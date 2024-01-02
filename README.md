@@ -1,235 +1,403 @@
-# MiSTer Extensions
+# NFC
 
-Extensions and utilities to make your [MiSTer](https://github.com/MiSTer-devel/Main_MiSTer/wiki) even better.
+NFC is a service for launching games, cores and custom dynamic commands using a USB NFC card reader. 
+All hardware required is inexpensive, easily available and quick to set up.
 
-Make sure to check the linked documentation for each script you use. Most are simple and work out-of-the-box, but some require manual setup before they do anything useful.
+<a href="https://github.com/wizzomafizzo/mrext/releases/latest/download/nfc.sh"><img src="images/download.svg" alt="Download Remote" title="Download Remote" width="140"></a>
 
-[Remote](#remote) • [NFC](#nfc) • [BGM](#bgm) • [Favorites](#favorites) • [GamesMenu](#gamesmenu) • [LastPlayed](#lastplayed) • [LaunchSync](#launchsync) • [PlayLog](#playlog) • [Random](#random) • [Search](#search) • [PocketBackup](#pocketbackup)
+[Create your own DIY NFC scanner](diyscanner.md)
 
-[Supported Systems](docs/systems.md) • [Developer Guide](docs/dev.md)
+<!-- TOC -->
+* [Credits](#credits)
+* [Card labels](#card-labels)
+* [Hardware required](#hardware-required)
+  * [Readers](#readers)
+  * [Tags](#tags)
+* [Install](#install)
+  * [Hardware configuration](#hardware-configuration)
+* [Configuration](#configuration)
+* [Setting up tags](#setting-up-tags)
+  * [Combining commands](#combining-commands)
+  * [Launching games and cores](#launching-games-and-cores)
+  * [Custom commands](#custom-commands)
+* [Mappings database](#mappings-database)
+* [Writing to tags](#writing-to-tags)
+* [Reading tags](#reading-tags)
+* [Service socket](#service-socket)
+<!-- TOC -->
+
+## Credits
+
+- [symm](https://github.com/symm) - for doing all the actual work of making the NFC scanners function.
+- [wizzo](https://github.com/wizzomafizzo) - integrating software into MiSTer and telling everyone.
+- [sigboe](https://github.com/sigboe) - creating the nfcui.sh script.
+- [RetroCastle](https://www.aliexpress.com/store/912024455) - making the DIY scanner happen.
+- [ElRojo](https://github.com/ElRojo/MiSTerRFID) & [javiwwweb](https://github.com/javiwwweb/MisTerRFID) - for inspiring this project.
+
+## Card labels
+
+- [Arcade & Computer core artwork collated and edited by NML32](https://mega.nz/folder/vH5WGSJI#UANuzi-5uG9XBqddPeApmw)
+
+Feel free to [open an issue](https://github.com/wizzomafizzo/mrext/issues/new) to add to this list.
+
+## Hardware required
+
+The following hardware is currently known to work. Many other devices may work, but might also require a project 
+update for proper support. Please [open an issue](https://github.com/wizzomafizzo/mrext/issues/new) if you'd like to
+add a working device to this list, or troubleshoot a device that isn't working.
+
+This project uses the [libnfc](https://nfc-tools.github.io/projects/libnfc/) library, so any device supported by it 
+should work.
+
+### Readers
+
+**WARNING: There is a certain version of clone of the ACR122U reader which is not compatible with the script. At this stage it's impossible to tell which version to avoid from a shop listing, and no ETA on support for the clone revision. Most listings are fine, but be aware of the risk. Your best bet is to not buy the literal cheapest listing available.**
+
+These are some known okay listings:
+- https://www.amazon.com/dp/B07KRKPWYC
+- https://www.ebay.co.uk/itm/145044206870
+
+Feel free to [open an issue](https://github.com/wizzomafizzo/mrext/issues/new) to add to this list.
+
+| Device                 | Details                                                                                                                                            |
+|------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------|
+| ACR122U USB NFC reader | <ul><li>Plug and play</li><li>Cheap</li><li>Littered on Amazon, eBay and AliExpress</li></ul>                                                      |
+| PN532 NFC module       | <ul><li>Really cheap</li><li>Small</li><li>Requires a USB to TTL cable</li><li>Some manual configuration</li><li>Possibly some soldering</li></ul> |
+
+### Tags
+
+The form factor of the tag is up to you. Can be a card, sticker, keychain, etc.
+
+| Device                 | Details                                            |
+|------------------------|----------------------------------------------------|
+| NTAG213                | 144 bytes storage                                  |
+| NTAG215                | 504 bytes storage                                  |
+| NTAG216                | 888 bytes storage                                  |
+| MIFARE Classic 1K      | 716 bytes storage, often ships with readers        |
+| Amiibo                 | Supported using the `nfc.csv` file described below |
+| Lego Dimensions        | Supported using the `nfc.csv` file described below |
+
+Custom NFC commands can be written to NTAG213 without issue, but keep storage size in mind if you have a large
+collection of games with deep folders. The tag may need to store the whole game path.
 
 ## Install
 
-### Update All
+Download [NFC](https://github.com/wizzomafizzo/mrext/releases/latest/download/nfc.sh) and copy it to the `Scripts`
+folder on your MiSTer's SD card.
 
-Open the [Update All](https://github.com/theypsilon/Update_All_MiSTer) settings menu, the `Unofficial Scripts` submenu, and enable the MiSTer Extensions repository from there.
-
-### Update/Downloader
-
-Add the following to your `downloader.ini` file to install everything at once through the `update` script:
-
+Optionally, add the following to the `downloader.ini` file on your MiSTer, to receive updates with the `update` or
+`downloader` script:
 ```
-[mrext/all]
-db_url = https://github.com/wizzomafizzo/mrext/raw/main/releases/all.json
+[mrext/nfc]
+db_url = https://github.com/wizzomafizzo/mrext/raw/main/releases/nfc/nfc.json
 ```
 
-Each script also provides its own individual update file if you only want certain ones. Check the script's README.
+Once installed, run `nfc` from the MiSTer `Scripts` menu, a prompt will offer to enable NFC as a startup service, then
+the service will be started in the background.
 
-### Manual
+After the initial setup is complete, a status display will be shown. It's ok to exit this screen, the service will
+continue to run in the background.
 
-All scripts listed can be installed by downloading the linked file below, placing it in the `Scripts` folder on your SD card, and running it from the `Scripts` menu on your MiSTer.
+### Hardware configuration
 
-## Remote
+Your reader may work out of the box with no extra configuration. Run `nfc` from the `Scripts` menu, plug it in, and
+check if it shows as connected in the log view.
 
-Control the MiSTer from any device on your network. Remote is a web-based interface with a stack of modern features to manage all aspects of your MiSTer.
+If you are using a PN532 NFC module connected with a USB to TTL cable, then the following config may be needed 
+in `nfc.ini` in the `Scripts` folder:
 
-<a href="https://github.com/wizzomafizzo/mrext/releases/latest/download/remote.sh"><img src="docs/images/download.svg" alt="Download Remote" title="Download Remote" width="140"></a>
-<a href="https://github.com/wizzomafizzo/mrext/blob/main/docs/remote.md"><img src="docs/images/readme.svg" alt="Readme Remote" title="Readme Remote" width="140"></a>
+```ini
+[nfc]
+probe_device=yes
+allow_commands=no
+```
 
-## NFC
-Launch games, cores and dynamic commands using NFC tags or cards. Uses easily available and cheap USB NFC card readers.
+Create this file if it doesn't exist.
 
-<a href="https://github.com/wizzomafizzo/mrext/releases/latest/download/nfc.sh"><img src="docs/images/download.svg" alt="Download NFC" title="Download NFC" width="140"></a>
-<a href="https://github.com/wizzomafizzo/mrext/tree/main/docs/nfc.md"><img src="docs/images/readme.svg" alt="Readme NFC" title="Readme NFC" width="140"></a>
+If nfc.sh is unable to auto detect your device it may be necessary to manually configure the connection string:
 
-## BGM
-Play your own music in the MiSTer menu. BGM is a highly configurable background music player that automatically pauses when you're playing games. Supports many common audio formats including internet radio streams.
+```ini
+[nfc]
+connection_string="pn532_uart:/dev/ttyUSB0"
+allow_commands=no
+```
 
-<a href="https://github.com/wizzomafizzo/MiSTer_BGM/raw/main/bgm.sh"><img src="docs/images/download.svg" alt="Download BGM" title="Download BGM" width="140"></a>
-<a href="https://github.com/wizzomafizzo/MiSTer_BGM"><img src="docs/images/readme.svg" alt="Readme BGM" title="Readme BGM" width="140"></a>
+Be aware the ttyUSB0 part may be different if you have other devices connected such as tty2oled. For a list of possible devices try:
 
-## Favorites
-Create and manage shortcuts for your favorite games. Favorites allows you to pick any game or core from your system and automatically generate a shortcut to it in the MiSTer menu.
+`ls /dev/serial/by-id` or `ls /dev |grep ttyUSB`
 
-<a href="https://github.com/wizzomafizzo/MiSTer_Favorites/raw/main/favorites.sh"><img src="docs/images/download.svg" alt="Download Favorites" title="Download Favorites" width="140"></a>
-<a href="https://github.com/wizzomafizzo/MiSTer_Favorites"><img src="docs/images/readme.svg" alt="Readme Favorites" title="Readme Favorites" width="140"></a>
+## Configuration
 
-## GamesMenu
-Browse your entire collection from the main MiSTer menu. GamesMenu indexes all your games and generates a set of shortcuts in the menu mirroring your folder layout.
+The NFC script supports a `nfc.ini` file in the `Scripts` folder. This file can be used to configure the NFC service.
 
-<a href="https://github.com/wizzomafizzo/MiSTer_GamesMenu/raw/main/gamesmenu.sh"><img src="docs/images/download.svg" alt="Download GamesMenu" title="Download GamesMenu" width="140"></a>
-<a href="https://github.com/wizzomafizzo/MiSTer_GamesMenu"><img src="docs/images/readme.svg" alt="Readme GamesMenu" title="Readme GamesMenu" width="140"></a>
+If one doesn't exist, create a new one. This example has all the default values:
 
-## LaunchSync
-Create shareable and subscribable game playlists. LaunchSync automatically generates working menu shortcuts from custom playlist files, with the ability to keep them up-to-date with the author's live version.
+```ini
+[nfc]
+connection_string=""
+allow_commands=no
+disable_sounds=no
+```
 
-<a href="https://github.com/wizzomafizzo/mrext/releases/latest/download/launchsync.sh"><img src="docs/images/download.svg" alt="Download LaunchSync" title="Download LaunchSync" width="140"></a>
-<a href="https://github.com/wizzomafizzo/mrext/tree/main/docs/launchsync.md"><img src="docs/images/readme.svg" alt="Readme LaunchSync" title="Readme LaunchSync" width="140"></a>
+All lines except the `[nfc]` header are optional.
 
-## LastPlayed
-Automatically generate dynamic shortcuts in the MiSTer menu.
+### connection_string
 
-<a href="https://github.com/wizzomafizzo/mrext/releases/latest/download/lastplayed.sh"><img src="docs/images/download.svg" alt="Download LastPlayed" title="Download LastPlayed" width="140"></a>
-<a href="https://github.com/wizzomafizzo/mrext/tree/main/docs/lastplayed.md"><img src="docs/images/readme.svg" alt="Readme LastPlayed" title="Readme LastPlayed" width="140"></a>
+See [Hardware configuration](#hardware-configuration) for details. This option is for configuration of [libnfc](https://github.com/nfc-tools/libnfc)
+and it currently required for the PN532 module.
 
-## PlayLog
-Track and report on what games you've been playing on your MiSTer.
+### allow_commands
 
-<a href="https://github.com/wizzomafizzo/mrext/releases/latest/download/playlog.sh"><img src="docs/images/download.svg" alt="Download PlayLog" title="Download PlayLog" width="140"></a>
-<a href="https://github.com/wizzomafizzo/mrext/tree/main/docs/playlog.md"><img src="docs/images/readme.svg" alt="Readme PlayLog" title="Readme PlayLog" width="140"></a>
+Enables the [command](#run-a-systemlinux-command-command) custom command to be triggered from a tag. By default this is
+disabled and only works from the `nfc.csv` file described below.
 
-## Random
-Instantly launch a random game in your collection from the Scripts menu.
+### disable_sounds
 
-<a href="https://github.com/wizzomafizzo/mrext/releases/latest/download/random.sh"><img src="docs/images/download.svg" alt="Download Random" title="Download Random" width="140"></a>
-<a href="https://github.com/wizzomafizzo/mrext/tree/main/docs/random.md"><img src="docs/images/readme.svg" alt="Readme Random" title="Readme Random" width="140"></a>
+Disables the success and fail sounds played when a tag is scanned.
 
-<img src="docs/images/search.gif" align="right" width="35%" />
+### probe_device
 
-## Search
-Search for and launch games from your collection. Searching is *fast* and great for discovering games.
+Enables auto detection of a serial based reader device
 
-<a href="https://github.com/wizzomafizzo/mrext/releases/latest/download/search.sh"><img src="docs/images/download.svg" alt="Download Search" title="Download Search" width="140"></a>
-<a href="https://github.com/wizzomafizzo/mrext/tree/main/docs/search.md"><img src="docs/images/readme.svg" alt="Readme Search" title="Readme Search" width="140"></a>
+## Setting up tags
 
-## PocketBackup
-Backup your Analogue Pocket saves, settings and screenshots to your MiSTer.
+The NFC Tools app is highly recommended for this. It's free and supports both
+[iOS](https://apps.apple.com/us/app/nfc-tools/id1252962749) and 
+[Android](https://play.google.com/store/apps/details?id=com.wakdev.wdnfc&hl=en&gl=US).
 
-<a href="https://github.com/wizzomafizzo/mrext/releases/latest/download/pocketbackup.sh"><img src="docs/images/download.svg" alt="Download PocketBackup" title="Download PocketBackup" width="140"></a>
-<a href="https://github.com/wizzomafizzo/mrext/tree/main/docs/pocketbackup.md"><img src="docs/images/readme.svg" alt="Readme PocketBackup" title="Readme PocketBackup" width="140"></a>
+You'll want to write a *Text record* with it for all the supported NFC service features.
 
-## Other Projects
+### Combining commands
 
-Great projects by other people that add heaps of functionality to your MiSTer.
+All commands and game/core launches can be combined on a single tag if space permits using the `||` separator.
 
-Please [open an issue](https://github.com/wizzomafizzo/mrext/issues/new) if you'd like to suggest something for this list. Anything is welcome, though the focus is on software projects that work without custom hardware.
+For example, to switch to MiSTer.ini number 3 and launch the SNES core:
+```
+**ini:3||_Console/SNES
+```
 
-### Cores & Games
+Or launch a game and notify an HTTP service:
+```
+_Console/SNES||**get:https://example.com
+```
 
-- [AMMiSTer](https://github.com/city41/AMMiSTer)
+As many of these can be combined as you like.
 
-  A slick PC application for managing your arcade game collection. Includes updates, bulk management, favorites and game metadata.
+### Launching games and cores
 
-- [MGL Core Setnames](https://github.com/RGarciaLago/MGL_Core_Setnames)
+The NFC script supports launching game files, core .RBF files, arcade .MRA files and .MGL shortcut files. This is
+done by simply writing the path to the file to the tag.
 
-  A preset pack of modified core shortcuts which let you have automatic alternate core configs. Useful for cores which support multiple systems or input devices.
+For example, to launch a game, write something like this to the tag:
+```
+/media/fat/games/Genesis/1 US - Q-Z/Road Rash (USA, Europe).md
+```
 
-- [mister-boot-roms](https://github.com/uberyoji/mister-boot-roms)
+To save space and to handle games moving between storage devices, you can also use a relative path:
+```
+Genesis/1 US - Q-Z/Road Rash (USA, Europe).md
+```
 
-  Adds high quality MiSTer-themed boot screens to cores which support loadable boot roms.
+This will search for the file in all standard MiSTer game folder paths including CIFS.
 
-- [mistercon](https://github.com/tatsutron/mistercon)
-    
-  A MiSTer frontend for Android. Browse your collection and launch games from your phone.
+Some other examples:
+```
+_Arcade/1942 (Revision B).mra
+```
+```
+_@Favorites/Super Metroid.mgl
+```
 
-- [VIDEO PRESETS by Robby](https://github.com/RGarciaLago/VIDEO_PRESETS_by_Robby)
+Because core filenames often change, it's supported to use the same short name as in a .MGL file to launch it:
+```
+_Console/PSX
+```
 
-  A curated and extensive set of video presets for the MiSTer cores.
+.ZIP files are also supported natively, same as they are in MiSTer itself. Just treat the .ZIP file as a folder name:
+```
+Genesis/@Genesis - MegaSD Mega EverDrive 2022-05-18.zip/1 US - Q-Z/Road Rash (USA, Europe).md
+```
 
-### Frontend
+### Custom commands
 
-- [Insert Coin](https://github.com/funkycochise/Insert-Coin)
+There are a small set of special commands that can be written to tags to perform dynamic actions. These are marked in
+a tag by putting `**` at the start of the stored text.
 
-  An alternative layout for browsing the Arcade folder.
+#### Launch a system (system)
 
-- [MiSTer Super Attract Mode (SAM)](https://github.com/mrchrisster/MiSTer_SAM)
+This command will launch a system, based on MiSTer Extensions own internal list of system IDs
+[here](https://github.com/wizzomafizzo/mrext/blob/main/docs/systems.md). This can be useful for "meta systems" such as
+Atari 2600 and WonderSwan Color which don't have their own core .RBF file.
 
-  Add an attract screen to your MiSTer. When idle, games will start to play at random and rotate after a set period. You can even jump in and start playing if a game looks fun! A mature project and highly configurable.
+For example:
+```
+**system:Atari2600
+```
+```
+**system:WonderSwanColor
+```
 
-- [MiSTerWallpapers](https://github.com/RetroDriven/MiSTerWallpapers)
+It also works for any other system if you prefer this method over the standard core .RBF file one.
 
-  Automatically download a large collection of high quality wallpapers.
+#### Launch a random game (random)
 
-- [MiSTer-CRT-Wallpapers](https://github.com/RetroDriven/MiSTer-CRT-Wallpapers)
+This command will launch a game a random for the given system. For example:
+```
+**random:snes
+```
+This will launch a random SNES game each time you scan the tag.
 
-  The same, but specifically for 4:3 CRT screens.
+You can also select all systems with `**random:all`.
 
-- [MiSTress](https://github.com/sigboe/MiSTress)
+#### Change the actve MiSTer.ini file (ini)
 
-  An RSS reader for MiSTer. Display the latest core updates right on your wallpaper.
+Loads the specified MiSTer.ini file and relaunches the menu core if open.
 
-- [Wallpaper Collection](https://github.com/RGarciaLago/Wallpaper_Collection)
+Specify the .ini file with its index in the list shown in the MiSTer menu. Numbers `1` to `4`.
 
-  Great curated collection of wallpapers for MiSTer with a downloader compatible repo.
+For example:
+```
+**ini:1
+```
 
-### Ports
+This switch will not persist after a reboot, same as loading it through the OSD.
 
-- [MiSTer Basilisk II](https://github.com/bbond007/MiSTer_BasiliskII)
+#### Make an HTTP request to a URL (get)
 
-  A build of the [Basilisk II](https://basilisk.cebix.net/) project for MiSTer. A 68k Macintosh emulator.
+Perform an HTTP GET request to the specified URL. For example:
+```
+**get:https://example.com
+```
 
-- [MiSTer DOSBox](https://github.com/bbond007/MiSTer_DOSBox)
+This is useful for triggering webhooks or other web services.
 
-  A build of the [DOSBox](https://www.dosbox.com/) project for MiSTer. Play a huge range of DOS games.
+It can be combined with other commands using the `||` separator. For example:
+```
+**get:https://example.com||_Console/SNES
+```
 
-- [MiSTer PrBoom-Plus](https://github.com/bbond007/MiSTer_PrBoom-Plus)
+This does *not* check for any errors, and will not show any output. You send the request and off it goes into the ether.
 
-  A build of the [PrBoom](http://prboom.sourceforge.net/) project for MiSTer. An enhanced Doom engine with a massive number of expansions.
+#### Press a keyboard key (key)
 
-- [MiSTer ScummVM](https://github.com/bbond007/MiSTer_ScummVM)
+Press a key on the keyboard using its uinput code. For example (to press F12 to bring up the OSD):
+```
+**key:88
+```
 
-  A build of the [ScummVM](https://www.scummvm.org/) project for MiSTer. Runs well and even works for games out of reach of the AO486 core.
+See a full list of key codes [here](https://pkg.go.dev/github.com/bendahl/uinput@v1.6.0#pkg-constants).
 
-### System
+#### Insert a coin/credit (coinp1/coinp2)
 
-- [Migrate SD](https://github.com/Natrox/MiSTer_Utils_Natrox)
+Insert a coin/credit for player 1 or 2. For example (to insert 1 coin for player 1):
+```
+**coinp1:1
+```
 
-  A utility to migrate your entire MiSTer SD card to a new one, straight from the MiSTer itself.
+This command presses the `5` and `6` key on the keyboard respectively, which is generally accepted as the coin insert
+keys in MiSTer arcade cores. If it doesn't work, try manually mapping the coin insert keys in the OSD.
 
-- [MiSTer Batch Control](https://github.com/pocomane/MiSTer_Batch_Control)
+It also supports inserting multiple coins at once. For example (to insert 3 coins for player 2):
+```
+**coinp2:3
+```
 
-  A command line utility to perform low-level functions that may not be possible via scripting languages.
+#### Run a system/Linux command (command)
 
-- [MiSTer FPGA Overclock Scripts](https://github.com/coolbho3k/MiSTer-Overclock-Scripts)
+**This feature is intentionally disabled for security reasons when run straight from a tag. You can still use it,
+but only via the `nfc.csv` file explained below or by enabling the `allow_commands` option in `nfc.ini`.**
 
-  An overclocked system can run Munt (MT32 emulator) at full speed and get extra performance out of software like ScummVM.
+This command will run a MiSTer Linux command directly. For example:
+```
+**command:reboot
+```
 
-- [MiSTerArch](https://github.com/MiSTerArch/PKGBUILDs)
+## Mappings database
 
-  A replacement image for the MiSTer with a full [Arch Linux](https://archlinux.org/) system.
+The NFC script supports a `nfc.csv` file in the top of the SD card. This file can be used to override the text read
+from a tag and map it to a different text value. This is useful for mapping Amiibos which are read-only, testing text
+values before actually writing them, and is necessary for using the `command` custom command.
 
-- [MiSTerTools](https://github.com/morfeus77/MiSTerTools/)
+Create a file called `nfc.csv` in the top of the SD card, with this as the header:
+```csv
+match_uid,match_text,text
+```
 
-  Scripts for custom aspect ratio calculation, modeline to video_mode conversion, video_mode to modeline conversion, ini profile switcher and to parse MRA files.
+You'll then need to either power cycle your MiSTer, or restart the NFC service by running `nfc` from the `Scripts`
+menu, selecting the `Stop` button, then the `Start` button.
 
-- [MOnSieurFPGA](https://github.com/MOnSieurFPGA/MOnSieurFPGA-SD_Image_Builds)
+After the file is created, the service will automatically reload it every time it's updated.
 
-  Another replacement image for the MiSTer with a full [Arch Linux](https://archlinux.org/) system.
+Here's an example `nfc.csv` file that maps several Amiibos to different functions:
+```csv
+match_uid,match_text,text
+04e5c7ca024980,,**command:reboot
+04078e6a724c80,,_#Favorites/Final Fantasy VII.mgl
+041e6d5a983c80,,_#Favorites/Super Metroid.mgl
+041ff6ea973c81,,_#Favorites/Legend of Zelda.mgl
+```
 
-- [Official Scripts](https://github.com/MiSTer-devel/Scripts_MiSTer)
+Only one `match_` column is required for an entry, and the `match_uid` can include colons and uppercase characters.
+You can get the UID of a tag by checking the output in the `nfc` Script display or on your phone.
 
-  The official MiSTer scripts repository. A miscellaneous collection of small scripts for various system tasks and configuration.
+## Writing to tags
 
-- [reMiSTer](https://github.com/sigboe/reMiSTer)
+The NFC script currently supports writing to NTAG tags through the command line option `-write <text>`.
 
-  A tool for using your keyboard on MiSTer over the network.
+For example, from the console or SSH:
+```bash
+/media/fat/Scripts/nfc.sh -write "_Console/SNES"
+```
+This will write the text `_Console/SNES` to the next detected tag.
 
-- [Remote Input Server Daemon](https://github.com/sofakng/risd)
+This is available to any script or application on the MiSTer.
 
-  Server daemon that monitors commands over TCP and emulates keystrokes using TCP.
+## Reading tags
 
-### Updaters
+Whenever a tag is successfully scanned, its UID and text contents (if available) will be written to the
+file `/tmp/NFCSCAN`. The contents of the file is in the format `<uid>,<text>`.
 
-- [DOS Shareware Updater](https://github.com/flynnsbit/DOS_Shareware_MyMenu)
+You can monitor the file for changes to detect when a tag is scanned with the `inotifywait` command that is
+shipped on the MiSTer Linux image. For example:
+```bash
+while inotifywait -e modify /tmp/NFCSCAN; do
+    echo "Tag scanned"
+done
+```
 
-  Update script for the Flynn's DOS Shareware pack on the AO486 core.
+## Service socket
 
-- [MiSTer-scripts](https://github.com/SwedishGojira/MiSTer-scripts)
+When the NFC service is active, a Unix socket is created at `/tmp/nfc.sock`. This socket can be used to send
+commands to the service.
 
-  Setup scripts for the Saturn and N64 cores.
+Commands can be sent in a shell script like this:
+```bash
+echo "status" | socat - UNIX-CONNECT:/tmp/nfc.sock
+```
 
-- [Top 300 Updater](https://github.com/flynnsbit/Top300_updates)
+### status
 
-  Update script for Flynn's Top 300 pack on the AO486 core.
+Returns the current status of the service with the following information:
 
-- [Update All](https://github.com/theypsilon/Update_All_MiSTer)
-  
-  If you're reading this, you already use it. Don't forget to check the advanced options.
+- Last card scanned date in Unix epoch format
+- Last card scanned UID
+- Whether launching is enabled
+- Last card scanned text
 
-- [Update tty2xxx](https://github.com/ojaksch/MiSTer_update_tty2xxx)
+Each value is separated by a comma. For example:
 
-  A unified updater script for the various MiSTer display projects.
+```
+1695650197,04faa9d2295880,true,**random:psx
+```
 
-- [Yet another random MiSTer utility script (YARMUS)](https://github.com/jayp76/MiSTer_get_optional_installers)
+### enable
 
-  A script to install a lot of MiSTer scripts at once. It includes many things on this list, plus extra custom installers for software like [DevilutionX](https://github.com/diasurgical/devilutionX), [Cave Story](https://nxengine.sourceforge.io/) and homebrew packs.
+Enables launching from tags (the default state).
+
+This command has no output.
+
+### disable
+
+Disables launching from tags. Cards will scan and log, but no action will be triggered.
+
+This command has no output.
