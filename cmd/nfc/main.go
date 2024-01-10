@@ -26,6 +26,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"github.com/wizzomafizzo/tapto/pkg/assets"
 	"net"
 	"os"
 	"os/exec"
@@ -257,7 +258,7 @@ func startService(cfg *config.UserConfig) (func() error, error) {
 	if err != nil {
 		logger.Error("error creating success sound file: %s", err)
 	}
-	_, err = sf.Write(successSound)
+	_, err = sf.Write(assets.SuccessSound)
 	if err != nil {
 		logger.Error("error writing success sound file: %s", err)
 	}
@@ -276,7 +277,7 @@ func startService(cfg *config.UserConfig) (func() error, error) {
 	if err != nil {
 		logger.Error("error creating fail sound file: %s", err)
 	}
-	_, err = ff.Write(failSound)
+	_, err = ff.Write(assets.FailSound)
 	if err != nil {
 		logger.Error("error writing fail sound file: %s", err)
 	}

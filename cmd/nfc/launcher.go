@@ -33,18 +33,6 @@ import (
 	"strings"
 )
 
-// Breviceps (https://freesound.org/people/Breviceps/sounds/445978/)
-// Licence: CC0 1.0 Universal (CC0 1.0) Public Domain Dedication
-//
-//go:embed sounds/success.wav
-var successSound []byte
-
-// PaulMorek (https://freesound.org/people/PaulMorek/sounds/330046/)
-// Licence: CC0 1.0 Universal (CC0 1.0) Public Domain Dedication
-//
-//go:embed sounds/fail.wav
-var failSound []byte
-
 type NfcMappingEntry struct {
 	MatchUID  string `csv:"match_uid"`
 	MatchText string `csv:"match_text"`
