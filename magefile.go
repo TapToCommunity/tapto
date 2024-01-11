@@ -23,9 +23,7 @@ along with TapTo.  If not, see <http://www.gnu.org/licenses/>.
 package main
 
 import (
-	"crypto/md5"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -60,12 +58,11 @@ type app struct {
 
 var apps = []app{
 	{
-		name:         "nfc",
+		name:         "tapto",
 		path:         filepath.Join(cwd, "cmd", "nfc"),
-		bin:          "nfc.sh",
-		releaseId:    "mrext/nfc",
+		bin:          "tapto.sh",
+		releaseId:    "mrext/tapto",
 		ldFlags:      "-lnfc -lusb -lcurses",
-		inAll:        true,
 		releaseFiles: []string{filepath.Join(cwd, "scripts", "nfcui", "nfcui.sh")},
 	},
 }
@@ -107,6 +104,7 @@ func buildApp(a app, out string) {
 
 func Build(appName string) {
 	platform := runtime.GOOS + "_" + runtime.GOARCH
+
 	if appName == "all" {
 		mg.Deps(func() { cleanPlatform(platform) })
 		for _, app := range apps {
@@ -134,14 +132,35 @@ func MakeMisterImage() {
 func Mister(appName string) {
 	buildCache := fmt.Sprintf("%s:%s", misterBuildCache, "/home/build/.cache/go-build")
 	_ = os.Mkdir(misterBuildCache, 0755)
+
 	modCache := fmt.Sprintf("%s:%s", misterModCache, "/home/build/go/pkg/mod")
 	_ = os.Mkdir(misterModCache, 0755)
-	buildDir := fmt.Sprintf("%s:%s", cwd, "/build")
-	if runtime.GOOS != "linux" {
-		_ = sh.RunV("docker", "run", "--rm", "--platform", "linux/arm/v7", "-v", buildCache, "-v", modCache, "-v", buildDir, "--user", "1000:1000", misterBuildImageName, "mage", "build", appName)
-	} else {
-		_ = sh.RunV("sudo", "docker", "run", "--rm", "--platform", "linux/arm/v7", "-v", buildCache, "-v", modCache, "-v", buildDir, "--user", "1000:1000", misterBuildImageName, "mage", "build", appName)
+
+	args := []string{
+		"docker",
+		"run",
+		"--rm",
+		"--platform",
+		"linux/arm/v7",
+		"-v",
+		buildCache,
+		"-v",
+		modCache,
+		"-v",
+		fmt.Sprintf("%s:%s", cwd, "/build"),
+		"--user",
+		"1000:1000",
+		misterBuildImageName,
+		"mage",
+		"build",
+		appName,
 	}
+
+	if runtime.GOOS == "linux" {
+		args = append([]string{"sudo"}, args...)
+	}
+
+	_ = sh.RunV(args[0], args[1:]...)
 }
 
 type updateDbFile struct {
@@ -160,35 +179,6 @@ type updateDb struct {
 	Timestamp int64                     `json:"timestamp"`
 	Files     map[string]updateDbFile   `json:"files"`
 	Folders   map[string]updateDbFolder `json:"folders"`
-}
-
-func getMd5Hash(path string) (string, error) {
-	file, err := os.Open(path)
-	if err != nil {
-		return "", err
-	}
-	hash := md5.New()
-	_, _ = io.Copy(hash, file)
-	_ = file.Close()
-	return fmt.Sprintf("%x", hash.Sum(nil)), nil
-}
-
-func getFileSize(path string) (int64, error) {
-	file, err := os.Open(path)
-	if err != nil {
-		return 0, err
-	}
-
-	stat, err := file.Stat()
-	if err != nil {
-		_ = file.Close()
-		return 0, err
-	}
-
-	size := stat.Size()
-	_ = file.Close()
-
-	return size, nil
 }
 
 func Release(name string) {
@@ -264,11 +254,23 @@ func MakeArmApp(name string) {
 		os.Exit(1)
 	}
 
-	if runtime.GOOS != "linux" {
-		_ = sh.RunV("docker", "run", "--rm", "--platform", "linux/arm/v7", "-v", buildDir+":/build", "--user", "1000:1000", misterBuildImageName, "bash", "./"+buildScript)
-	} else {
-		_ = sh.RunV("sudo", "docker", "run", "--rm", "--platform", "linux/arm/v7", "-v", buildDir+":/build", "--user", "1000:1000", misterBuildImageName, "bash", "./"+buildScript)
+	args := []string{
+		"docker",
+		"run",
+		"--rm",
+		"--platform", "linux/arm/v7",
+		"-v", buildDir + ":/build",
+		"--user", "1000:1000",
+		misterBuildImageName,
+		"bash",
+		"./" + buildScript,
 	}
+
+	if runtime.GOOS == "linux" {
+		args = append([]string{"sudo"}, args...)
+	}
+
+	_ = sh.RunV(args[0], args[1:]...)
 }
 
 func Test() {
