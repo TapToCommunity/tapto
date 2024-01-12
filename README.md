@@ -8,7 +8,7 @@ TapTo is an open source system for launching games and custom actions using phys
 - All hardware required is inexpensive and readily available.
 - It currently supports the [MiSTer FPGA](https://mister-devel.github.io/MkDocs_MiSTer/) platform, with more planned.
 
-[Download](https://github.com/wizzomafizzo/tapto/releases/latest/) | [Vendors](vendors.md) | [Community Projects](community.md) | [Discord](https://wizzo.dev/discord) | [Developer Guide](developers.md) | [API](api.md)
+[Download](https://github.com/wizzomafizzo/tapto/releases/latest/) | [Vendors](docs/vendors.md) | [Community Projects](docs/community.md) | [Discord](https://wizzo.dev/discord) | [Developer Guide](docs/developers.md) | [API](docs/api.md)
 
 ## Getting Started
 
