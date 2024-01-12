@@ -9,6 +9,8 @@ NFC tokens come in many form factors and standards. The form factor is entirely 
 * [Where To Buy](#where-to-buy)
 * [NTAG](#ntag)
 * [MIFARE](#mifare)
+* [Amiibos](#amiibos)
+* [Lego Dimensions](#lego-dimensions)
 
 ## Where To Buy
 
