@@ -2,17 +2,19 @@
   <img width="70%" title="TapTo" src="assets/images/logo/logo.svg">
 </h1>
 
-TapTo is an open system for launching games and custom actions using physical objects. It's a great way to make launching games more accessible and add some fun to your gaming setup!
+TapTo is an open source system for launching games and custom actions using physical objects. It's a great way to make launching games more accessible and add some fun to your gaming setup!
 
 - The project includes everything necessary to get running.
 - All hardware required is inexpensive and readily available.
 - It currently supports the [MiSTer FPGA](https://mister-devel.github.io/MkDocs_MiSTer/) platform, with more planned.
 
+[Download](https://github.com/wizzomafizzo/tapto/releases/latest/) | [Vendors](vendors.md) | [Community Projects](community.md) | [Discord](https://wizzo.dev/discord) | [Developer Guide](developers.md) | [API](api.md)
+
 ## Getting Started
 
 1. Buy or build a compatible NFC reader: [Reader Hardware](docs/readers.md)
 2. Buy some compatible NFC cards or tags: [Token Hardware](docs/tokens.md)
-3. Install the TapTo software on your MiSTer: [MiSTer Installation](docs/mister.md)
+3. Install the TapTo software on your MiSTer: [MiSTer Setup](docs/mister.md)
 4. Set up your cards or tags to launch games: [Token Commands](docs/commands.md)
 5. Make or buy some awesome labels: [Custom Labels](docs/labels.md)
 
