@@ -7,4 +7,6 @@ The TapTo logo was designed by and is © Ranny Snice. The terms of use for the l
 - The logo **MUST NOT** be used for any other commercial products or purposes, without express permission from the project.
 - The shape and overall design of the logo **MUST NOT** be modified or distorted. You **MAY** change the colors if required.
 
-This logo is **not** covered by the CC BY-SA 4.0 licence.
+Please contact the project if you are unsure about any of these licensing arrangements, or have any licensing requests.
+
+This logo is **not** covered by the CC BY-SA 4.0 license.

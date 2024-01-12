@@ -1,16 +1,24 @@
 <h1 align="center">
-  <img width="90%" title="TapTo" src="assets/images/logo/logo.svg">
+  <img width="70%" title="TapTo" src="assets/images/logo/logo.svg">
 </h1>
 
 TapTo is an open system for launching games and custom actions using physical objects. It's a great way to make launching games more accessible and add some fun to your gaming setup!
 
-The project includes everying required for a working setup. All hardware required is inexpensive, easily available and quick to set up. It currently supports the [MiSTer FPGA](https://mister-devel.github.io/MkDocs_MiSTer/) platform.
+- The project includes everything necessary to get running.
+- All hardware required is inexpensive and readily available.
+- It currently supports the [MiSTer FPGA](https://mister-devel.github.io/MkDocs_MiSTer/) platform, with more planned.
 
-<a href="https://github.com/wizzomafizzo/tapto/releases/latest/"><img src="assets/images/download.svg" alt="Download TapTo" title="Download TapTo" width="140"></a>
+## Getting Started
+
+1. Buy or build a compatible NFC scanner: [Scanner Hardware](docs/scanners.md)
+2. Buy some compatible NFC cards or tags: [Token Hardware](docs/tokens.md)
+3. Install the TapTo software on your MiSTer: [MiSTer Installation](docs/mister.md)
+4. Set up your cards or tags to launch games: [Token Commands](docs/commands.md)
+5. Make or buy some awesome labels: [Custom Labels](docs/labels.md)
 
 ## Contributors
 
-TapTo has been a community effort from day one. Everyone's contributions are appreciated and encouraged!
+TapTo has been a community effort from day one. Everyone's contributions are appreciated and encouraged! Want to contribute too? Check out the [Developer Guide](docs/developers.md).
 
 - **Andrea Bogazzi** &mdash; developer &mdash; [GitHub](https://github.com/asturur) | [Twitter](https://twitter.com/AndreaBogazzi)
 - **BedroomNinja** &mdash; case designer &mdash; Printables | [Twitter](https://twitter.com/Bedroom_Ninja)
@@ -28,7 +36,7 @@ Special thanks to **Gaz** for starting the project originally, and to **[javiwww
 
 This project's source code is licensed under the [GNU General Public License v3](/LICENSE).
 
-This project's [assets](/assets) (e.g. image templates, 3D models and PCB designs) and [documentation](/docs) is licensed under the [Creative Commons Attribution-ShareAlike 4.0 International](/assets/LICENSE) license, unless explcitly noted otherwise.
+This project's [assets](/assets) (e.g. image templates, 3D models, PCB designs) and [documentation](/docs) is licensed under the [Creative Commons Attribution-ShareAlike 4.0 International](/assets/LICENSE) license, unless explcitly noted otherwise.
 
 The TapTo logo was designed by and is © Ranny Snice. The terms of use for the logo are as follows:
 
@@ -39,4 +47,4 @@ The TapTo logo was designed by and is © Ranny Snice. The terms of use for the l
 - The logo **MUST NOT** be used for any other commercial products or purposes, without express permission from the project.
 - The shape and overall design of the logo **MUST NOT** be modified or distorted. You **MAY** change the colors if required.
 
-Please contact the project if you are unsure about any of these licensing arrangements, or have any licencing requests.
+Please contact the project if you are unsure about any of these licensing arrangements, or have any licensing requests.
