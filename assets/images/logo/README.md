@@ -1,0 +1,1 @@
+The TapTo logo was designed by and is © Ranny Snice. It is **not** covered by the CC BY-SA 4.0 licence.
