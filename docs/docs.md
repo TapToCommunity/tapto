@@ -31,30 +31,6 @@
 
 Feel free to [open an issue](https://github.com/wizzomafizzo/mrext/issues/new) to add to this list.
 
-## Hardware required
-
-The following hardware is currently known to work. Many other devices may work, but might also require a project 
-update for proper support. Please [open an issue](https://github.com/wizzomafizzo/mrext/issues/new) if you'd like to
-add a working device to this list, or troubleshoot a device that isn't working.
-
-This project uses the [libnfc](https://nfc-tools.github.io/projects/libnfc/) library, so any device supported by it 
-should work.
-
-### Readers
-
-**WARNING: There is a certain version of clone of the ACR122U reader which is not compatible with the script. At this stage it's impossible to tell which version to avoid from a shop listing, and no ETA on support for the clone revision. Most listings are fine, but be aware of the risk. Your best bet is to not buy the literal cheapest listing available.**
-
-These are some known okay listings:
-- https://www.amazon.com/dp/B07KRKPWYC
-- https://www.ebay.co.uk/itm/145044206870
-
-Feel free to [open an issue](https://github.com/wizzomafizzo/mrext/issues/new) to add to this list.
-
-| Device                 | Details                                                                                                                                            |
-|------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------|
-| ACR122U USB NFC reader | <ul><li>Plug and play</li><li>Cheap</li><li>Littered on Amazon, eBay and AliExpress</li></ul>                                                      |
-| PN532 NFC module       | <ul><li>Really cheap</li><li>Small</li><li>Requires a USB to TTL cable</li><li>Some manual configuration</li><li>Possibly some soldering</li></ul> |
-
 ### Tags
 
 The form factor of the tag is up to you. Can be a card, sticker, keychain, etc.

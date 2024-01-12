@@ -1,18 +1,18 @@
-# DIY NFC Scanner
+# DIY NFC Reader Build Guide
 
-This guide explains how to create a low cost NFC scanner using easily available
+This guide explains how to create a low cost NFC reader using easily available
 parts, which is guaranteed to be compatible with the TapTo project
-on MiSTer. The total cost of a single scanner is approximately $10 USD in a
+on MiSTer. The total cost of a single reader is approximately $10 USD in a
 small batch of 5.
 
 This guide, the serial PCB design and case 3D model are all open source and
 distributed under the
 [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/) license. Anyone
-is welcome and encouraged to use, remix and sell their own scanners. The
-intention of this project is to make reliable NFC scanners more accessible,
+is welcome and encouraged to use, remix and sell their own readers. The
+intention of this project is to make reliable NFC readers more accessible,
 additional contributions and improvements are welcome!
 
-![](/assets/diyscanner/images/complete.jpg)
+![](/assets/diyreader/images/complete.jpg)
 
 * [Supplies](#supplies)
 * [Serial PCB](#serial-pcb)
@@ -20,7 +20,7 @@ additional contributions and improvements are welcome!
 * [Assembly](#assembly)
 * [Usage](#usage)
 
-## Credits
+## Contributors
 
 - [RetroCastle](https://www.aliexpress.com/store/912024455) - serial PCB design and testing.
 - [wizzo](https://www.patreon.com/wizzo) - case design and documentation.
@@ -69,10 +69,10 @@ This section will explain how to order the PCB from
 ### Upload gerber file
 
 From the [JLCPCB](https://jlcpcb.com/) home page, click the "Add gerber file"
-button and upload the [Gerber.zip file](/assets/diyscanner/pcb/Gerber.zip) from
+button and upload the [Gerber.zip file](/assets/diyreader/pcb/Gerber.zip) from
 this repo. You'll be forwarded to the order page.
 
-![](/assets/diyscanner/images/pcb1.png)
+![](/assets/diyreader/images/pcb1.png)
 
 ### Beginning order
 
@@ -80,34 +80,34 @@ Scroll down to the "PCB Assembly" section and enable this option with the side
 toggle. Otherwise, leave all options as default and click "NEXT" on the right
 sidebar.
 
-![](/assets/diyscanner/images/pcb2.png)
+![](/assets/diyreader/images/pcb2.png)
 
 ### Board confirmation
 
 Just click "NEXT" on this page.
 
-![](/assets/diyscanner/images/pcb3.png)
+![](/assets/diyreader/images/pcb3.png)
 
 ### Upload BOM and CPL files
 
-Upload the [BOM-JLCPCB.xlsx file](/assets/diyscanner/pcb/BOM-JLCPCB.xlsx) in the
+Upload the [BOM-JLCPCB.xlsx file](/assets/diyreader/pcb/BOM-JLCPCB.xlsx) in the
 left file picker (BOM) and the
-[PickPlace-JLCPCB.xlsx file](/assets/diyscanner/pcb/PickPlace-JLCPCB.xlsx) in the
+[PickPlace-JLCPCB.xlsx file](/assets/diyreader/pcb/PickPlace-JLCPCB.xlsx) in the
 right file picker (CPL). Then click the "Process BOM & CPL" button.
 
-![](/assets/diyscanner/images/pcb4.png)
+![](/assets/diyreader/images/pcb4.png)
 
 You may receive an error about the "J2 designator" as seen below. Ignore this
 and press "Continue". This is referring to the female header pins which you
 will solder yourself later.
 
-![](/assets/diyscanner/images/pcb5.png)
+![](/assets/diyreader/images/pcb5.png)
 
 ### Bill of materials
 
 There should be nothing to do on this page, just click "NEXT".
 
-![](/assets/diyscanner/images/pcb6.png)
+![](/assets/diyreader/images/pcb6.png)
 
 ### Component placements
 
@@ -115,16 +115,16 @@ You may see the error below when this page loads, just click "Ok". You can
 make sure the components aren't obviously in the wrong place, but it should be
 ok to just click "NEXT" here too.
 
-![](/assets/diyscanner/images/pcb7.png)
+![](/assets/diyreader/images/pcb7.png)
 
-![](/assets/diyscanner/images/pcb8.png)
+![](/assets/diyreader/images/pcb8.png)
 
 ### Quote & order
 
 Select a "Product Description" option. Something like "DIY" is fine. Then click
 "SAVE TO CART".
 
-![](/assets/diyscanner/images/pcb9.png)
+![](/assets/diyreader/images/pcb9.png)
 
 ### Checkout
 
@@ -139,8 +139,8 @@ The case is 3D printed in two parts, the top and bottom. Each part snaps
 together, no other assembly or parts are required.
 
 Download STL files:
-- [Top](/assets/diyscanner/case/NFCMicroUSBTop.stl)
-- [Bottom](/assets/diyscanner/case/NFCMicroUSBBottom.stl)
+- [Top](/assets/diyreader/case/NFCMicroUSBTop.stl)
+- [Bottom](/assets/diyreader/case/NFCMicroUSBBottom.stl)
 
 Print each part with a 0.2mm layer height. PLA and PETG have both tested
 working fine. It requires approximately 20g of filament.
@@ -165,7 +165,7 @@ Assembly does not take long, but does require a small amount of soldering.
 First, solder the female 4 pin header to the serial PCB, as shown in the image
 below. Make sure the plastic casing is flush with the PCB.
 
-![](/assets/diyscanner/images/assembly1.jpg)
+![](/assets/diyreader/images/assembly1.jpg)
 
 Next, solder the male 4 pin header to the PN532 module. See the image below, it
 needs to be soldered into the part with only 4 holes, not the side with 8 holes.
@@ -175,7 +175,7 @@ tricky to get right. You can hold one edge straight with your nail or helping
 hands, then solder the opposite side. Kapton tape may also help to hold it in
 place.
 
-![](/assets/diyscanner/images/assembly2.jpg)
+![](/assets/diyreader/images/assembly2.jpg)
 
 _If you touch the male pins at any point, make sure to give them a quick clean
 with alcohol. This can affect the connection to the module._
@@ -186,22 +186,22 @@ default.
 
 Now you can connect the 2 boards together like shown.
 
-![](/assets/diyscanner/images/assembly3.jpg)
+![](/assets/diyreader/images/assembly3.jpg)
 
 ### Case
 
-![](/assets/diyscanner/images/assembly4.jpg)
+![](/assets/diyreader/images/assembly4.jpg)
 
 Drop the assembled boards into the bottom half of the case, aligning the
 mounting holes with the indentations in the case and the micro USB slot.
 
-![](/assets/diyscanner/images/assembly5.jpg)
+![](/assets/diyreader/images/assembly5.jpg)
 
 Then, place the top piece on top and push it in place into the bottom
 piece. They will snap shut together. It can take a little bit of force to
 make them snap together, but it should not be too difficult.
 
-![](/assets/diyscanner/images/assembly6.jpg)
+![](/assets/diyreader/images/assembly6.jpg)
 
 ## Usage
 
@@ -209,16 +209,16 @@ Congratulations, you did it! Welcome to the world of tapping a thing on another
 thing to make it do a thing.
 
 Please check the [nfc documentation](/README.md) for configuration
-instructions. This scanner should also work without configuration on Windows, Mac and
+instructions. This reader should also work without configuration on Windows, Mac and
 Linux PCs.
 
-There are 2 ways to scan cards with this scanner. If you want to tap the card,
+There are 2 ways to scan cards with this reader. If you want to tap the card,
 make sure to align the edge of the card with the square marking on the top of
 the case. It can take a little technique at first.
 
-![](/assets/diyscanner/images/usage.jpg)
+![](/assets/diyreader/images/usage.jpg)
 
-The other option is to just float the card 1-2cm above the scanner. This is
+The other option is to just float the card 1-2cm above the reader. This is
 a lot more forgiving on technique than the tap, but usually isn't your first
 instinct when trying it out.
 

@@ -10,7 +10,7 @@ TapTo is an open system for launching games and custom actions using physical ob
 
 ## Getting Started
 
-1. Buy or build a compatible NFC scanner: [Scanner Hardware](docs/scanners.md)
+1. Buy or build a compatible NFC reader: [Reader Hardware](docs/readers.md)
 2. Buy some compatible NFC cards or tags: [Token Hardware](docs/tokens.md)
 3. Install the TapTo software on your MiSTer: [MiSTer Installation](docs/mister.md)
 4. Set up your cards or tags to launch games: [Token Commands](docs/commands.md)
@@ -36,7 +36,7 @@ Special thanks to **Gaz** for starting the project originally, and to **[javiwww
 
 This project's source code is licensed under the [GNU General Public License v3](/LICENSE).
 
-This project's [assets](/assets) (e.g. image templates, 3D models, PCB designs) and [documentation](/docs) is licensed under the [Creative Commons Attribution-ShareAlike 4.0 International](/assets/LICENSE) license, unless explcitly noted otherwise.
+This project's [assets](/assets) (e.g. image templates, 3D models, PCB designs) and [documentation](/docs) is licensed under the [Creative Commons Attribution-ShareAlike 4.0 International](/assets/LICENSE) license, unless explicitly noted otherwise.
 
 The TapTo logo was designed by and is © Ranny Snice. The terms of use for the logo are as follows:
 
