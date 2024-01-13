@@ -5,6 +5,7 @@ These readers are currently confirmed to work with TapTo. Want to add a device o
 TapTo uses the [libnfc](https://nfc-tools.github.io/projects/libnfc/) library, so there may be other devices that work with the correct configuration.
 
 * [DIY NFC Reader](#diy-nfc-reader)
+  * [TapTo NFC-Engine](#tapto-nfc-engine)
 * [ACR122U](#acr122u)
 * [PN532 Module](#pn532-module)
 
@@ -27,6 +28,14 @@ Internally, this reader uses a [PN532 module](#pn532-module) and has all the sam
 ### Where To Buy
 
 - **[Grumpy Old Gamer](https://www.ebay.co.uk/usr/grumpyoldgamer)** &mdash; £24.99, UK based, ships worldwide &mdash; this is a great complete starter kit including USB cable, NFC cards, NFC stickers and rubber feet.
+
+### TapTo NFC-Engine
+
+<img src="../assets/images/readers/nfc-engine2.jpg" width=200 />
+
+The TapTo NFC-Engine is an alternative case for the DIY NFC Reader which fits around the outside. It's designed in the style of a PC-Engine HuCard loader where NFC cards are slotted into the top and stay for the duration of play. It has a set of HuCard inspired [label templates](labels.md) that match perfectly with the aesthetic!
+
+The model is freely available to [print from Printables](https://www.printables.com/model/719567-tapto-nfc-engine) and is designed by [BedroomNinja](https://www.printables.com/@bedroom_ninj_1665215).
 
 ## ACR122U
 
