@@ -49,7 +49,9 @@ The model is freely available to [print from Printables](https://www.printables.
 
 ### Known Issues
 
-- There is a version of the ACR122U reader which is not compatible with TapTo. It's not possible to tell from a shop listing, and we currently have no ETA on support. Most listings are fine, but be aware of the risk. Your best bet is to not buy the literal cheapest listing available.
+There is a version of the ACR122U reader which is not compatible with TapTo. It's not possible to tell from a shop listing, and we currently have no ETA on support.
+
+Most listings are fine, but be aware of the risk. Your best bet is to not buy the literal cheapest listing available.
 
 ### Where To Buy
 

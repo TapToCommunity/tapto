@@ -40,12 +40,8 @@ They're totally usable with TapTo, but generally not recommend at this stage if 
 
 ## Amiibos
 
-Reading Amiibos is supported by TapTo. Internally they are NTAG215 tokens. They can't be written to, but their ID can be read and mapped to a custom action with TapTo.
-
-:exclamation: Link to nfc.csv configuration.
+Reading Amiibos is supported by TapTo. Internally they are NTAG215 tokens. They can't be written to, but their UID can be read and [mapped to a custom action](mister.md#mappings-database) with TapTo.
 
 ## Lego Dimensions
 
-Reading Lego Dimensions figurines is supported by TapTo. Internally they are NTAG213 tokens. They can't be written to, but their ID can be read and mapped to a custom action with TapTo.
-
-:exclamation: Link to nfc.csv configuration.
+Reading Lego Dimensions figurines is supported by TapTo. Internally they are NTAG213 tokens. They can't be written to, but their UID can be read and [mapped to a custom action](mister.md#mappings-database) with TapTo.
