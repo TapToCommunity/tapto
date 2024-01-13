@@ -4,10 +4,16 @@ These readers are currently confirmed to work with TapTo. Want to add a device o
 
 TapTo uses the [libnfc](https://nfc-tools.github.io/projects/libnfc/) library, so there may be other devices that work with the correct configuration.
 
-* [DIY NFC Reader](#diy-nfc-reader)
-  * [TapTo NFC-Engine](#tapto-nfc-engine)
-* [ACR122U](#acr122u)
-* [PN532 Module](#pn532-module)
+- [Reader Hardware](#reader-hardware)
+  - [DIY NFC Reader](#diy-nfc-reader)
+    - [Where To Buy](#where-to-buy)
+    - [TapTo NFC-Engine](#tapto-nfc-engine)
+  - [ACR122U](#acr122u)
+    - [Known Issues](#known-issues)
+    - [Where To Buy](#where-to-buy-1)
+  - [PN532 Module](#pn532-module)
+    - [Known Issues](#known-issues-1)
+    - [Where To Buy](#where-to-buy-2)
 
 ## DIY NFC Reader
 

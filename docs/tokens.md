@@ -6,11 +6,12 @@ NFC tokens come in many form factors and standards. The form factor is entirely 
 
 :question: If in doubt, **NTAG215 NFC cards** are a very solid option with the best software and community label compatibility.
 
-* [Where To Buy](#where-to-buy)
-* [NTAG](#ntag)
-* [MIFARE](#mifare)
-* [Amiibos](#amiibos)
-* [Lego Dimensions](#lego-dimensions)
+- [Token Hardware](#token-hardware)
+  - [Where To Buy](#where-to-buy)
+  - [NTAG](#ntag)
+  - [MIFARE](#mifare)
+  - [Amiibos](#amiibos)
+  - [Lego Dimensions](#lego-dimensions)
 
 ## Where To Buy
 

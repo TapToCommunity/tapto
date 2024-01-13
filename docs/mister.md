@@ -1,9 +1,14 @@
 # MiSTer Setup
 
-- [Installation](#installation)
-  - [Hardware Setup](#hardware-setup)
-- [Configuration File](#configuration-file)
-- [Mappings Database](#mappings-database)
+- [MiSTer Setup](#mister-setup)
+  - [Installation](#installation)
+    - [Hardware Setup](#hardware-setup)
+  - [Configuration File](#configuration-file)
+    - [connection\_string](#connection_string)
+    - [allow\_commands](#allow_commands)
+    - [disable\_sounds](#disable_sounds)
+    - [probe\_device](#probe_device)
+  - [Mappings Database](#mappings-database)
 
 ## Installation
 

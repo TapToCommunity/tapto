@@ -1,5 +1,13 @@
 # API
 
+- [API](#api)
+  - [Writing to tags](#writing-to-tags)
+  - [Reading tags](#reading-tags)
+  - [Service socket](#service-socket)
+    - [status](#status)
+    - [enable](#enable)
+    - [disable](#disable)
+
 ## Writing to tags
 
 The NFC script currently supports writing to NTAG tags through the command line option `-write <text>`.
