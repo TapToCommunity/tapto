@@ -12,7 +12,7 @@ TapTo uses the [libnfc](https://nfc-tools.github.io/projects/libnfc/) library, s
 
 :question: Are you a potential vendor? This reader is fully open source and we're always looking for more vendors to offer it for sale. Check out the [DIY NFC Reader Build Guide](diyreader.md) for details.
 
-![](/assets/images/readers/diyreader.jpg)
+<img src="../assets/images/readers/diyreader.jpg" width=300 />
 
 The DIY NFC Reader is a TapTo community project aiming to offer a high quality and reliable reader at a low price, which is guaranteed to work with TapTo software.
 
@@ -30,7 +30,7 @@ Internally, this reader uses a [PN532 module](#pn532-module) and has all the sam
 
 ## ACR122U
 
-:exclamation: Add a photo of reader.
+<img src="../assets/images/readers/acr122u.jpg" width=200 />
 
 - Plug and play.
 - Reasonably priced from around $30 to $50 USD depending on vendor.
@@ -40,9 +40,7 @@ Internally, this reader uses a [PN532 module](#pn532-module) and has all the sam
 
 ### Known Issues
 
-There is a version of the ACR122U reader which is not compatible with TapTo. It's not possible to tell from a shop listing, and we currently have no ETA on support.
-
-Most listings are fine, but be aware of the risk. Your best bet is to not buy the literal cheapest listing available.
+- There is a version of the ACR122U reader which is not compatible with TapTo. It's not possible to tell from a shop listing, and we currently have no ETA on support. Most listings are fine, but be aware of the risk. Your best bet is to not buy the literal cheapest listing available.
 
 ### Where To Buy
 
@@ -59,7 +57,7 @@ These are some confirmed working listings submitted by users:
 
 :warning: The PN532 module is **not** a ready-to-use reader, it's a bare PCB module intended for custom projects. It can used directly with TapTo via a *USB to TTL converter*.
 
-![](/assets/images/readers/pn532.jpg)
+<img src="../assets/images/readers/pn532.jpg" width=200 />
 
 - Very cheap price, sometimes as little as $1 USD.
 - Very small footprint and is great for custom projects.
@@ -73,9 +71,9 @@ These are some confirmed working listings submitted by users:
 
 Build quality of these modules can vary a lot between vendors. In general they are fine, but be cautious about choosing the cheapest possible option. One concern is shipping, sometimes modules can be shipped loose and unprotected, and are easy to be damaged.
 
-:exclamation: Add photos of inductor comparison.
-
 Some modules may use low quality inductors connecting the antenna. This can result in a module that appears to function fine, but has extremely poor read range. It is possible to replace the inductors with new ones that are to spec.
+
+:exclamation: Add photos of inductor comparison.
 
 Not necessarily related to the module, but some USB to TTL converters can have poor quality voltage regulators which are not enough to power the module properly.
 
