@@ -26,7 +26,6 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"github.com/wizzomafizzo/tapto/pkg/assets"
 	"net"
 	"os"
 	"os/exec"
@@ -36,13 +35,17 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/wizzomafizzo/tapto/pkg/assets"
+
 	"github.com/fsnotify/fsnotify"
 	gc "github.com/rthornton128/goncurses"
 	"github.com/wizzomafizzo/mrext/pkg/curses"
 	"github.com/wizzomafizzo/mrext/pkg/input"
 
-	"github.com/wizzomafizzo/mrext/pkg/config"
+	mrextConfig "github.com/wizzomafizzo/mrext/pkg/config"
 	"github.com/wizzomafizzo/mrext/pkg/service"
+
+	"github.com/wizzomafizzo/tapto/pkg/config"
 
 	"github.com/clausecker/nfc/v2"
 	"github.com/wizzomafizzo/mrext/pkg/mister"
@@ -56,15 +59,15 @@ import (
 // TODO: if it exists, use search.db instead of on demand index for random
 
 const (
-	appName              = "nfc"
+	appName              = "tapto"
 	connectMaxTries      = 10
 	timesToPoll          = 20
 	periodBetweenPolls   = 300 * time.Millisecond
 	periodBetweenLoop    = 300 * time.Millisecond
 	timeToForgetCard     = 5 * time.Second
-	successPath          = config.TempFolder + "/success.wav"
-	failPath             = config.TempFolder + "/fail.wav"
-	launcherDisabledPath = config.TempFolder + "/nfc.disabled"
+	successPath          = mrextConfig.TempFolder + "/success.wav"
+	failPath             = mrextConfig.TempFolder + "/fail.wav"
+	launcherDisabledPath = mrextConfig.TempFolder + "/nfc.disabled"
 )
 
 var (
@@ -264,7 +267,7 @@ func startService(cfg *config.UserConfig) (func() error, error) {
 	}
 	_ = sf.Close()
 	playSuccess := func() {
-		if cfg.Nfc.DisableSounds {
+		if cfg.TapTo.DisableSounds {
 			return
 		}
 		err := exec.Command("aplay", successPath).Start()
@@ -283,7 +286,7 @@ func startService(cfg *config.UserConfig) (func() error, error) {
 	}
 	_ = ff.Close()
 	playFail := func() {
-		if cfg.Nfc.DisableSounds {
+		if cfg.TapTo.DisableSounds {
 			return
 		}
 		err := exec.Command("aplay", failPath).Start()
@@ -340,9 +343,9 @@ func startService(cfg *config.UserConfig) (func() error, error) {
 				} else if event.Has(fsnotify.Remove) {
 					// editors may also delete the file on write
 					time.Sleep(delay)
-					_, err := os.Stat(config.NfcDatabaseFile)
+					_, err := os.Stat(mrextConfig.NfcDatabaseFile)
 					if err == nil {
-						err = dbWatcher.Add(config.NfcDatabaseFile)
+						err = dbWatcher.Add(mrextConfig.NfcDatabaseFile)
 						if err != nil {
 							logger.Error("error watching database: %s", err)
 						}
@@ -362,7 +365,7 @@ func startService(cfg *config.UserConfig) (func() error, error) {
 		}
 	}()
 
-	err = dbWatcher.Add(config.NfcDatabaseFile)
+	err = dbWatcher.Add(mrextConfig.NfcDatabaseFile)
 	if err != nil {
 		logger.Error("error watching database: %s", err)
 	}
@@ -376,7 +379,7 @@ func startService(cfg *config.UserConfig) (func() error, error) {
 		var err error
 
 	reconnect:
-		pnd, err = openDeviceWithRetries(cfg.Nfc)
+		pnd, err = openDeviceWithRetries(cfg.TapTo)
 		if err != nil {
 			return
 		}
@@ -453,7 +456,7 @@ func startService(cfg *config.UserConfig) (func() error, error) {
 		}
 	}()
 
-	socket, err := net.Listen("unix", config.TempFolder+"/nfc.sock")
+	socket, err := net.Listen("unix", mrextConfig.TempFolder+"/nfc.sock")
 	if err != nil {
 		logger.Error("error creating socket: %s", err)
 		return nil, err
@@ -543,9 +546,9 @@ func startService(cfg *config.UserConfig) (func() error, error) {
 }
 
 func writeScanResult(card Card) error {
-	f, err := os.Create(config.NfcLastScanFile)
+	f, err := os.Create(mrextConfig.NfcLastScanFile)
 	if err != nil {
-		return fmt.Errorf("unable to create scan result file %s: %s", config.NfcLastScanFile, err)
+		return fmt.Errorf("unable to create scan result file %s: %s", mrextConfig.NfcLastScanFile, err)
 	}
 	defer func(f *os.File) {
 		_ = f.Close()
@@ -553,7 +556,7 @@ func writeScanResult(card Card) error {
 
 	_, err = f.WriteString(fmt.Sprintf("%s,%s", card.UID, card.Text))
 	if err != nil {
-		return fmt.Errorf("unable to write scan result file %s: %s", config.NfcLastScanFile, err)
+		return fmt.Errorf("unable to write scan result file %s: %s", mrextConfig.NfcLastScanFile, err)
 	}
 
 	return nil
@@ -582,7 +585,7 @@ func addToStartup() error {
 	return nil
 }
 
-func openDeviceWithRetries(config config.NfcConfig) (nfc.Device, error) {
+func openDeviceWithRetries(config config.TapToConfig) (nfc.Device, error) {
 	var connectionString = config.ConnectionString
 	if connectionString == "" && config.ProbeDevice == true {
 		connectionString = detectConnectionString()
@@ -645,7 +648,7 @@ func getSerialDeviceList() ([]string, error) {
 	return devices, nil
 }
 
-func handleWriteCommand(textToWrite string, svc *service.Service, config config.NfcConfig) {
+func handleWriteCommand(textToWrite string, svc *service.Service, cfg config.TapToConfig) {
 	serviceRunning := svc.Running()
 	if serviceRunning {
 		err := svc.Stop()
@@ -695,7 +698,7 @@ func handleWriteCommand(textToWrite string, svc *service.Service, config config.
 	var pnd nfc.Device
 	var err error
 
-	pnd, err = openDeviceWithRetries(config)
+	pnd, err = openDeviceWithRetries(cfg)
 	if err != nil {
 		logger.Error("giving up, exiting")
 		_, _ = fmt.Fprintln(os.Stderr, "Could not open device:", err)
@@ -782,7 +785,7 @@ func main() {
 	flag.Parse()
 
 	cfg, err := config.LoadUserConfig(appName, &config.UserConfig{
-		Nfc: config.NfcConfig{
+		TapTo: config.TapToConfig{
 			ProbeDevice: true,
 		},
 	})
@@ -806,7 +809,7 @@ func main() {
 	}
 
 	if *writeOpt != "" {
-		handleWriteCommand(*writeOpt, svc, cfg.Nfc)
+		handleWriteCommand(*writeOpt, svc, cfg.TapTo)
 	}
 
 	svc.ServiceHandler(svcOpt)

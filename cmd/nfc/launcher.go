@@ -24,13 +24,15 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
-	"github.com/gocarina/gocsv"
-	"github.com/wizzomafizzo/mrext/pkg/config"
-	"github.com/wizzomafizzo/mrext/pkg/input"
-	"github.com/wizzomafizzo/mrext/pkg/mister"
 	"io"
 	"os"
 	"strings"
+
+	"github.com/gocarina/gocsv"
+	mrextConfig "github.com/wizzomafizzo/mrext/pkg/config"
+	"github.com/wizzomafizzo/mrext/pkg/input"
+	"github.com/wizzomafizzo/tapto/pkg/config"
+	"github.com/wizzomafizzo/tapto/pkg/tokens"
 )
 
 type NfcMappingEntry struct {
@@ -43,12 +45,12 @@ func loadDatabase(state *ServiceState) error {
 	uids := make(map[string]string)
 	texts := make(map[string]string)
 
-	if _, err := os.Stat(config.NfcDatabaseFile); errors.Is(err, os.ErrNotExist) {
+	if _, err := os.Stat(mrextConfig.NfcDatabaseFile); errors.Is(err, os.ErrNotExist) {
 		logger.Info("no database file found, skipping")
 		return nil
 	}
 
-	f, err := os.Open(config.NfcDatabaseFile)
+	f, err := os.Open(mrextConfig.NfcDatabaseFile)
 	if err != nil {
 		return err
 	}
@@ -117,7 +119,7 @@ func launchCard(cfg *config.UserConfig, state *ServiceState, kbd input.Keyboard)
 	cmds := strings.Split(text, "||")
 
 	for _, cmd := range cmds {
-		err := mister.LaunchToken(cfg, cfg.Nfc.AllowCommands || override, kbd, cmd)
+		err := tokens.LaunchToken(cfg, cfg.TapTo.AllowCommands || override, kbd, cmd)
 		if err != nil {
 			return err
 		}
