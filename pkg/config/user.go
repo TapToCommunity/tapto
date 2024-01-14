@@ -28,6 +28,7 @@ import (
 	"gopkg.in/ini.v1"
 )
 
+// TODO: change these, causes a conflict with remote's script support
 const UserConfigEnv = "MREXT_CONFIG"
 const UserAppPathEnv = "MREXT_APP_PATH"
 
@@ -47,7 +48,7 @@ type SystemsConfig struct {
 type UserConfig struct {
 	AppPath string
 	IniPath string
-	TapTo   TapToConfig   `ini:"nfc,omitempty"`
+	TapTo   TapToConfig   `ini:"tapto,omitempty"`
 	Systems SystemsConfig `ini:"systems,omitempty"`
 }
 
