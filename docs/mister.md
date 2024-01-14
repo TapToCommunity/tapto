@@ -4,10 +4,11 @@
   - [Installation](#installation)
     - [Hardware Setup](#hardware-setup)
   - [Configuration File](#configuration-file)
-    - [connection\_string](#connection_string)
-    - [allow\_commands](#allow_commands)
-    - [disable\_sounds](#disable_sounds)
-    - [probe\_device](#probe_device)
+    - [Connection String (connection\_string)](#connection-string-connection_string)
+    - [Allow Shell Commands From Tokens (allow\_commands)](#allow-shell-commands-from-tokens-allow_commands)
+    - [Disable Sounds After a Read (disable\_sounds)](#disable-sounds-after-a-read-disable_sounds)
+    - [Probe for Serial Devices (probe\_device)](#probe-for-serial-devices-probe_device)
+    - [Exit Game When Token Is Removed (exit\_game)](#exit-game-when-token-is-removed-exit_game)
   - [Mappings Database](#mappings-database)
 
 ## Installation
@@ -56,25 +57,55 @@ connection_string=""
 allow_commands=no
 disable_sounds=no
 probe_device=yes
+exit_game=no
 ```
 
 All lines except the `[tapto]` header are optional.
 
-### connection_string
+### Connection String (connection_string)
+
+| Key                 | Default Value | 
+|---------------------|---------------|
+| `connection_string` |               |
 
 See [Hardware Setup](#hardware-setup) for details. This option is for configuration of [libnfc](https://github.com/nfc-tools/libnfc).
 
-### allow_commands
+### Allow Shell Commands From Tokens (allow_commands)
 
-Enables the [command](#run-a-systemlinux-command-command) custom command to be triggered from a tag. By default this is disabled and only works from the [Mappings Database](#mappings-database) described below.
+| Key                 | Default Value | 
+|---------------------|---------------|
+| `allow_commands`    | no            |
 
-### disable_sounds
+Enables the [command](commands.md#run-a-systemlinux-command-command) custom command to be triggered from a tag.
 
-Disables the success and fail sounds played when a tag is scanned.
+By default this is disabled and only works from the [Mappings Database](#mappings-database) described below.
 
-### probe_device
+### Disable Sounds After a Read (disable_sounds)
 
-Enables auto detection of a serial based reader device
+| Key                 | Default Value | 
+|---------------------|---------------|
+| `disable_sounds`    | no            |
+
+Disables the success and fail sounds played when a tag is read by the reader.
+
+### Probe for Serial Devices (probe_device)
+
+| Key                 | Default Value | 
+|---------------------|---------------|
+| `probe_device`      | yes           |
+
+Enables auto-detection of a serial based reader device.
+
+### Exit Game When Token Is Removed (exit_game)
+
+| Key                 | Default Value | 
+|---------------------|---------------|
+| `exit_game`         | no            |
+
+Enables exiting the current game when a token is removed from the reader.
+
+:warning: This does not trigger a save file to be written in MiSTer, you have to do that manually.
+
 
 ## Mappings Database
 
