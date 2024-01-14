@@ -60,6 +60,7 @@ import (
 
 const (
 	appName              = "tapto"
+	appVersion           = "1.0"
 	connectMaxTries      = 10
 	timesToPoll          = 20
 	periodBetweenPolls   = 300 * time.Millisecond
@@ -813,6 +814,8 @@ func main() {
 	}
 
 	svc.ServiceHandler(svcOpt)
+
+	logger.Info("TapTo v%s", appVersion)
 
 	interactive := true
 	stdscr, err := curses.Setup()
