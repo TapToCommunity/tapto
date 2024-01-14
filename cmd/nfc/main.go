@@ -36,6 +36,7 @@ import (
 	"time"
 
 	"github.com/wizzomafizzo/tapto/pkg/assets"
+	"github.com/wizzomafizzo/tapto/pkg/utils"
 
 	"github.com/fsnotify/fsnotify"
 	gc "github.com/rthornton128/goncurses"
@@ -795,7 +796,7 @@ func handleWriteCommand(textToWrite string, svc *service.Service, cfg config.Tap
 }
 
 func main() {
-	svcOpt := flag.String("service", "", "manage nfc service (start, stop, restart, status)")
+	svcOpt := flag.String("service", "", "manage TapTo service (start, stop, restart, status)")
 	writeOpt := flag.String("write", "", "write text to tag")
 	flag.Parse()
 
@@ -818,6 +819,8 @@ func main() {
 	logger.Info("disable_sounds: %t", cfg.TapTo.DisableSounds)
 	logger.Info("probe_device: %t", cfg.TapTo.ProbeDevice)
 	logger.Info("exit_game: %t", cfg.TapTo.ExitGame)
+
+	utils.NfcMigration(logger)
 
 	svc, err := service.NewService(service.ServiceArgs{
 		Name:   appName,
