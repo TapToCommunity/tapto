@@ -65,7 +65,7 @@ const (
 	timesToPoll          = 20
 	periodBetweenPolls   = 300 * time.Millisecond
 	periodBetweenLoop    = 300 * time.Millisecond
-	timeToForgetCard     = 5 * time.Second
+	timeToForgetCard     = 500 * time.Millisecond
 	successPath          = mrextConfig.TempFolder + "/success.wav"
 	failPath             = mrextConfig.TempFolder + "/fail.wav"
 	launcherDisabledPath = mrextConfig.TempFolder + "/nfc.disabled"
@@ -174,10 +174,20 @@ func (s *ServiceState) SetDB(uidMap map[string]string, textMap map[string]string
 }
 
 func pollDevice(
+	cfg *config.UserConfig,
 	pnd *nfc.Device,
 	activeCard Card,
 ) (Card, error) {
-	count, target, err := pnd.InitiatorPollTarget(supportedCardTypes, timesToPoll, periodBetweenPolls)
+	ttp := timesToPoll
+	pbp := periodBetweenPolls
+
+	if cfg.TapTo.ExitGame {
+		// FIXME: this method makes the activity indicator flicker, is there another way?
+		ttp = 1
+		pbp = 150 * time.Millisecond
+	}
+
+	count, target, err := pnd.InitiatorPollTarget(supportedCardTypes, ttp, pbp)
 	if err != nil && !errors.Is(err, nfc.Error(nfc.ETIMEOUT)) {
 		return activeCard, err
 	}
@@ -186,6 +196,10 @@ func pollDevice(
 		if activeCard.UID != "" && time.Since(activeCard.ScanTime) > timeToForgetCard {
 			logger.Info("card removed")
 			activeCard = Card{}
+
+			if cfg.TapTo.ExitGame {
+				_ = mister.LaunchMenu()
+			}
 		}
 
 		return activeCard, nil
@@ -407,7 +421,7 @@ func startService(cfg *config.UserConfig) (func() error, error) {
 			}
 
 			activeCard := state.GetActiveCard()
-			newScanned, err := pollDevice(&pnd, activeCard)
+			newScanned, err := pollDevice(cfg, &pnd, activeCard)
 			if errors.Is(err, nfc.Error(nfc.EIO)) {
 				logger.Error("error during poll: %s", err)
 				logger.Error("fatal IO error, device was unplugged, exiting...")
