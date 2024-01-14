@@ -810,6 +810,15 @@ func main() {
 		os.Exit(1)
 	}
 
+	logger.Info("TapTo v%s", appVersion)
+	logger.Info("config path: %s", cfg.IniPath)
+	logger.Info("app path: %s", cfg.AppPath)
+	logger.Info("connection_string: %s", cfg.TapTo.ConnectionString)
+	logger.Info("allow_commands: %t", cfg.TapTo.AllowCommands)
+	logger.Info("disable_sounds: %t", cfg.TapTo.DisableSounds)
+	logger.Info("probe_device: %t", cfg.TapTo.ProbeDevice)
+	logger.Info("exit_game: %t", cfg.TapTo.ExitGame)
+
 	svc, err := service.NewService(service.ServiceArgs{
 		Name:   appName,
 		Logger: logger,
@@ -828,8 +837,6 @@ func main() {
 	}
 
 	svc.ServiceHandler(svcOpt)
-
-	logger.Info("TapTo v%s", appVersion)
 
 	interactive := true
 	stdscr, err := curses.Setup()
