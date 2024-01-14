@@ -21,17 +21,18 @@ along with TapTo.  If not, see <http://www.gnu.org/licenses/>.
 package main
 
 import (
+	"net"
+	"os"
+	"strconv"
+	"strings"
+	"time"
+
 	"github.com/rthornton128/goncurses"
 	"github.com/wizzomafizzo/mrext/pkg/config"
 	"github.com/wizzomafizzo/mrext/pkg/curses"
 	"github.com/wizzomafizzo/mrext/pkg/mister"
 	"github.com/wizzomafizzo/mrext/pkg/service"
 	"github.com/wizzomafizzo/mrext/pkg/utils"
-	"net"
-	"os"
-	"strconv"
-	"strings"
-	"time"
 )
 
 func tryAddStartup(stdscr *goncurses.Window) error {
@@ -58,7 +59,7 @@ func tryAddStartup(stdscr *goncurses.Window) error {
 		selected := 0
 
 		for {
-			win.MovePrint(1, 4, "Add NFC service to MiSTer startup?")
+			win.MovePrint(1, 3, "Add TapTo service to MiSTer startup?")
 			win.MovePrint(2, 2, "This won't impact MiSTer's performance.")
 			curses.DrawActionButtons(win, []string{"Yes", "No"}, selected, 10)
 
@@ -173,7 +174,7 @@ func displayServiceInfo(stdscr *goncurses.Window, service *service.Service) erro
 		}
 
 		var logLines []string
-		log, err := os.ReadFile(config.TempFolder + "/nfc.log")
+		log, err := os.ReadFile(config.TempFolder + "/tapto.log")
 		if err != nil {
 			logger.Error("could not read log file: %s", err)
 		} else {
