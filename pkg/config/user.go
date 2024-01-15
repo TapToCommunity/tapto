@@ -28,8 +28,9 @@ import (
 	"gopkg.in/ini.v1"
 )
 
-const UserConfigEnv = "TAPTO_CONFIG"
-const UserAppPathEnv = "TAPTO_APP_PATH"
+// TODO: change these, causes a conflict with remote's script support
+const UserConfigEnv = "MREXT_CONFIG"
+const UserAppPathEnv = "MREXT_APP_PATH"
 
 type TapToConfig struct {
 	ConnectionString string `ini:"connection_string,omitempty"`
