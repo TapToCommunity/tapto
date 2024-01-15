@@ -1,5 +1,5 @@
 <h1 align="center">
-  <img width="70%" title="TapTo" src="assets/images/logo/logo.svg">
+  <img width="70%" title="TapTo" src="assets/images/logo/logo-background.svg">
 </h1>
 
 TapTo is an open source system for launching games and custom actions using physical objects. It's a great way to make launching games more accessible and add some fun to your gaming setup!
