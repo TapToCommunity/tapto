@@ -178,16 +178,9 @@ func pollDevice(
 	cfg *config.UserConfig,
 	pnd *nfc.Device,
 	activeCard Card,
+	ttp int,
+	pbp time.Duration,
 ) (Card, error) {
-	ttp := timesToPoll
-	pbp := periodBetweenPolls
-
-	if cfg.TapTo.ExitGame {
-		// FIXME: this method makes the activity indicator flicker, is there another way?
-		ttp = 1
-		pbp = 150 * time.Millisecond
-	}
-
 	count, target, err := pnd.InitiatorPollTarget(supportedCardTypes, ttp, pbp)
 	if err != nil && !errors.Is(err, nfc.Error(nfc.ETIMEOUT)) {
 		return activeCard, err
@@ -394,6 +387,17 @@ func startService(cfg *config.UserConfig) (func() error, error) {
 		var pnd nfc.Device
 		var err error
 
+		ttp := timesToPoll
+		pbp := periodBetweenPolls
+
+		if cfg.TapTo.ExitGame {
+			// FIXME: this method makes the activity indicator flicker, is there another way?
+			ttp = 1
+			// TODO: value requires investigation, originally set to 150 which worked for pn532
+			//       but not for acr122u (read once then never again). 200 seems to work ok
+			pbp = 200 * time.Millisecond
+		}
+
 	reconnect:
 		pnd, err = openDeviceWithRetries(cfg.TapTo)
 		if err != nil {
@@ -413,7 +417,7 @@ func startService(cfg *config.UserConfig) (func() error, error) {
 		}
 
 		logger.Info("opened connection: %s %s", pnd, pnd.Connection())
-		logger.Info("polling for %d times with %s delay", timesToPoll, periodBetweenPolls)
+		logger.Info("polling for %d times with %s delay", ttp, pbp)
 		var lastError time.Time
 
 		for {
@@ -422,7 +426,7 @@ func startService(cfg *config.UserConfig) (func() error, error) {
 			}
 
 			activeCard := state.GetActiveCard()
-			newScanned, err := pollDevice(cfg, &pnd, activeCard)
+			newScanned, err := pollDevice(cfg, &pnd, activeCard, ttp, pbp)
 			if errors.Is(err, nfc.Error(nfc.EIO)) {
 				logger.Error("error during poll: %s", err)
 				logger.Error("fatal IO error, device was unplugged, exiting...")
