@@ -11,4 +11,4 @@
 ## Cases
 
 - [TapTo NFC-Engine](https://www.printables.com/model/719567-tapto-nfc-engine) &mdash; a case designed for the [DIY NFC Reader](readers.md#diy-nfc-reader) which turns it into a PC Engine-style game launcher &mdash; by [BedroomNinja](https://www.printables.com/@bedroom_ninj_1665215)
-- [TapTo NFC-Engine ACR](https://www.printables.com/model/719567-tapto-nfc-engine) &mdash; a variant of the above case for the [ACR122U reader](readers.md#acr122u) &mdash; by [BedroomNinja](https://www.printables.com/@bedroom_ninj_1665215)
+- [TapTo NFC-Engine ACR](https://www.printables.com/model/722658-tapto-nfc-engine-acr) &mdash; a variant of the above case for the [ACR122U reader](readers.md#acr122u) &mdash; by [BedroomNinja](https://www.printables.com/@bedroom_ninj_1665215)
