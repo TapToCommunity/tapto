@@ -11,6 +11,7 @@ TapTo uses the [libnfc](https://nfc-tools.github.io/projects/libnfc/) library, s
   - [ACR122U](#acr122u)
     - [Known Issues](#known-issues)
     - [Where To Buy](#where-to-buy-1)
+    - [TapTo NFC-Engine](#tapto-nfc-engine-1)
   - [PN532 Module](#pn532-module)
     - [Known Issues](#known-issues-1)
     - [Where To Buy](#where-to-buy-2)
@@ -67,6 +68,14 @@ These are some confirmed working listings submitted by users:
 
 - https://www.amazon.com/dp/B07KRKPWYC
 - https://www.ebay.co.uk/itm/145044206870
+
+### TapTo NFC-Engine
+
+<img src="../assets/images/readers/nfc-engine2.jpg" width=200 />
+
+The TapTo NFC-Engine is an alternative case for the ACR122U which fits around the internal PCB. It's designed in the style of a PC-Engine HuCard loader where NFC cards are slotted into the top and stay for the duration of play. It has a set of HuCard inspired [label templates](labels.md) that match perfectly with the aesthetic!
+
+The model is freely available to [print from Printables](https://www.printables.com/model/722658-tapto-nfc-engine-acr) and is designed by [BedroomNinja](https://www.printables.com/@bedroom_ninj_1665215).
 
 ## PN532 Module
 
