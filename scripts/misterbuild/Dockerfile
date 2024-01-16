@@ -24,6 +24,25 @@ RUN mkdir /internal && cd /internal && \
     make -j "$(nproc)" && \
     make install
 
+# install pcsc-lite and ccid dependencies
+RUN apt-get install -y flex libusb-1.0-0-dev zlib1g-dev
+# install custom version of pcsc-lite
+RUN cd /internal && \
+    wget https://pcsclite.apdu.fr/files/pcsc-lite-2.0.0.tar.bz2 && \
+    tar xf pcsc-lite-2.0.0.tar.bz2 && \
+    cd pcsc-lite-2.0.0 && \
+    ./configure --disable-libsystemd --disable-libudev -enable-static && \
+    make -j "$(nproc)" && \
+    make install
+# install custom version of ccid
+RUN cd /internal && \
+    wget https://ccid.apdu.fr/files/ccid-1.5.4.tar.bz2 && \
+    tar xf ccid-1.5.4.tar.bz2 && \
+    cd ccid-1.5.4 && \
+    ./configure -enable-static && \
+    make -j "$(nproc)" && \
+    make install
+
 # drop permissions on output files
 RUN useradd -m -u 1000 build
 USER build

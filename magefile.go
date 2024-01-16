@@ -238,7 +238,7 @@ func PrepRelease() {
 	}
 }
 
-func MakeArmApp(name string) {
+func MakeMisterApp(name string) {
 	buildScript := name + ".sh"
 	if _, err := os.Stat(filepath.Join(misterBuild, buildScript)); os.IsNotExist(err) {
 		fmt.Println("No build script for", name)
