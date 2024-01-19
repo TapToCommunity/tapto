@@ -18,21 +18,18 @@ You should have received a copy of the GNU General Public License
 along with TapTo.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-package main
+package launcher
 
 import (
 	_ "embed"
 	"errors"
-	"fmt"
 	"io"
 	"os"
 	"strings"
 
 	"github.com/gocarina/gocsv"
+	"github.com/rs/zerolog/log"
 	mrextConfig "github.com/wizzomafizzo/mrext/pkg/config"
-	"github.com/wizzomafizzo/mrext/pkg/input"
-	"github.com/wizzomafizzo/tapto/pkg/config"
-	"github.com/wizzomafizzo/tapto/pkg/tokens"
 )
 
 type NfcMappingEntry struct {
@@ -41,18 +38,18 @@ type NfcMappingEntry struct {
 	Text      string `csv:"text"`
 }
 
-func loadDatabase(state *ServiceState) error {
+func LoadDatabase() (map[string]string, map[string]string, error) {
 	uids := make(map[string]string)
 	texts := make(map[string]string)
 
 	if _, err := os.Stat(mrextConfig.NfcDatabaseFile); errors.Is(err, os.ErrNotExist) {
-		logger.Info("no database file found, skipping")
-		return nil
+		log.Info().Msg("no database file found, skipping")
+		return nil, nil, nil
 	}
 
 	f, err := os.Open(mrextConfig.NfcDatabaseFile)
 	if err != nil {
-		return err
+		return nil, nil, err
 	}
 	defer func(c io.Closer) {
 		_ = c.Close()
@@ -61,13 +58,13 @@ func loadDatabase(state *ServiceState) error {
 	entries := make([]NfcMappingEntry, 0)
 	err = gocsv.Unmarshal(f, &entries)
 	if err != nil {
-		return err
+		return nil, nil, err
 	}
 
 	count := 0
 	for i, entry := range entries {
 		if entry.MatchUID == "" && entry.MatchText == "" {
-			logger.Warn("entry %d has no UID or text, skipping", i+1)
+			log.Warn().Msgf("entry %d has no UID or text, skipping", i+1)
 			continue
 		}
 
@@ -85,45 +82,7 @@ func loadDatabase(state *ServiceState) error {
 
 		count++
 	}
-	logger.Info("loaded %d entries from database", count)
+	log.Info().Msgf("loaded %d entries from database", count)
 
-	state.SetDB(uids, texts)
-
-	return nil
-}
-
-func launchCard(cfg *config.UserConfig, state *ServiceState, kbd input.Keyboard) error {
-	card := state.GetActiveCard()
-	uidMap, textMap := state.GetDB()
-
-	text := card.Text
-	override := false
-
-	if v, ok := uidMap[card.UID]; ok {
-		logger.Info("launching with uid match override")
-		text = v
-		override = true
-	}
-
-	if v, ok := textMap[card.Text]; ok {
-		logger.Info("launching with text match override")
-		text = v
-		override = true
-	}
-
-	if text == "" {
-		return fmt.Errorf("no text NDEF found in card or database")
-	}
-
-	logger.Info("launching with text: %s", text)
-	cmds := strings.Split(text, "||")
-
-	for _, cmd := range cmds {
-		err := tokens.LaunchToken(cfg, cfg.TapTo.AllowCommands || override, kbd, cmd)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
+	return uids, texts, nil
 }

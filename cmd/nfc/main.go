@@ -23,33 +23,26 @@ package main
 
 import (
 	"encoding/hex"
-	"errors"
 	"flag"
 	"fmt"
-	"net"
 	"os"
-	"os/exec"
 	"os/signal"
-	"strings"
-	"sync"
 	"syscall"
 	"time"
 
-	"github.com/wizzomafizzo/tapto/pkg/assets"
+	"github.com/wizzomafizzo/tapto/pkg/tokens"
 	"github.com/wizzomafizzo/tapto/pkg/utils"
 
-	"github.com/fsnotify/fsnotify"
 	gc "github.com/rthornton128/goncurses"
 	"github.com/wizzomafizzo/mrext/pkg/curses"
-	"github.com/wizzomafizzo/mrext/pkg/input"
 
-	mrextConfig "github.com/wizzomafizzo/mrext/pkg/config"
 	"github.com/wizzomafizzo/mrext/pkg/service"
 
 	"github.com/wizzomafizzo/tapto/pkg/config"
+	"github.com/wizzomafizzo/tapto/pkg/daemon"
 
 	"github.com/clausecker/nfc/v2"
-	"github.com/wizzomafizzo/mrext/pkg/mister"
+	mrextMister "github.com/wizzomafizzo/mrext/pkg/mister"
 )
 
 // TODO: something like the nfc-list utility so new users with unsupported readers can help identify them
@@ -60,530 +53,16 @@ import (
 // TODO: if it exists, use search.db instead of on demand index for random
 
 const (
-	appName              = "tapto"
-	appVersion           = "1.0"
-	connectMaxTries      = 10
-	timesToPoll          = 20
-	periodBetweenPolls   = 300 * time.Millisecond
-	periodBetweenLoop    = 300 * time.Millisecond
-	timeToForgetCard     = 500 * time.Millisecond
-	successPath          = mrextConfig.TempFolder + "/success.wav"
-	failPath             = mrextConfig.TempFolder + "/fail.wav"
-	launcherDisabledPath = mrextConfig.TempFolder + "/nfc.disabled"
+	appName    = "tapto"
+	appVersion = "1.0-beta4"
 )
 
 var (
-	supportedCardTypes = []nfc.Modulation{
-		{Type: nfc.ISO14443a, BaudRate: nfc.Nbr106},
-	}
 	logger = service.NewLogger(appName)
 )
 
-type Card struct {
-	CardType string
-	UID      string
-	Text     string
-	ScanTime time.Time
-}
-
-type ServiceState struct {
-	mu              sync.Mutex
-	activeCard      Card
-	lastScanned     Card
-	stopService     bool
-	disableLauncher bool
-	dbLoadTime      time.Time
-	uidMap          map[string]string
-	textMap         map[string]string
-}
-
-func (s *ServiceState) SetActiveCard(card Card) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	s.activeCard = card
-	if s.activeCard.UID != "" {
-		s.lastScanned = card
-	}
-}
-
-func (s *ServiceState) GetActiveCard() Card {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	return s.activeCard
-}
-
-func (s *ServiceState) GetLastScanned() Card {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	return s.lastScanned
-}
-
-func (s *ServiceState) StopService() {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	s.stopService = true
-}
-
-func (s *ServiceState) ShouldStopService() bool {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	return s.stopService
-}
-
-func (s *ServiceState) DisableLauncher() {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	s.disableLauncher = true
-	if _, err := os.Create(launcherDisabledPath); err != nil {
-		logger.Error("error creating launcher disabled file: %s", err)
-	}
-}
-
-func (s *ServiceState) EnableLauncher() {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	s.disableLauncher = false
-	if err := os.Remove(launcherDisabledPath); err != nil {
-		logger.Error("error removing launcher disabled file: %s", err)
-	}
-}
-
-func (s *ServiceState) IsLauncherDisabled() bool {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	return s.disableLauncher
-}
-
-func (s *ServiceState) GetDB() (map[string]string, map[string]string) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	return s.uidMap, s.textMap
-}
-
-func (s *ServiceState) GetDBLoadTime() time.Time {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	return s.dbLoadTime
-}
-
-func (s *ServiceState) SetDB(uidMap map[string]string, textMap map[string]string) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	s.dbLoadTime = time.Now()
-	s.uidMap = uidMap
-	s.textMap = textMap
-}
-
-func pollDevice(
-	cfg *config.UserConfig,
-	pnd *nfc.Device,
-	activeCard Card,
-	ttp int,
-	pbp time.Duration,
-) (Card, error) {
-	count, target, err := pnd.InitiatorPollTarget(supportedCardTypes, ttp, pbp)
-	if err != nil && !errors.Is(err, nfc.Error(nfc.ETIMEOUT)) {
-		return activeCard, err
-	}
-
-	if count <= 0 {
-		if activeCard.UID != "" && time.Since(activeCard.ScanTime) > timeToForgetCard {
-			logger.Info("card removed")
-			activeCard = Card{}
-
-			if cfg.TapTo.ExitGame {
-				_ = mister.LaunchMenu()
-			}
-		}
-
-		return activeCard, nil
-	}
-
-	cardUid := getCardUID(target)
-	if cardUid == "" {
-		logger.Warn("unable to detect card UID: %s", target.String())
-	}
-
-	if cardUid == activeCard.UID {
-		return activeCard, nil
-	}
-
-	logger.Info("card UID: %s", cardUid)
-
-	var record []byte
-	cardType := getCardType(target)
-
-	if cardType == TypeNTAG {
-		logger.Info("NTAG detected")
-		record, err = readNtag(*pnd, logger)
-		if err != nil {
-			return activeCard, fmt.Errorf("error reading ntag: %s", err)
-		}
-		cardType = TypeNTAG
-	}
-
-	if cardType == TypeMifare {
-		logger.Info("Mifare detected")
-		record, err = readMifare(*pnd, cardUid)
-		if err != nil {
-			logger.Error("error reading mifare: %s", err)
-		}
-		cardType = TypeMifare
-	}
-
-	logger.Debug("record bytes: %s", hex.EncodeToString(record))
-	tagText := ParseRecordText(record)
-	if tagText == "" {
-		logger.Warn("no text NDEF found")
-	} else {
-		logger.Info("decoded text NDEF: %s", tagText)
-	}
-
-	card := Card{
-		CardType: cardType,
-		UID:      cardUid,
-		Text:     tagText,
-		ScanTime: time.Now(),
-	}
-
-	return card, nil
-}
-
-func startService(cfg *config.UserConfig) (func() error, error) {
-	state := &ServiceState{}
-
-	kbd, err := input.NewKeyboard()
-	if err != nil {
-		logger.Error("failed to initialize keyboard: %s", err)
-		return nil, err
-	}
-
-	err = loadDatabase(state)
-	if err != nil {
-		logger.Error("error loading database: %s", err)
-	}
-
-	// TODO: don't want to depend on external aplay command, but i'm out of
-	//       time to keep messing with this. oto/beep would not work for me
-	//       and are annoying to compile statically
-	sf, err := os.Create(successPath)
-	if err != nil {
-		logger.Error("error creating success sound file: %s", err)
-	}
-	_, err = sf.Write(assets.SuccessSound)
-	if err != nil {
-		logger.Error("error writing success sound file: %s", err)
-	}
-	_ = sf.Close()
-	playSuccess := func() {
-		if cfg.TapTo.DisableSounds {
-			return
-		}
-		err := exec.Command("aplay", successPath).Start()
-		if err != nil {
-			logger.Error("error playing success sound: %s", err)
-		}
-	}
-
-	ff, err := os.Create(failPath)
-	if err != nil {
-		logger.Error("error creating fail sound file: %s", err)
-	}
-	_, err = ff.Write(assets.FailSound)
-	if err != nil {
-		logger.Error("error writing fail sound file: %s", err)
-	}
-	_ = ff.Close()
-	playFail := func() {
-		if cfg.TapTo.DisableSounds {
-			return
-		}
-		err := exec.Command("aplay", failPath).Start()
-		if err != nil {
-			logger.Error("error playing fail sound: %s", err)
-		}
-	}
-
-	var closeDbWatcher func() error
-	dbWatcher, err := fsnotify.NewWatcher()
-	if err != nil {
-		logger.Error("error creating watcher: %s", err)
-	} else {
-		closeDbWatcher = dbWatcher.Close
-	}
-
-	go func() {
-		// this turned out to be not trivial to say the least, mostly due to
-		// the fact the fsnotify library does not implement the IN_CLOSE_WRITE
-		// inotify event, which signals the file has finished being written
-		// see: https://github.com/fsnotify/fsnotify/issues/372
-		//
-		// during a standard write operation, a file may emit multiple write
-		// events, including when the file could be half-written
-		//
-		// it's also the case that editors may delete the file and create a new
-		// one, which kills the active watcher
-		//
-		// this solution is very ugly, but it appears to work well :)
-		// i think it will be sufficient for the use case, and i really like
-		// this idea a lot. it's certainly preferable to the screen flicker
-		// with the previous setup
-		//
-		// there doesn't appear to be any actively maintained wrapper for
-		// inotify, so i think it would be best to write one for mrext later
-		const delay = 1 * time.Second
-		for {
-			select {
-			case event, ok := <-dbWatcher.Events:
-				if !ok {
-					return
-				}
-				if event.Has(fsnotify.Write) {
-					// usually receives multiple write events, just act on the first
-					if time.Since(state.GetDBLoadTime()) < delay {
-						continue
-					}
-					time.Sleep(delay)
-					logger.Info("database changed, reloading")
-					err := loadDatabase(state)
-					if err != nil {
-						logger.Error("error loading database: %s", err)
-					}
-				} else if event.Has(fsnotify.Remove) {
-					// editors may also delete the file on write
-					time.Sleep(delay)
-					_, err := os.Stat(mrextConfig.NfcDatabaseFile)
-					if err == nil {
-						err = dbWatcher.Add(mrextConfig.NfcDatabaseFile)
-						if err != nil {
-							logger.Error("error watching database: %s", err)
-						}
-						logger.Info("database changed, reloading")
-						err := loadDatabase(state)
-						if err != nil {
-							logger.Error("error loading database: %s", err)
-						}
-					}
-				}
-			case err, ok := <-dbWatcher.Errors:
-				if !ok {
-					return
-				}
-				logger.Error("watcher error: %s", err)
-			}
-		}
-	}()
-
-	err = dbWatcher.Add(mrextConfig.NfcDatabaseFile)
-	if err != nil {
-		logger.Error("error watching database: %s", err)
-	}
-
-	if _, err := os.Stat(launcherDisabledPath); err == nil {
-		state.DisableLauncher()
-	}
-
-	go func() {
-		var pnd nfc.Device
-		var err error
-
-		ttp := timesToPoll
-		pbp := periodBetweenPolls
-
-		if cfg.TapTo.ExitGame {
-			// FIXME: this method makes the activity indicator flicker, is there another way?
-			ttp = 1
-			// TODO: value requires investigation, originally set to 150 which worked for pn532
-			//       but not for acr122u (read once then never again). 200 seems to work ok
-			pbp = 200 * time.Millisecond
-		}
-
-	reconnect:
-		pnd, err = openDeviceWithRetries(cfg.TapTo)
-		if err != nil {
-			return
-		}
-
-		defer func(pnd nfc.Device) {
-			err := pnd.Close()
-			if err != nil {
-				logger.Warn("error closing device: %s", err)
-			}
-		}(pnd)
-
-		if err := pnd.InitiatorInit(); err != nil {
-			logger.Error("could not init initiator: %s", err)
-			return
-		}
-
-		logger.Info("opened connection: %s %s", pnd, pnd.Connection())
-		logger.Info("polling for %d times with %s delay", ttp, pbp)
-		var lastError time.Time
-
-		for {
-			if state.ShouldStopService() {
-				break
-			}
-
-			activeCard := state.GetActiveCard()
-			newScanned, err := pollDevice(cfg, &pnd, activeCard, ttp, pbp)
-			if errors.Is(err, nfc.Error(nfc.EIO)) {
-				logger.Error("error during poll: %s", err)
-				logger.Error("fatal IO error, device was unplugged, exiting...")
-				if time.Since(lastError) > 1*time.Second {
-					playFail()
-				}
-				goto reconnect
-			} else if err != nil {
-				logger.Error("error during poll: %s", err)
-				if time.Since(lastError) > 1*time.Second {
-					playFail()
-				}
-				lastError = time.Now()
-				goto end
-			}
-
-			state.SetActiveCard(newScanned)
-
-			if newScanned.UID == "" || activeCard.UID == newScanned.UID {
-				goto end
-			}
-
-			playSuccess()
-
-			err = writeScanResult(newScanned)
-			if err != nil {
-				logger.Warn("error writing tmp scan result: %s", err)
-			}
-
-			if state.IsLauncherDisabled() {
-				logger.Info("launcher disabled, skipping")
-				goto end
-			}
-
-			err = launchCard(cfg, state, kbd)
-			if err != nil {
-				logger.Error("error launching card: %s", err)
-				if time.Since(lastError) > 1*time.Second {
-					playFail()
-				}
-				lastError = time.Now()
-				goto end
-			}
-
-		end:
-			time.Sleep(periodBetweenLoop)
-		}
-	}()
-
-	socket, err := net.Listen("unix", mrextConfig.TempFolder+"/nfc.sock")
-	if err != nil {
-		logger.Error("error creating socket: %s", err)
-		return nil, err
-	}
-
-	go func() {
-		for {
-			if state.ShouldStopService() {
-				break
-			}
-
-			conn, err := socket.Accept()
-			if err != nil {
-				logger.Error("error accepting connection: %s", err)
-				return
-			}
-
-			go func(conn net.Conn) {
-				logger.Debug("new socket connection")
-
-				defer func(conn net.Conn) {
-					err := conn.Close()
-					if err != nil {
-						logger.Warn("error closing connection: %s", err)
-					}
-				}(conn)
-
-				buf := make([]byte, 4096)
-
-				n, err := conn.Read(buf)
-				if err != nil {
-					logger.Error("error reading from connection: %s", err)
-					return
-				}
-
-				if n == 0 {
-					return
-				}
-				logger.Debug("received %d bytes", n)
-
-				payload := ""
-
-				switch strings.TrimSpace(string(buf[:n])) {
-				case "status":
-					lastScanned := state.GetLastScanned()
-					if lastScanned.UID != "" {
-						payload = fmt.Sprintf(
-							"%d,%s,%t,%s",
-							lastScanned.ScanTime.Unix(),
-							lastScanned.UID,
-							!state.IsLauncherDisabled(),
-							lastScanned.Text,
-						)
-					} else {
-						payload = fmt.Sprintf("0,,%t,", !state.IsLauncherDisabled())
-					}
-				case "disable":
-					state.DisableLauncher()
-					logger.Info("launcher disabled")
-				case "enable":
-					state.EnableLauncher()
-					logger.Info("launcher enabled")
-				default:
-					logger.Warn("unknown command: %s", strings.TrimRight(string(buf[:n]), "\n"))
-				}
-
-				_, err = conn.Write([]byte(payload))
-				if err != nil {
-					logger.Error("error writing to connection: %s", err)
-					return
-				}
-			}(conn)
-		}
-	}()
-
-	return func() error {
-		err := socket.Close()
-		if err != nil {
-			logger.Warn("error closing socket: %s", err)
-		}
-		state.StopService()
-		if closeDbWatcher != nil {
-			return closeDbWatcher()
-		}
-		return nil
-	}, nil
-}
-
-func writeScanResult(card Card) error {
-	f, err := os.Create(mrextConfig.NfcLastScanFile)
-	if err != nil {
-		return fmt.Errorf("unable to create scan result file %s: %s", mrextConfig.NfcLastScanFile, err)
-	}
-	defer func(f *os.File) {
-		_ = f.Close()
-	}(f)
-
-	_, err = f.WriteString(fmt.Sprintf("%s,%s", card.UID, card.Text))
-	if err != nil {
-		return fmt.Errorf("unable to write scan result file %s: %s", mrextConfig.NfcLastScanFile, err)
-	}
-
-	return nil
-}
-
 func addToStartup() error {
-	var startup mister.Startup
+	var startup mrextMister.Startup
 
 	err := startup.Load()
 	if err != nil {
@@ -605,70 +84,10 @@ func addToStartup() error {
 	return nil
 }
 
-func openDeviceWithRetries(config config.TapToConfig) (nfc.Device, error) {
-	var connectionString = config.ConnectionString
-	if connectionString == "" && config.ProbeDevice == true {
-		connectionString = detectConnectionString()
-	}
-
-	tries := 0
-	for {
-		pnd, err := nfc.Open(connectionString)
-		if err == nil {
-			logger.Info("successful connect after %d tries", tries)
-			return pnd, err
-		}
-
-		if tries >= connectMaxTries {
-			logger.Error("could not open device after %d tries: %s", connectMaxTries, err)
-			return pnd, err
-		}
-
-		tries++
-	}
-}
-
-func detectConnectionString() string {
-	logger.Info("attempting to probe for NFC device")
-	devices, _ := getSerialDeviceList()
-
-	for _, device := range devices {
-		connectionString := "pn532_uart:" + device
-		pnd, err := nfc.Open(connectionString)
-		logger.Info("trying %s", connectionString)
-		if err == nil {
-			logger.Info("success using serial: %s", connectionString)
-			pnd.Close()
-			return connectionString
-		}
-	}
-
-	return ""
-}
-
-func getSerialDeviceList() ([]string, error) {
-	path := "/dev/serial/by-id/"
-	f, err := os.Open(path)
-	if err != nil {
-		return nil, err
-	}
-	files, err := f.Readdir(0)
-	if err != nil {
-		return nil, err
-	}
-
-	var devices []string
-
-	for _, v := range files {
-		if !v.IsDir() {
-			devices = append(devices, path+v.Name())
-		}
-	}
-
-	return devices, nil
-}
-
 func handleWriteCommand(textToWrite string, svc *service.Service, cfg config.TapToConfig) {
+	// TODO: this is very tightly coupled to the mister service handling, it should
+	//       be made a part of the daemon process itself without killing it
+
 	serviceRunning := svc.Running()
 	if serviceRunning {
 		err := svc.Stop()
@@ -718,7 +137,7 @@ func handleWriteCommand(textToWrite string, svc *service.Service, cfg config.Tap
 	var pnd nfc.Device
 	var err error
 
-	pnd, err = openDeviceWithRetries(cfg)
+	pnd, err = daemon.OpenDeviceWithRetries(cfg)
 	if err != nil {
 		logger.Error("giving up, exiting")
 		_, _ = fmt.Fprintln(os.Stderr, "Could not open device:", err)
@@ -739,7 +158,7 @@ func handleWriteCommand(textToWrite string, svc *service.Service, cfg config.Tap
 	tries := 6 // ~30 seconds
 
 	for tries > 0 {
-		count, target, err = pnd.InitiatorPollTarget(supportedCardTypes, timesToPoll, periodBetweenPolls)
+		count, target, err = pnd.InitiatorPollTarget(tokens.SupportedCardTypes, daemon.TimesToPoll, daemon.PeriodBetweenPolls)
 
 		if err != nil && err.Error() != "timeout" {
 			logger.Error("could not poll: %s", err)
@@ -762,15 +181,15 @@ func handleWriteCommand(textToWrite string, svc *service.Service, cfg config.Tap
 		os.Exit(1)
 	}
 
-	cardUid := getCardUID(target)
+	cardUid := tokens.GetCardUID(target)
 	logger.Info("Found card with UID: %s", cardUid)
 
-	cardType := getCardType(target)
+	cardType := tokens.GetCardType(target)
 	var bytesWritten []byte
 
 	switch cardType {
-	case TypeMifare:
-		bytesWritten, err = writeMifare(pnd, textToWrite, cardUid)
+	case tokens.TypeMifare:
+		bytesWritten, err = tokens.WriteMifare(pnd, textToWrite, cardUid)
 		if err != nil {
 			logger.Error("error writing to card: %s", err)
 			_, _ = fmt.Fprintln(os.Stderr, "Error writing to card:", err)
@@ -778,8 +197,8 @@ func handleWriteCommand(textToWrite string, svc *service.Service, cfg config.Tap
 			restartService()
 			os.Exit(1)
 		}
-	case TypeNTAG:
-		bytesWritten, err = writeNtag(pnd, textToWrite)
+	case tokens.TypeNTAG:
+		bytesWritten, err = tokens.WriteNtag(pnd, textToWrite)
 		if err != nil {
 			logger.Error("error writing to card: %s", err)
 			_, _ = fmt.Fprintln(os.Stderr, "Error writing to card:", err)
@@ -803,6 +222,12 @@ func main() {
 	svcOpt := flag.String("service", "", "manage TapTo service (start, stop, restart, status)")
 	writeOpt := flag.String("write", "", "write text to tag")
 	flag.Parse()
+
+	err := utils.InitLogging()
+	if err != nil {
+		fmt.Println("Error initializing logging:", err)
+		os.Exit(1)
+	}
 
 	cfg, err := config.LoadUserConfig(appName, &config.UserConfig{
 		TapTo: config.TapToConfig{
@@ -830,7 +255,7 @@ func main() {
 		Name:   appName,
 		Logger: logger,
 		Entry: func() (func() error, error) {
-			return startService(cfg)
+			return daemon.StartService(cfg)
 		},
 	})
 	if err != nil {

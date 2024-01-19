@@ -18,7 +18,7 @@ You should have received a copy of the GNU General Public License
 along with TapTo.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-package main
+package tokens
 
 import (
 	"bytes"
@@ -26,7 +26,7 @@ import (
 	"fmt"
 
 	"github.com/clausecker/nfc/v2"
-	"github.com/wizzomafizzo/mrext/pkg/service"
+	"github.com/rs/zerolog/log"
 )
 
 const (
@@ -49,12 +49,13 @@ var LEGO_DIMENSIONS_MATCHER = []byte{
 	0x01, 0x0F, 0x54, 0x02,
 	0x65, 0x6E}
 
-func readNtag(pnd nfc.Device, logger *service.Logger) ([]byte, error) {
+func ReadNtag(pnd nfc.Device) ([]byte, error) {
 	blockCount, err := getNtagBlockCount(pnd)
 	if err != nil {
 		return []byte{}, err
 	}
-	logger.Info("NTAG has %d blocks", blockCount)
+
+	log.Debug().Msgf("NTAG has %d blocks", blockCount)
 
 	allBlocks := make([]byte, 0)
 	currentBlock := 4
@@ -66,7 +67,7 @@ func readNtag(pnd nfc.Device, logger *service.Logger) ([]byte, error) {
 		}
 
 		if byte(currentBlock) == 0x04 && bytes.Equal(blocks[0:14], LEGO_DIMENSIONS_MATCHER) {
-			logger.Info("found Lego Dimensions tag")
+			log.Info().Msg("found Lego Dimensions tag")
 			return []byte{}, nil
 		}
 
@@ -77,7 +78,7 @@ func readNtag(pnd nfc.Device, logger *service.Logger) ([]byte, error) {
 			// Once we find the end of the NDEF text record there is no need to
 			// continue reading the rest of the card.
 			// This should make things "load" quicker
-			logger.Debug("found end of ndef record")
+			log.Debug().Msg("found end of ndef record")
 			break
 		}
 	}
@@ -85,7 +86,7 @@ func readNtag(pnd nfc.Device, logger *service.Logger) ([]byte, error) {
 	return allBlocks, nil
 }
 
-func writeNtag(pnd nfc.Device, text string) ([]byte, error) {
+func WriteNtag(pnd nfc.Device, text string) ([]byte, error) {
 	var payload, err = BuildMessage(text)
 	if err != nil {
 		return nil, err
