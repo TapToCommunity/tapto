@@ -109,7 +109,7 @@ func tryAddStartup(stdscr *goncurses.Window) error {
 
 func displayServiceInfo(stdscr *goncurses.Window, service *service.Service) error {
 	width := 57
-	height := 18
+	height := 17
 
 	win, err := curses.NewWindow(stdscr, height, width, "", -1)
 	if err != nil {
