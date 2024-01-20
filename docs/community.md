@@ -6,7 +6,7 @@
 
 ## Software
 
-- [NFC Retro Label Printer](https://nfc-retro-label-printer.netlify.app/) &mdash; a bulk NFC card label creator with many built in features, supports several great templates already and is super easy to use &mdash; by [Andrea Bogazzi](https://github.com/asturur) ([Source](https://github.com/asturur/nfc-retro-label-printer))
+- [TapTo Designer](https://tapto-designer.netlify.app/) &mdash; a bulk NFC card label creator with many built in features, supports several great templates already and is super easy to use &mdash; by [Andrea Bogazzi](https://github.com/asturur) ([Source](https://github.com/asturur/nfc-retro-label-printer))
 
 ## Cases
 

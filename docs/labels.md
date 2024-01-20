@@ -2,9 +2,9 @@
 
 ## Generating Labels
 
-Labels can be created in bulk using the [NFC Retro Label Printer](https://tapto-designer.netlify.app/) web app by [Andrea Bogazzi](https://github.com/asturur). This app allows you to drag in box art images, which will be automatically applied to templates and made available to export as PDF. The app is pre-filled with a set of templates by [Tim Wilsie](https://twitter.com/timwilsie).
+Labels can be created in bulk using the [TapTo Designer](https://tapto-designer.netlify.app/) web app by [Andrea Bogazzi](https://github.com/asturur). This app allows you to drag in box art images, which will be automatically applied to templates and made available to export as PDF. The app is pre-filled with a set of templates by [Tim Wilsie](https://twitter.com/timwilsie).
 
-<img src="../assets/images/software/nfcretrolabelprinter.png" width=400 />
+<img src="../assets/images/software/taptodesigner.png" width=400 />
 
 ## Label Packs
 
