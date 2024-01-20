@@ -251,7 +251,7 @@ func main() {
 	svc, err := mister.NewService(mister.ServiceArgs{
 		Name: appName,
 		Entry: func() (func() error, error) {
-			return daemon.StartService(cfg)
+			return daemon.StartDaemon(cfg)
 		},
 	})
 	if err != nil {

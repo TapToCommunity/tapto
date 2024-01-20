@@ -55,3 +55,25 @@ func GetFileSize(path string) (int64, error) {
 
 	return size, nil
 }
+
+func GetLinuxSerialDeviceList() ([]string, error) {
+	path := "/dev/serial/by-id/"
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	files, err := f.Readdir(0)
+	if err != nil {
+		return nil, err
+	}
+
+	var devices []string
+
+	for _, v := range files {
+		if !v.IsDir() {
+			devices = append(devices, path+v.Name())
+		}
+	}
+
+	return devices, nil
+}
