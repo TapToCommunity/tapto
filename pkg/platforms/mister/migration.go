@@ -1,4 +1,4 @@
-package utils
+package mister
 
 import (
 	"os"
@@ -7,12 +7,12 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/rs/zerolog/log"
 	"github.com/wizzomafizzo/mrext/pkg/mister"
-	"github.com/wizzomafizzo/mrext/pkg/service"
 )
 
 // NfcMigration migrates NFC app data and removes the old service.
-func NfcMigration(logger *service.Logger) {
+func NfcMigration() {
 	nfcAppPath := "/media/fat/Scripts/nfc.sh"
 	nfcIniPath := "/media/fat/Scripts/nfc.ini"
 	nfcPid := "/tmp/nfc.pid"
@@ -22,16 +22,16 @@ func NfcMigration(logger *service.Logger) {
 	if _, err := os.Stat(nfcPid); err == nil {
 		pidFile, err := os.ReadFile(nfcPid)
 		if err != nil {
-			logger.Error("migration: error reading pid file: %s", err)
+			log.Error().Msgf("migration: error reading pid file: %s", err)
 		} else {
 			pidInt, err := strconv.Atoi(string(pidFile))
 			if err != nil {
-				logger.Error("migration: error parsing pid: %s", err)
+				log.Error().Msgf("migration: error parsing pid: %s", err)
 			} else {
-				logger.Info("migration: killing nfc.sh")
+				log.Info().Msg("migration: nfc.sh is running, killing it")
 				err := syscall.Kill(pidInt, syscall.SIGTERM)
 				if err != nil {
-					logger.Error("migration: error killing nfc.sh: %s", err)
+					log.Error().Msgf("migration: error killing nfc.sh: %s", err)
 				}
 				time.Sleep(1 * time.Second)
 			}
@@ -42,19 +42,19 @@ func NfcMigration(logger *service.Logger) {
 	var startup mister.Startup
 	err := startup.Load()
 	if err != nil {
-		logger.Error("migration: failed to load startup file: %s", err)
+		log.Error().Msgf("migration: failed to load startup file: %s", err)
 	}
 
 	if startup.Exists("mrext/nfc") {
-		logger.Info("migration: removing nfc.sh from startup")
+		log.Info().Msg("migration: removing nfc.sh from startup")
 		err := startup.Remove("mrext/nfc")
 		if err != nil {
-			logger.Error("migration: error removing nfc.sh from startup: %s", err)
+			log.Error().Msgf("migration: error removing nfc.sh from startup: %s", err)
 		}
 
 		err = startup.Save()
 		if err != nil {
-			logger.Error("migration: error saving startup file: %s", err)
+			log.Error().Msgf("migration: error saving startup file: %s", err)
 		}
 	}
 
@@ -63,15 +63,15 @@ func NfcMigration(logger *service.Logger) {
 		if _, err := os.Stat(taptoIniPath); err != nil {
 			err := os.Rename(nfcIniPath, taptoIniPath)
 			if err != nil {
-				logger.Error("migration: error renaming nfc.ini: %s", err)
+				log.Error().Msgf("migration: error renaming nfc.ini: %s", err)
 			} else {
-				logger.Info("migration: renamed nfc.ini to tapto.ini")
+				log.Info().Msg("migration: renamed nfc.ini to tapto.ini")
 			}
 
 			// replace [nfc] header with [tapto]
 			contents, err := os.ReadFile(taptoIniPath)
 			if err != nil {
-				logger.Error("migration: error reading tapto.ini: %s", err)
+				log.Error().Msgf("migration: error reading tapto.ini: %s", err)
 			}
 
 			lines := strings.Split(string(contents), "\n")
@@ -87,18 +87,18 @@ func NfcMigration(logger *service.Logger) {
 			if changed {
 				err = os.WriteFile(taptoIniPath, []byte(strings.Join(lines, "\n")), 0644)
 				if err != nil {
-					logger.Error("migration: error writing tapto.ini: %s", err)
+					log.Error().Msgf("migration: error writing tapto.ini: %s", err)
 				} else {
-					logger.Info("migration: replaced .ini header")
+					log.Info().Msg("migration: replaced [nfc] header with [tapto]")
 				}
 			}
 		} else {
 			// or just remove the old one
 			err := os.Remove(nfcIniPath)
 			if err != nil {
-				logger.Error("migration: error removing nfc.ini: %s", err)
+				log.Error().Msgf("migration: error removing nfc.ini: %s", err)
 			} else {
-				logger.Info("migration: removed nfc.ini")
+				log.Info().Msg("migration: removed nfc.ini")
 			}
 		}
 	}
@@ -107,9 +107,9 @@ func NfcMigration(logger *service.Logger) {
 	if _, err := os.Stat(nfcAppPath); err == nil {
 		err := os.Remove(nfcAppPath)
 		if err != nil {
-			logger.Error("migration: error removing nfc.sh: %s", err)
+			log.Error().Msgf("migration: error removing nfc.sh: %s", err)
 		} else {
-			logger.Info("migration: removed nfc.sh")
+			log.Info().Msg("migration: removed nfc.sh")
 		}
 	}
 }

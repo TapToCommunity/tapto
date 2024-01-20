@@ -18,7 +18,7 @@ You should have received a copy of the GNU General Public License
 along with TapTo.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-package main
+package tokens
 
 import (
 	"bytes"
@@ -49,8 +49,8 @@ func buildMifareAuthCommand(block byte, cardUid string) []byte {
 	return append(command, uidBytes...)
 }
 
-// readMifare reads data from all blocks in sectors 1-15
-func readMifare(pnd nfc.Device, cardUid string) ([]byte, error) {
+// ReadMifare reads data from all blocks in sectors 1-15
+func ReadMifare(pnd nfc.Device, cardUid string) ([]byte, error) {
 	permissionSectors := []int{4, 8, 12, 16, 20, 24, 28, 32, 36, 40, 44, 48, 52, 56, 60}
 	var allBlocks = []byte{}
 	for block := 0; block < 64; block++ {
@@ -97,8 +97,8 @@ func getMifareCapacityInBytes() int {
 	return (MIFARE_WRITABLE_BLOCKS_PER_SECTOR * MIFARE_WRITABLE_SECTOR_COUNT) * MIFARE_BLOCK_SIZE_BYTES
 }
 
-// writeMifare writes the given text string to a Mifare card starting from sector, skipping any trailer blocks
-func writeMifare(pnd nfc.Device, text string, cardUid string) ([]byte, error) {
+// WriteMifare writes the given text string to a Mifare card starting from sector, skipping any trailer blocks
+func WriteMifare(pnd nfc.Device, text string, cardUid string) ([]byte, error) {
 	var payload, err = BuildMessage(text)
 	if err != nil {
 		return nil, err

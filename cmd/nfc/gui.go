@@ -21,26 +21,27 @@ along with TapTo.  If not, see <http://www.gnu.org/licenses/>.
 package main
 
 import (
+	"encoding/json"
 	"net"
 	"os"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/rs/zerolog/log"
 	"github.com/rthornton128/goncurses"
-	"github.com/wizzomafizzo/mrext/pkg/config"
 	"github.com/wizzomafizzo/mrext/pkg/curses"
-	"github.com/wizzomafizzo/mrext/pkg/mister"
-	"github.com/wizzomafizzo/mrext/pkg/service"
+	mrextMister "github.com/wizzomafizzo/mrext/pkg/mister"
 	"github.com/wizzomafizzo/mrext/pkg/utils"
+	"github.com/wizzomafizzo/tapto/pkg/platforms/mister"
 )
 
 func tryAddStartup(stdscr *goncurses.Window) error {
-	var startup mister.Startup
+	var startup mrextMister.Startup
 
 	err := startup.Load()
 	if err != nil {
-		logger.Error("failed to load startup file: %s", err)
+		log.Error().Msgf("failed to load startup file: %s", err)
 	}
 
 	if !startup.Exists("mrext/" + appName) {
@@ -51,7 +52,7 @@ func tryAddStartup(stdscr *goncurses.Window) error {
 		defer func(win *goncurses.Window) {
 			err := win.Delete()
 			if err != nil {
-				logger.Error("failed to delete window: %s", err)
+				log.Error().Msgf("failed to delete window: %s", err)
 			}
 		}(win)
 
@@ -107,7 +108,13 @@ func tryAddStartup(stdscr *goncurses.Window) error {
 	return nil
 }
 
-func displayServiceInfo(stdscr *goncurses.Window, service *service.Service) error {
+type logEntry struct {
+	Level   string `json:"level"`
+	Time    int    `json:"time"`
+	Message string `json:"message"`
+}
+
+func displayServiceInfo(stdscr *goncurses.Window, service *mister.Service) error {
 	width := 57
 	height := 18
 
@@ -118,7 +125,7 @@ func displayServiceInfo(stdscr *goncurses.Window, service *service.Service) erro
 	defer func(win *goncurses.Window) {
 		err := win.Delete()
 		if err != nil {
-			logger.Error("failed to delete window: %s", err)
+			log.Error().Msgf("failed to delete window: %s", err)
 		}
 	}(win)
 
@@ -150,18 +157,18 @@ func displayServiceInfo(stdscr *goncurses.Window, service *service.Service) erro
 		scanTime := "never"
 		tagUid := ""
 		tagText := ""
-		conn, err := net.Dial("unix", config.TempFolder+"/nfc.sock")
+		conn, err := net.Dial("unix", mister.SocketFile)
 		if err != nil {
-			logger.Debug("could not connect to nfc service: %s", err)
+			log.Debug().Msgf("could not connect to nfc service: %s", err)
 		} else {
 			_, err := conn.Write([]byte("status"))
 			if err != nil {
-				logger.Debug("could not write to nfc service: %s", err)
+				log.Debug().Msgf("could not write to nfc service: %s", err)
 			} else {
 				buf := make([]byte, 4096)
 				_, err := conn.Read(buf)
 				if err != nil {
-					logger.Debug("could not read from nfc service: %s", err)
+					log.Debug().Msgf("could not read from nfc service: %s", err)
 				} else {
 					parts := strings.SplitN(string(buf), ",", 5)
 					if parts[0] != "0" {
@@ -173,22 +180,30 @@ func displayServiceInfo(stdscr *goncurses.Window, service *service.Service) erro
 			}
 		}
 
-		var logLines []string
-		log, err := os.ReadFile(config.TempFolder + "/tapto.log")
+		var logLines []logEntry
+		logFile, err := os.ReadFile(mister.LogFile)
 		if err != nil {
-			logger.Error("could not read log file: %s", err)
+			log.Error().Msgf("could not read log file: %s", err)
 		} else {
-			lines := strings.Split(string(log), "\n")
+			lines := strings.Split(string(logFile), "\n")
 			for i := len(lines) - 1; i >= 0; i-- {
-				if !strings.Contains(lines[i], "DEBUG") {
-					line := lines[i]
-					line = strings.Replace(line, " INFO", "", 1)
-					line = strings.Replace(line, "ERROR", "ERR", 1)
-					if len(line) > 11 {
-						line = line[11:]
-					}
-					logLines = append(logLines, line)
+				line := lines[i]
+
+				if len(line) == 0 {
+					continue
 				}
+
+				entry := logEntry{}
+				err := json.Unmarshal([]byte(line), &entry)
+				if err != nil {
+					log.Error().Str("value", line).Msgf("could not unmarshal log entry: %s", err)
+					continue
+				}
+
+				if entry.Level != "debug" {
+					logLines = append(logLines, entry)
+				}
+
 				if len(logLines) >= 10 {
 					break
 				}
@@ -202,7 +217,7 @@ func displayServiceInfo(stdscr *goncurses.Window, service *service.Service) erro
 		if scanTime != "never" {
 			t, err := strconv.ParseInt(scanTime, 10, 64)
 			if err != nil {
-				logger.Debug("could not parse scan time: %s", err)
+				log.Debug().Msgf("could not parse scan time: %s", err)
 			} else {
 				scanTime = time.Unix(t, 0).Format("2006-01-02 15:04:05")
 			}
@@ -231,6 +246,16 @@ func displayServiceInfo(stdscr *goncurses.Window, service *service.Service) erro
 		win.MoveAddChar(5, 0, goncurses.ACS_LTEE)
 		win.MoveAddChar(5, width-1, goncurses.ACS_RTEE)
 
+		errorOn := func(level string) {
+			if level != "info" {
+				win.ColorOn(1)
+			}
+		}
+
+		errorOff := func() {
+			win.ColorOff(1)
+		}
+
 		// maximum 10 log lines, from line 6 to 15 of the window
 		// print from bottom to top, if a line is over the width (53), split it
 		// to a second line. if it's still over the width (106), truncate the second
@@ -244,8 +269,14 @@ func displayServiceInfo(stdscr *goncurses.Window, service *service.Service) erro
 				break
 			}
 
-			line := logLines[logLine]
+			line := logLines[logLine].Message
+			level := logLines[logLine].Level
+
 			logLine--
+
+			if len(line) == 0 {
+				continue
+			}
 
 			if len(line) > 53 {
 				if winLine < 6 {
@@ -256,7 +287,9 @@ func displayServiceInfo(stdscr *goncurses.Window, service *service.Service) erro
 					// just truncate the line
 					line = line[:53-3] + "..."
 					clearLine(winLine)
+					errorOn(level)
 					win.MovePrint(winLine, 2, line)
+					errorOff()
 					break
 				}
 
@@ -266,14 +299,20 @@ func displayServiceInfo(stdscr *goncurses.Window, service *service.Service) erro
 					line2 = line2[:53-3] + "..."
 				}
 				clearLine(winLine)
+				errorOn(level)
 				win.MovePrint(winLine, 2, line2)
+				errorOff()
 				winLine--
 				clearLine(winLine)
+				errorOn(level)
 				win.MovePrint(winLine, 2, line1)
+				errorOff()
 				winLine--
 			} else {
 				clearLine(winLine)
+				errorOn(level)
 				win.MovePrint(winLine, 2, line)
+				errorOff()
 				winLine--
 			}
 		}
@@ -306,12 +345,12 @@ func displayServiceInfo(stdscr *goncurses.Window, service *service.Service) erro
 				if service.Running() {
 					err := service.Stop()
 					if err != nil {
-						logger.Error("could not stop service: %s", err)
+						log.Error().Msgf("could not stop service: %s", err)
 					}
 				} else {
 					err := service.Start()
 					if err != nil {
-						logger.Error("could not start service: %s", err)
+						log.Error().Msgf("could not start service: %s", err)
 					}
 				}
 				time.Sleep(1 * time.Second)
