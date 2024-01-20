@@ -33,8 +33,6 @@ func StartSocketServer(state *State) (net.Listener, error) {
 			}
 
 			go func(conn net.Conn) {
-				log.Debug().Msg("new socket connection")
-
 				defer func(conn net.Conn) {
 					err := conn.Close()
 					if err != nil {
@@ -53,7 +51,6 @@ func StartSocketServer(state *State) (net.Listener, error) {
 				if n == 0 {
 					return
 				}
-				log.Debug().Msgf("received %d bytes", n)
 
 				payload := ""
 
