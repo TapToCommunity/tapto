@@ -30,6 +30,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 
 	"github.com/wizzomafizzo/tapto/pkg/platforms/mister"
@@ -238,13 +239,20 @@ func main() {
 	}
 
 	log.Info().Msgf("TapTo v%s", appVersion)
-	log.Info().Msgf("config path: %s", cfg.IniPath)
-	log.Info().Msgf("app path: %s", cfg.AppPath)
-	log.Info().Msgf("connection_string: %s", cfg.TapTo.ConnectionString)
-	log.Info().Msgf("allow_commands: %t", cfg.TapTo.AllowCommands)
-	log.Info().Msgf("disable_sounds: %t", cfg.TapTo.DisableSounds)
-	log.Info().Msgf("probe_device: %t", cfg.TapTo.ProbeDevice)
-	log.Info().Msgf("exit_game: %t", cfg.TapTo.ExitGame)
+	log.Info().Msgf("config path = %s", cfg.IniPath)
+	log.Info().Msgf("app path = %s", cfg.AppPath)
+	log.Info().Msgf("connection_string = %s", cfg.TapTo.ConnectionString)
+	log.Info().Msgf("allow_commands = %t", cfg.TapTo.AllowCommands)
+	log.Info().Msgf("disable_sounds = %t", cfg.TapTo.DisableSounds)
+	log.Info().Msgf("probe_device = %t", cfg.TapTo.ProbeDevice)
+	log.Info().Msgf("exit_game = %t", cfg.TapTo.ExitGame)
+	log.Info().Msgf("debug = %t", cfg.TapTo.Debug)
+
+	if cfg.TapTo.Debug {
+		zerolog.SetGlobalLevel(zerolog.DebugLevel)
+	} else {
+		zerolog.SetGlobalLevel(zerolog.InfoLevel)
+	}
 
 	mister.NfcMigration()
 
