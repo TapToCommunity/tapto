@@ -25,9 +25,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-
-	mrextConfig "github.com/wizzomafizzo/mrext/pkg/config"
-	config "github.com/wizzomafizzo/tapto/pkg/config"
 )
 
 func GetMd5Hash(path string) (string, error) {
@@ -57,21 +54,4 @@ func GetFileSize(path string) (int64, error) {
 	_ = file.Close()
 
 	return size, nil
-}
-
-func UserConfigToMrext(cfg *config.UserConfig) *mrextConfig.UserConfig {
-	return &mrextConfig.UserConfig{
-		AppPath: cfg.AppPath,
-		IniPath: cfg.IniPath,
-		Nfc: mrextConfig.NfcConfig{
-			ConnectionString: cfg.TapTo.ConnectionString,
-			AllowCommands:    cfg.TapTo.AllowCommands,
-			DisableSounds:    cfg.TapTo.DisableSounds,
-			ProbeDevice:      cfg.TapTo.ProbeDevice,
-		},
-		Systems: mrextConfig.SystemsConfig{
-			GamesFolder: cfg.Systems.GamesFolder,
-			SetCore:     cfg.Systems.SetCore,
-		},
-	}
 }

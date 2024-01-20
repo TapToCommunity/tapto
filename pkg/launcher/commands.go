@@ -33,9 +33,9 @@ import (
 	"github.com/wizzomafizzo/mrext/pkg/input"
 
 	"github.com/wizzomafizzo/mrext/pkg/games"
-	"github.com/wizzomafizzo/mrext/pkg/mister"
+	mrextMister "github.com/wizzomafizzo/mrext/pkg/mister"
 	"github.com/wizzomafizzo/tapto/pkg/config"
-	"github.com/wizzomafizzo/tapto/pkg/utils"
+	"github.com/wizzomafizzo/tapto/pkg/platforms/mister"
 )
 
 func LaunchToken(cfg *config.UserConfig, manual bool, kbd input.Keyboard, text string) error {
@@ -57,7 +57,7 @@ func LaunchToken(cfg *config.UserConfig, manual bool, kbd input.Keyboard, text s
 		switch cmd {
 		case "system":
 			if s.EqualFold(args, "menu") {
-				return mister.LaunchMenu()
+				return mrextMister.LaunchMenu()
 			}
 
 			system, err := games.LookupSystem(args)
@@ -65,7 +65,7 @@ func LaunchToken(cfg *config.UserConfig, manual bool, kbd input.Keyboard, text s
 				return err
 			}
 
-			return mister.LaunchCore(utils.UserConfigToMrext(cfg), *system)
+			return mrextMister.LaunchCore(mister.UserConfigToMrext(cfg), *system)
 		case "command":
 			if !manual {
 				return fmt.Errorf("commands must be manually run")
@@ -84,7 +84,7 @@ func LaunchToken(cfg *config.UserConfig, manual bool, kbd input.Keyboard, text s
 			}
 
 			if args == "all" {
-				return mister.LaunchRandomGame(utils.UserConfigToMrext(cfg), games.AllSystems())
+				return mrextMister.LaunchRandomGame(mister.UserConfigToMrext(cfg), games.AllSystems())
 			}
 
 			// TODO: allow multiple systems
@@ -93,9 +93,9 @@ func LaunchToken(cfg *config.UserConfig, manual bool, kbd input.Keyboard, text s
 				return err
 			}
 
-			return mister.LaunchRandomGame(utils.UserConfigToMrext(cfg), []games.System{*system})
+			return mrextMister.LaunchRandomGame(mister.UserConfigToMrext(cfg), []games.System{*system})
 		case "ini":
-			inis, err := mister.GetAllMisterIni()
+			inis, err := mrextMister.GetAllMisterIni()
 			if err != nil {
 				return err
 			}
@@ -113,7 +113,7 @@ func LaunchToken(cfg *config.UserConfig, manual bool, kbd input.Keyboard, text s
 				return fmt.Errorf("ini id out of range: %d", id)
 			}
 
-			return mister.SetActiveIni(id)
+			return mrextMister.SetActiveIni(id)
 		case "get":
 			go func() {
 				_, _ = http.Get(args)
@@ -160,12 +160,12 @@ func LaunchToken(cfg *config.UserConfig, manual bool, kbd input.Keyboard, text s
 
 	// if it's not a command, assume it's some kind of file path
 	if filepath.IsAbs(text) {
-		return mister.LaunchGenericFile(utils.UserConfigToMrext(cfg), text)
+		return mrextMister.LaunchGenericFile(mister.UserConfigToMrext(cfg), text)
 	}
 
 	// if it's a relative path with no extension, assume it's a core
 	if filepath.Ext(text) == "" {
-		return mister.LaunchShortCore(text)
+		return mrextMister.LaunchShortCore(text)
 	}
 
 	// if the file is in a .zip, just check .zip exists in each games folder
@@ -173,9 +173,9 @@ func LaunchToken(cfg *config.UserConfig, manual bool, kbd input.Keyboard, text s
 	for i, part := range parts {
 		if s.HasSuffix(s.ToLower(part), ".zip") {
 			zipPath := filepath.Join(parts[:i+1]...)
-			for _, folder := range games.GetGamesFolders(utils.UserConfigToMrext(cfg)) {
+			for _, folder := range games.GetGamesFolders(mister.UserConfigToMrext(cfg)) {
 				if _, err := os.Stat(filepath.Join(folder, zipPath)); err == nil {
-					return mister.LaunchGenericFile(utils.UserConfigToMrext(cfg), filepath.Join(folder, text))
+					return mrextMister.LaunchGenericFile(mister.UserConfigToMrext(cfg), filepath.Join(folder, text))
 				}
 			}
 			break
@@ -183,10 +183,10 @@ func LaunchToken(cfg *config.UserConfig, manual bool, kbd input.Keyboard, text s
 	}
 
 	// then try check for the whole path in each game folder
-	for _, folder := range games.GetGamesFolders(utils.UserConfigToMrext(cfg)) {
+	for _, folder := range games.GetGamesFolders(mister.UserConfigToMrext(cfg)) {
 		path := filepath.Join(folder, text)
 		if _, err := os.Stat(path); err == nil {
-			return mister.LaunchGenericFile(utils.UserConfigToMrext(cfg), path)
+			return mrextMister.LaunchGenericFile(mister.UserConfigToMrext(cfg), path)
 		}
 	}
 

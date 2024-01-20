@@ -29,7 +29,7 @@ import (
 
 	"github.com/gocarina/gocsv"
 	"github.com/rs/zerolog/log"
-	mrextConfig "github.com/wizzomafizzo/mrext/pkg/config"
+	"github.com/wizzomafizzo/tapto/pkg/platforms/mister"
 )
 
 type NfcMappingEntry struct {
@@ -42,12 +42,12 @@ func LoadDatabase() (map[string]string, map[string]string, error) {
 	uids := make(map[string]string)
 	texts := make(map[string]string)
 
-	if _, err := os.Stat(mrextConfig.NfcDatabaseFile); errors.Is(err, os.ErrNotExist) {
+	if _, err := os.Stat(mister.MappingsFile); errors.Is(err, os.ErrNotExist) {
 		log.Info().Msg("no database file found, skipping")
 		return nil, nil, nil
 	}
 
-	f, err := os.Open(mrextConfig.NfcDatabaseFile)
+	f, err := os.Open(mister.MappingsFile)
 	if err != nil {
 		return nil, nil, err
 	}

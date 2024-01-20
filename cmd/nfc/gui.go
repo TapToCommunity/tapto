@@ -31,7 +31,6 @@ import (
 	"github.com/rthornton128/goncurses"
 	"github.com/wizzomafizzo/mrext/pkg/curses"
 	mrextMister "github.com/wizzomafizzo/mrext/pkg/mister"
-	"github.com/wizzomafizzo/mrext/pkg/service"
 	"github.com/wizzomafizzo/mrext/pkg/utils"
 	"github.com/wizzomafizzo/tapto/pkg/platforms/mister"
 )
@@ -108,7 +107,7 @@ func tryAddStartup(stdscr *goncurses.Window) error {
 	return nil
 }
 
-func displayServiceInfo(stdscr *goncurses.Window, service *service.Service) error {
+func displayServiceInfo(stdscr *goncurses.Window, service *mister.Service) error {
 	width := 57
 	height := 18
 

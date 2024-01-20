@@ -32,13 +32,12 @@ import (
 
 	"github.com/rs/zerolog/log"
 
+	"github.com/wizzomafizzo/tapto/pkg/platforms/mister"
 	"github.com/wizzomafizzo/tapto/pkg/tokens"
 	"github.com/wizzomafizzo/tapto/pkg/utils"
 
 	gc "github.com/rthornton128/goncurses"
 	"github.com/wizzomafizzo/mrext/pkg/curses"
-
-	"github.com/wizzomafizzo/mrext/pkg/service"
 
 	"github.com/wizzomafizzo/tapto/pkg/config"
 	"github.com/wizzomafizzo/tapto/pkg/daemon"
@@ -82,7 +81,7 @@ func addToStartup() error {
 	return nil
 }
 
-func handleWriteCommand(textToWrite string, svc *service.Service, cfg config.TapToConfig) {
+func handleWriteCommand(textToWrite string, svc *mister.Service, cfg config.TapToConfig) {
 	// TODO: this is very tightly coupled to the mister service handling, it should
 	//       be made a part of the daemon process itself without killing it
 
@@ -247,9 +246,9 @@ func main() {
 	log.Info().Msgf("probe_device: %t", cfg.TapTo.ProbeDevice)
 	log.Info().Msgf("exit_game: %t", cfg.TapTo.ExitGame)
 
-	utils.NfcMigration()
+	mister.NfcMigration()
 
-	svc, err := service.NewService(service.ServiceArgs{
+	svc, err := mister.NewService(mister.ServiceArgs{
 		Name: appName,
 		Entry: func() (func() error, error) {
 			return daemon.StartService(cfg)
