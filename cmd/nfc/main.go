@@ -30,6 +30,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/rs/zerolog/log"
+
 	"github.com/wizzomafizzo/tapto/pkg/tokens"
 	"github.com/wizzomafizzo/tapto/pkg/utils"
 
@@ -55,10 +57,6 @@ import (
 const (
 	appName    = "tapto"
 	appVersion = "1.0-beta4"
-)
-
-var (
-	logger = service.NewLogger(appName)
 )
 
 func addToStartup() error {
@@ -92,7 +90,7 @@ func handleWriteCommand(textToWrite string, svc *service.Service, cfg config.Tap
 	if serviceRunning {
 		err := svc.Stop()
 		if err != nil {
-			logger.Error("error stopping service: %s", err)
+			log.Error().Msgf("error stopping service: %s", err)
 			_, _ = fmt.Fprintln(os.Stderr, "Error stopping service:", err)
 			os.Exit(1)
 		}
@@ -105,7 +103,7 @@ func handleWriteCommand(textToWrite string, svc *service.Service, cfg config.Tap
 			time.Sleep(100 * time.Millisecond)
 			tries--
 			if tries <= 0 {
-				logger.Error("error stopping service: %s", err)
+				log.Error().Msgf("error stopping service: %s", err)
 				_, _ = fmt.Fprintln(os.Stderr, "Error stopping service:", err)
 				os.Exit(1)
 			}
@@ -116,7 +114,7 @@ func handleWriteCommand(textToWrite string, svc *service.Service, cfg config.Tap
 		if serviceRunning {
 			err := svc.Start()
 			if err != nil {
-				logger.Error("error starting service: %s", err)
+				log.Error().Msgf("error starting service: %s", err)
 				_, _ = fmt.Fprintln(os.Stderr, "Error starting service:", err)
 				os.Exit(1)
 			}
@@ -139,7 +137,7 @@ func handleWriteCommand(textToWrite string, svc *service.Service, cfg config.Tap
 
 	pnd, err = daemon.OpenDeviceWithRetries(cfg)
 	if err != nil {
-		logger.Error("giving up, exiting")
+		log.Error().Msgf("giving up, exiting: %s")
 		_, _ = fmt.Fprintln(os.Stderr, "Could not open device:", err)
 		restartService()
 		os.Exit(1)
@@ -148,9 +146,9 @@ func handleWriteCommand(textToWrite string, svc *service.Service, cfg config.Tap
 	defer func(pnd nfc.Device) {
 		err := pnd.Close()
 		if err != nil {
-			logger.Warn("error closing device: %s", err)
+			log.Warn().Msgf("error closing device: %s", err)
 		}
-		logger.Info("closed nfc device")
+		log.Info().Msg("closed nfc device")
 	}(pnd)
 
 	var count int
@@ -161,7 +159,7 @@ func handleWriteCommand(textToWrite string, svc *service.Service, cfg config.Tap
 		count, target, err = pnd.InitiatorPollTarget(tokens.SupportedCardTypes, daemon.TimesToPoll, daemon.PeriodBetweenPolls)
 
 		if err != nil && err.Error() != "timeout" {
-			logger.Error("could not poll: %s", err)
+			log.Error().Msgf("could not poll: %s", err)
 			_, _ = fmt.Fprintln(os.Stderr, "Could not poll:", err)
 			restartService()
 			os.Exit(1)
@@ -175,14 +173,14 @@ func handleWriteCommand(textToWrite string, svc *service.Service, cfg config.Tap
 	}
 
 	if count == 0 {
-		logger.Error("could not detect a card")
+		log.Error().Msgf("could not detect a card")
 		_, _ = fmt.Fprintln(os.Stderr, "Could not detect a card")
 		restartService()
 		os.Exit(1)
 	}
 
 	cardUid := tokens.GetCardUID(target)
-	logger.Info("Found card with UID: %s", cardUid)
+	log.Info().Msgf("found card with UID: %s", cardUid)
 
 	cardType := tokens.GetCardType(target)
 	var bytesWritten []byte
@@ -191,7 +189,7 @@ func handleWriteCommand(textToWrite string, svc *service.Service, cfg config.Tap
 	case tokens.TypeMifare:
 		bytesWritten, err = tokens.WriteMifare(pnd, textToWrite, cardUid)
 		if err != nil {
-			logger.Error("error writing to card: %s", err)
+			log.Error().Msgf("error writing to card: %s", err)
 			_, _ = fmt.Fprintln(os.Stderr, "Error writing to card:", err)
 			fmt.Println("Mifare cards need to NDEF formatted. If this is a brand new card, please use NFC tools mobile app to write some text (this only needs to be done the first time)")
 			restartService()
@@ -200,18 +198,18 @@ func handleWriteCommand(textToWrite string, svc *service.Service, cfg config.Tap
 	case tokens.TypeNTAG:
 		bytesWritten, err = tokens.WriteNtag(pnd, textToWrite)
 		if err != nil {
-			logger.Error("error writing to card: %s", err)
+			log.Error().Msgf("error writing to card: %s", err)
 			_, _ = fmt.Fprintln(os.Stderr, "Error writing to card:", err)
 			restartService()
 			os.Exit(1)
 		}
 	default:
-		logger.Error("Unsupported card type: %s", cardType)
+		log.Error().Msgf("unsupported card type: %s", cardType)
 		restartService()
 		os.Exit(1)
 	}
 
-	logger.Info("successfully wrote to card: %s", hex.EncodeToString(bytesWritten))
+	log.Info().Msgf("successfully wrote to card: %s", hex.EncodeToString(bytesWritten))
 	_, _ = fmt.Fprintln(os.Stderr, "Successfully wrote to card")
 
 	restartService()
@@ -235,31 +233,30 @@ func main() {
 		},
 	})
 	if err != nil {
-		logger.Error("error loading user config: %s", err)
+		log.Error().Msgf("error loading user config: %s", err)
 		fmt.Println("Error loading config:", err)
 		os.Exit(1)
 	}
 
-	logger.Info("TapTo v%s", appVersion)
-	logger.Info("config path: %s", cfg.IniPath)
-	logger.Info("app path: %s", cfg.AppPath)
-	logger.Info("connection_string: %s", cfg.TapTo.ConnectionString)
-	logger.Info("allow_commands: %t", cfg.TapTo.AllowCommands)
-	logger.Info("disable_sounds: %t", cfg.TapTo.DisableSounds)
-	logger.Info("probe_device: %t", cfg.TapTo.ProbeDevice)
-	logger.Info("exit_game: %t", cfg.TapTo.ExitGame)
+	log.Info().Msgf("TapTo v%s", appVersion)
+	log.Info().Msgf("config path: %s", cfg.IniPath)
+	log.Info().Msgf("app path: %s", cfg.AppPath)
+	log.Info().Msgf("connection_string: %s", cfg.TapTo.ConnectionString)
+	log.Info().Msgf("allow_commands: %t", cfg.TapTo.AllowCommands)
+	log.Info().Msgf("disable_sounds: %t", cfg.TapTo.DisableSounds)
+	log.Info().Msgf("probe_device: %t", cfg.TapTo.ProbeDevice)
+	log.Info().Msgf("exit_game: %t", cfg.TapTo.ExitGame)
 
-	utils.NfcMigration(logger)
+	utils.NfcMigration()
 
 	svc, err := service.NewService(service.ServiceArgs{
-		Name:   appName,
-		Logger: logger,
+		Name: appName,
 		Entry: func() (func() error, error) {
 			return daemon.StartService(cfg)
 		},
 	})
 	if err != nil {
-		logger.Error("error creating service: %s", err)
+		log.Error().Msgf("error creating service: %s", err)
 		fmt.Println("Error creating service:", err)
 		os.Exit(1)
 	}
@@ -273,7 +270,7 @@ func main() {
 	interactive := true
 	stdscr, err := curses.Setup()
 	if err != nil {
-		logger.Error("starting curses: %s", err)
+		log.Error().Msgf("starting curses: %s", err)
 		interactive = false
 	}
 	defer gc.End()
@@ -281,20 +278,20 @@ func main() {
 	if !interactive {
 		err = addToStartup()
 		if err != nil {
-			logger.Error("error adding startup: %s", err)
+			log.Error().Msgf("error adding startup: %s", err)
 			fmt.Println("Error adding to startup:", err)
 		}
 	} else {
 		err = tryAddStartup(stdscr)
 		if err != nil {
-			logger.Error("error adding startup: %s", err)
+			log.Error().Msgf("error adding startup: %s", err)
 		}
 	}
 
 	if !svc.Running() {
 		err := svc.Start()
 		if err != nil {
-			logger.Error("error starting service: %s", err)
+			log.Error().Msgf("error starting service: %s", err)
 			if !interactive {
 				fmt.Println("Error starting service:", err)
 			}
@@ -310,6 +307,6 @@ func main() {
 
 	err = displayServiceInfo(stdscr, svc)
 	if err != nil {
-		logger.Error("error displaying service info: %s", err)
+		log.Error().Msgf("error displaying service info: %s", err)
 	}
 }

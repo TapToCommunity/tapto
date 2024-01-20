@@ -7,6 +7,7 @@ const (
 	SuccessSoundFile  = TempFolder + "/success.wav"
 	FailSoundFile     = TempFolder + "/fail.wav"
 	SocketFile        = TempFolder + "/tapto.sock"
+	PidFile           = TempFolder + "/tapto.pid"
 	MappingsFile      = "/media/fat/nfc.csv"
 	TokenReadFile     = "/tmp/TOKENREAD"
 )

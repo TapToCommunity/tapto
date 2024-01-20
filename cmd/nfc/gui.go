@@ -27,20 +27,21 @@ import (
 	"strings"
 	"time"
 
+	"github.com/rs/zerolog/log"
 	"github.com/rthornton128/goncurses"
-	"github.com/wizzomafizzo/mrext/pkg/config"
 	"github.com/wizzomafizzo/mrext/pkg/curses"
-	"github.com/wizzomafizzo/mrext/pkg/mister"
+	mrextMister "github.com/wizzomafizzo/mrext/pkg/mister"
 	"github.com/wizzomafizzo/mrext/pkg/service"
 	"github.com/wizzomafizzo/mrext/pkg/utils"
+	"github.com/wizzomafizzo/tapto/pkg/platforms/mister"
 )
 
 func tryAddStartup(stdscr *goncurses.Window) error {
-	var startup mister.Startup
+	var startup mrextMister.Startup
 
 	err := startup.Load()
 	if err != nil {
-		logger.Error("failed to load startup file: %s", err)
+		log.Error().Msgf("failed to load startup file: %s", err)
 	}
 
 	if !startup.Exists("mrext/" + appName) {
@@ -51,7 +52,7 @@ func tryAddStartup(stdscr *goncurses.Window) error {
 		defer func(win *goncurses.Window) {
 			err := win.Delete()
 			if err != nil {
-				logger.Error("failed to delete window: %s", err)
+				log.Error().Msgf("failed to delete window: %s", err)
 			}
 		}(win)
 
@@ -118,7 +119,7 @@ func displayServiceInfo(stdscr *goncurses.Window, service *service.Service) erro
 	defer func(win *goncurses.Window) {
 		err := win.Delete()
 		if err != nil {
-			logger.Error("failed to delete window: %s", err)
+			log.Error().Msgf("failed to delete window: %s", err)
 		}
 	}(win)
 
@@ -150,18 +151,18 @@ func displayServiceInfo(stdscr *goncurses.Window, service *service.Service) erro
 		scanTime := "never"
 		tagUid := ""
 		tagText := ""
-		conn, err := net.Dial("unix", config.TempFolder+"/nfc.sock")
+		conn, err := net.Dial("unix", mister.SocketFile)
 		if err != nil {
-			logger.Debug("could not connect to nfc service: %s", err)
+			log.Debug().Msgf("could not connect to nfc service: %s", err)
 		} else {
 			_, err := conn.Write([]byte("status"))
 			if err != nil {
-				logger.Debug("could not write to nfc service: %s", err)
+				log.Debug().Msgf("could not write to nfc service: %s", err)
 			} else {
 				buf := make([]byte, 4096)
 				_, err := conn.Read(buf)
 				if err != nil {
-					logger.Debug("could not read from nfc service: %s", err)
+					log.Debug().Msgf("could not read from nfc service: %s", err)
 				} else {
 					parts := strings.SplitN(string(buf), ",", 5)
 					if parts[0] != "0" {
@@ -174,11 +175,11 @@ func displayServiceInfo(stdscr *goncurses.Window, service *service.Service) erro
 		}
 
 		var logLines []string
-		log, err := os.ReadFile(config.TempFolder + "/tapto.log")
+		logFile, err := os.ReadFile(mister.LogFile)
 		if err != nil {
-			logger.Error("could not read log file: %s", err)
+			log.Error().Msgf("could not read log file: %s", err)
 		} else {
-			lines := strings.Split(string(log), "\n")
+			lines := strings.Split(string(logFile), "\n")
 			for i := len(lines) - 1; i >= 0; i-- {
 				if !strings.Contains(lines[i], "DEBUG") {
 					line := lines[i]
@@ -202,7 +203,7 @@ func displayServiceInfo(stdscr *goncurses.Window, service *service.Service) erro
 		if scanTime != "never" {
 			t, err := strconv.ParseInt(scanTime, 10, 64)
 			if err != nil {
-				logger.Debug("could not parse scan time: %s", err)
+				log.Debug().Msgf("could not parse scan time: %s", err)
 			} else {
 				scanTime = time.Unix(t, 0).Format("2006-01-02 15:04:05")
 			}
@@ -306,12 +307,12 @@ func displayServiceInfo(stdscr *goncurses.Window, service *service.Service) erro
 				if service.Running() {
 					err := service.Stop()
 					if err != nil {
-						logger.Error("could not stop service: %s", err)
+						log.Error().Msgf("could not stop service: %s", err)
 					}
 				} else {
 					err := service.Start()
 					if err != nil {
-						logger.Error("could not start service: %s", err)
+						log.Error().Msgf("could not start service: %s", err)
 					}
 				}
 				time.Sleep(1 * time.Second)
