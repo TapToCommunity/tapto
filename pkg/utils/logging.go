@@ -18,7 +18,7 @@ func InitLogging() error {
 	}
 
 	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
-	log.Logger = log.Output(io.MultiWriter(os.Stderr, &lumberjack.Logger{
+	log.Logger = log.Output(io.MultiWriter(&lumberjack.Logger{
 		Filename:   mister.LogFile,
 		MaxSize:    1,
 		MaxBackups: 1,
