@@ -2,6 +2,7 @@
 
 - [MiSTer Setup](#mister-setup)
   - [Installation](#installation)
+    - [Downloader and Update All](#downloader-and-update-all)
     - [Hardware Setup](#hardware-setup)
   - [Configuration File](#configuration-file)
     - [Connection String (connection\_string)](#connection-string-connection_string)
@@ -18,6 +19,17 @@ Download [TapTo](https://github.com/wizzomafizzo/tapto/releases/latest/) and cop
 Once installed, run `tapto` from the MiSTer `Scripts` menu, a prompt will offer to enable TapTo as a startup service, then the service will be started in the background.
 
 After the initial setup is complete, a status display will be shown. It's ok to exit this screen, the service will continue to run in the background.
+
+### Downloader and Update All
+
+TapTo is available in [Update All](https://github.com/theypsilon/Update_All_MiSTer) by enabling the `MiSTer Extensions` repository in the `Tools & Scripts` menu.
+
+If you only want TapTo, add the following text to the `downloader.ini` file on your MiSTer:
+
+```
+[mrext/tapto]
+db_url = https://github.com/wizzomafizzo/tapto/raw/main/scripts/mister/repo/tapto.json
+```
 
 ### Hardware Setup
 
