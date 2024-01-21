@@ -11,7 +11,8 @@ from typing import TypedDict, Union, Optional, List
 
 DB_ID = "mrext/tapto"
 DL_URL = "https://github.com/wizzomafizzo/tapto/releases/download/{}"
-DL_FOLDER = "_bin/releases"
+RELEASES_FOLDER = "_bin/releases"
+REPO_FOLDER = "scripts/mister/repo"
 FILES = [
     "tapto.sh",
     "taptui.sh",
@@ -52,7 +53,7 @@ def create_tapto_db(tag: str) -> RepoDb:
 
     files: RepoDbFiles = {}
     for file in FILES:
-        local_path = os.path.join(DL_FOLDER, file)
+        local_path = os.path.join(RELEASES_FOLDER, file)
 
         key = "Scripts/{}".format(os.path.basename(local_path))
         size = os.stat(local_path).st_size
@@ -89,7 +90,7 @@ def main():
     tag = sys.argv[1]
 
     repo_db = create_tapto_db(tag)
-    with open("{}/tapto.json".format(DL_FOLDER), "w") as f:
+    with open("{}/tapto.json".format(REPO_FOLDER), "w") as f:
         f.write(generate_json(repo_db))
 
 if __name__ == "__main__":
