@@ -14,5 +14,5 @@ go.work
 /bin
 /_bin
 /out
-scripts/misterbuild/_build
+scripts/mister/build/_build
 .DS_Store

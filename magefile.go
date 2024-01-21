@@ -39,8 +39,8 @@ var (
 	binReleasesDir = filepath.Join(binDir, "releases")
 	upxBin         = os.Getenv("UPX_BIN")
 	// docker mister arm build
-	misterBuild          = filepath.Join(cwd, "scripts", "misterbuild")
-	misterBuildImageName = "tapto/misterbuild"
+	misterBuild          = filepath.Join(cwd, "scripts", "mister", "build")
+	misterBuildImageName = "tapto/mister-build"
 	misterBuildCache     = filepath.Join(os.TempDir(), "tapto-mister-buildcache")
 	misterModCache       = filepath.Join(os.TempDir(), "tapto-mister-modcache")
 )
@@ -63,7 +63,7 @@ var apps = []app{
 		bin:          "tapto.sh",
 		releaseId:    "mrext/tapto",
 		ldFlags:      "-lnfc -lusb -lcurses",
-		releaseFiles: []string{filepath.Join(cwd, "scripts", "nfcui", "nfcui.sh")},
+		releaseFiles: []string{filepath.Join(cwd, "scripts", "taptui", "taptui.sh")},
 	},
 }
 
