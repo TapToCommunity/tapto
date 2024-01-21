@@ -53,23 +53,22 @@ func pollDevice(
 	activeCard Token,
 	ttp int,
 	pbp time.Duration,
-) (Token, error) {
+) (Token, bool, error) {
+	removed := false
+
 	count, target, err := pnd.InitiatorPollTarget(tokens.SupportedCardTypes, ttp, pbp)
 	if err != nil && !errors.Is(err, nfc.Error(nfc.ETIMEOUT)) {
-		return activeCard, err
+		return activeCard, removed, err
 	}
 
 	if count <= 0 {
 		if activeCard.UID != "" && time.Since(activeCard.ScanTime) > timeToForgetCard {
 			log.Info().Msg("card removed")
 			activeCard = Token{}
-
-			if cfg.TapTo.ExitGame {
-				mister.ExitGame()
-			}
+			removed = true
 		}
 
-		return activeCard, nil
+		return activeCard, removed, nil
 	}
 
 	cardUid := tokens.GetCardUID(target)
@@ -78,7 +77,7 @@ func pollDevice(
 	}
 
 	if cardUid == activeCard.UID {
-		return activeCard, nil
+		return activeCard, removed, nil
 	}
 
 	log.Info().Msgf("found token UID: %s", cardUid)
@@ -90,7 +89,7 @@ func pollDevice(
 		log.Info().Msg("NTAG detected")
 		record, err = tokens.ReadNtag(*pnd)
 		if err != nil {
-			return activeCard, fmt.Errorf("error reading ntag: %s", err)
+			return activeCard, removed, fmt.Errorf("error reading ntag: %s", err)
 		}
 		cardType = tokens.TypeNTAG
 	}
@@ -119,7 +118,7 @@ func pollDevice(
 		ScanTime: time.Now(),
 	}
 
-	return card, nil
+	return card, removed, nil
 }
 
 func detectConnectionString() string {
@@ -288,7 +287,7 @@ func StartDaemon(cfg *config.UserConfig) (func() error, error) {
 			}
 
 			activeCard := state.GetActiveCard()
-			newScanned, err := pollDevice(cfg, &pnd, activeCard, ttp, pbp)
+			newScanned, removed, err := pollDevice(cfg, &pnd, activeCard, ttp, pbp)
 			if errors.Is(err, nfc.Error(nfc.EIO)) {
 				log.Error().Msgf("error during poll: %s", err)
 				log.Error().Msg("fatal IO error, device was unplugged, exiting...")
@@ -306,6 +305,11 @@ func StartDaemon(cfg *config.UserConfig) (func() error, error) {
 			}
 
 			state.SetActiveCard(newScanned)
+
+			if removed && cfg.TapTo.ExitGame && !state.IsLauncherDisabled() {
+				mister.ExitGame()
+				goto end
+			}
 
 			if newScanned.UID == "" || activeCard.UID == newScanned.UID {
 				goto end
