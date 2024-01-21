@@ -19,15 +19,15 @@
 # You should have received a copy of the GNU General Public License
 # along with TapTo.  If not, see <http://www.gnu.org/licenses/>.
 
-title="MiSTer NFC"
+title="TapTo"
 scriptdir="$(dirname "$(readlink -f "${0}")")"
-version="0.2"
+version="0.3"
 fullFileBrowser="false"
 basedir="/media"
 sdroot="${basedir}/fat"
 searchCommand="${scriptdir}/search.sh"
-nfcCommand="${scriptdir}/nfc.sh"
-settings="${scriptdir}/nfc.ini"
+nfcCommand="${scriptdir}/tapto.sh"
+settings="${scriptdir}/tapto.ini"
 map="${sdroot}/nfc.csv"
 #For debugging purpouse
 [[ -d "${sdroot}" ]] || map="${scriptdir}/nfc.csv"
@@ -35,12 +35,12 @@ map="${sdroot}/nfc.csv"
 mapHeader="match_uid,match_text,text"
 nfcStatus="$("${nfcCommand}" --service status)"
 case "${nfcStatus}" in
-  "nfc service running")
+  "tapto service running")
     nfcStatus="true"
     nfcUnavailable="false"
     msg="Service: Enabled"
     ;;
-  "nfc service not running")
+  "tapto service not running")
     nfcStatus="false"
     nfcUnavailable="false"
     msg="Service: Disabled"
@@ -50,7 +50,7 @@ case "${nfcStatus}" in
     nfcUnavailable="true"
     msg="Service: Unavailable"
 esac
-nfcSocket="UNIX-CONNECT:/tmp/nfc.sock"
+nfcSocket="UNIX-CONNECT:/tmp/tapto/tapto.sock"
 if [[ -S "${nfcSocket#*:}" ]]; then
   nfcReadingStatus="$(echo "status" | socat - "${nfcSocket}")"
   nfcReadingStatus="$(cut -d ',' -f 3 <<< "${nfcReadingStatus}")"
@@ -469,7 +469,7 @@ _depends() {
     _exit 1
   fi
 
-  [[ -x "${nfcCommand}" ]] || _error "${nfcCommand} not found\n\nRead more at ${underline}github.com/wizzomafizzo/mrext${noUnderline}" "1" --colors
+  [[ -x "${nfcCommand}" ]] || _error "${nfcCommand} not found\n\nRead more at ${underline}github.com/wizzomafizzo/tapto${noUnderline}" "1" --colors
 
   [[ -x "$(command -v rg)" ]] && grep() { rg "${@}"; }
 }
@@ -707,7 +707,7 @@ _craftCommand(){
 _Settings() {
   local menuOptions selected
   menuOptions=(
-    "Service"     "Start/stop the NFC service"
+    "Service"     "Start/stop the TapTo service"
     "Commands"    "Toggles the ability to run Linux commands from NFC tags"
     "Sounds"      "Toggles sounds played when a tag is scanned"
     "Connection"  "Hardware configuration for certain NFC readers"
@@ -730,11 +730,11 @@ _Settings() {
 _serviceSetting() {
   local menuOptions selected
 
-  "${nfcUnavailable}" && { _error "NFC Service Unavailable!\n\nIs the NFC script installed?"; return; }
+  "${nfcUnavailable}" && { _error "TapTo Service Unavailable!\n\nIs TapTo installed?"; return; }
 
   menuOptions=(
-    "Enable"   "Enable NFC service"  "off"
-    "Disable"  "Disable NFC service" "off"
+    "Enable"   "Enable TapTo service"  "off"
+    "Disable"  "Disable TapTo service" "off"
   )
   "${nfcStatus}" && menuOptions[2]="on"
   "${nfcStatus}" || menuOptions[5]="on"
@@ -742,14 +742,14 @@ _serviceSetting() {
   selected="$(_radiolist -- "${menuOptions[@]}" )"
   case "${selected}" in
     Enable)
-      "${nfcCommand}" -service start || { _error "Unable to start the NFC service"; return; }
+      "${nfcCommand}" -service start || { _error "Unable to start the TapTo service"; return; }
       export nfcStatus="true" msg="Service: Enabled"
-      _msgbox "The NFC service started"
+      _msgbox "The TapTo service started"
       ;;
     Disable)
-      "${nfcCommand}" -service stop || { _error "Unable to stop the NFC service"; return; }
+      "${nfcCommand}" -service stop || { _error "Unable to stop the TapTo service"; return; }
       export nfcStatus="false" msg="Service: Disabled"
-      _msgbox "The NFC service stopped"
+      _msgbox "The TapTo service stopped"
       ;;
   esac
 }
@@ -761,7 +761,7 @@ _commandSetting() {
     "Disable"  "Disable Linux commands" "off"
   )
 
-  [[ -f "${settings}" ]] || echo "[nfc]" > "${settings}" || { _error "Can't create settings file" ; return 1 ; }
+  [[ -f "${settings}" ]] || echo "[tapto]" > "${settings}" || { _error "Can't create settings file" ; return 1 ; }
 
   if grep -q "^allow_commands=yes" "${settings}"; then
     menuOptions[2]="on"
@@ -802,7 +802,7 @@ _soundSetting() {
     "Disable"  "Disable sounds played when a tag is scanned"  "off"
   )
 
-  [[ -f "${settings}" ]] || echo "[nfc]" > "${settings}" || { _error "Can't create settings file" ; return 1 ; }
+  [[ -f "${settings}" ]] || echo "[tapto]" > "${settings}" || { _error "Can't create settings file" ; return 1 ; }
 
   if grep -q "^disable_sounds=no" "${settings}"; then
     menuOptions[5]="on"
@@ -837,7 +837,7 @@ _connectionSetting() {
     "Custom"    "Manually enter a custom connection string"                 "off"
   )
 
-  [[ -f "${settings}" ]] || echo "[nfc]" > "${settings}" || { _error "Can't create settings file" ; return 1 ; }
+  [[ -f "${settings}" ]] || echo "[tapto]" > "${settings}" || { _error "Can't create settings file" ; return 1 ; }
 
   if ! grep -q "^connection_string=.*" "${settings}"; then
     menuOptions[2]="on"
@@ -886,7 +886,7 @@ _probeSetting() {
     "Disable"  "Disable detection of a serial based reader device"  "off"
   )
 
-  [[ -f "${settings}" ]] || echo "[nfc]" > "${settings}" || { _error "Can't create settings file" ; return 1 ; }
+  [[ -f "${settings}" ]] || echo "[tapto]" > "${settings}" || { _error "Can't create settings file" ; return 1 ; }
 
   # Check if probe_device is set to "no" in the settings
   if grep -q "^probe_device=no" "${settings}"; then
@@ -924,7 +924,7 @@ ${version}
 A tool for making and working with NFC tags on MiSTer FPGA
 
 Whats New? Get involved? Need help?
-  ${underline}github.com/wizzomafizzo/mrext${noUnderline}
+  ${underline}github.com/wizzomafizzo/tapto${noUnderline}
 
 ${nfcjokes[$((RANDOM % ${#nfcjokes[@]}))]}
 
@@ -933,7 +933,7 @@ Wizzo     ${underline}github.com/wizzomafizzo${noUnderline}
 Ziggurat  ${underline}github.com/sigboe${noUnderline}
 
 License: GPL v3.0
-  ${underline}github.com/wizzomafizzo/mrext/blob/main/LICENSE${noUnderline}
+  ${underline}github.com/wizzomafizzo/tapto/blob/main/LICENSE${noUnderline}
 _EOF_
   _msgbox "${about}" --no-collapse --colors --title "About"
 }
