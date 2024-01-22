@@ -23,6 +23,7 @@ TapTo is an open source system for launching games and custom actions using phys
 TapTo has been a community effort from day one. Everyone's contributions are appreciated and encouraged! Want to contribute too? Check out the [Developer Guide](docs/developers.md).
 
 - **Andrea Bogazzi** &mdash; developer &mdash; [GitHub](https://github.com/asturur) | [Twitter](https://twitter.com/AndreaBogazzi)
+- **batty** &mdash; writer &mdash; [GitHub](https://github.com/protogem2) | [Twitter](https://twitter.com/goddamnbathead)
 - **BedroomNinja** &mdash; case designer &mdash; [Printables](https://www.printables.com/@bedroom_ninj_1665215) | [Twitter](https://twitter.com/Bedroom_Ninja)
 - **Gaz** &mdash; developer &mdash; [GitHub](https://github.com/symm) | [Twitter](https://twitter.com/gazj)
 - **Ranny Snice** &mdash; logo creator &mdash; [GitHub](https://github.com/Ranny-Snice) | [Twitter](https://twitter.com/RannySnice)
