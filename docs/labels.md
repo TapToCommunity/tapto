@@ -1,4 +1,5 @@
 # TapTo Labels
+![TapToDIYLabels](https://github.com/wizzomafizzo/tapto/assets/617551/890ebc27-0470-4224-8415-0163c91cbf62)
 Having your favorite artwork on your NFC token is the perfect finishing touch to your TapTo collection. The TapTo team has tried to streamline and document this process to accomodate every skill level.
 
 ## Generating Labels
