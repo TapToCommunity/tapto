@@ -23,6 +23,9 @@ Please [open an issue](https://github.com/wizzomafizzo/mrext/issues/new) to add 
 
 - [Arcade & Computer core artwork collated and edited by NML32](https://mega.nz/folder/vH5WGSJI#UANuzi-5uG9XBqddPeApmw)
 
+## Pre-Printed TapTo Labels
+A request that we've heard often is where people can order pre-printed labels. Unfortunately the TapTo project is not able to offer this due to concerns over the IP rights regarding artwork.
+
 ## Creating Your Own Labels
 
 ### Printers
