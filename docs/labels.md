@@ -1,5 +1,5 @@
 # TapTo Labels
-<img src="..assets/images/labels/labels_header.jpg" />
+<img src="../assets/images/labels/labels_header.jpg" />
 Having your favorite artwork on your NFC token is the perfect finishing touch to your TapTo collection. The TapTo team has tried to streamline and document this process to accomodate every skill level.
 
 ## Generating Labels
