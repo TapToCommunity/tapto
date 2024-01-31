@@ -12,9 +12,9 @@ Labels can be created in bulk using the [TapTo Designer](https://tapto-designer.
 ### TapTo Template Files
 You can also download the template files directly to use in your own design software. The official TapTo templates are free to use and modify to meet your needs. You must follow the [TapTo logo usage guidelines](https://github.com/wizzomafizzo/tapto#license) if you choose to include it.
 
-#### TapTo official template collection - by [Tim Wilsie](https://twitter.com/timwilsie)
-Includes files for horizontal, vertical, and NFC Engine layouts.
-COMING SOON
+#### [TapTo official template collection](.//templates.md) - by [Tim Wilsie](https://twitter.com/timwilsie)
+Includes files for horizontal, vertical, and NFC Engine layouts.  
+[Download and Specifications](.//templates.md)
 
 ### Community Label Packs
 
