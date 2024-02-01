@@ -1,6 +1,6 @@
 # TapTo official template collection
 
-[Download TapTo official template collection](../assets/templates/tapto_templates.zip)
+[Download templates](../assets/templates/)
 
 The Official TapTo Labels were designed for the most common NFC card size, which shares the same dimensions as a standard credit card.
 

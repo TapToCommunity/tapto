@@ -1,5 +1,5 @@
-<h1 align="center">
-  <img width="70%" title="TapTo" src="assets/images/logo/logo-background.svg">
+<h1 align="left">
+  <img width="60%" title="TapTo" src="assets/images/logo/tapto_logo.png" />
 </h1>
 
 TapTo is an open source system for launching games and custom actions using physical objects. It's a great way to make launching games more accessible and add some fun to your gaming setup!
@@ -8,7 +8,7 @@ TapTo is an open source system for launching games and custom actions using phys
 - All hardware required is inexpensive and readily available.
 - It currently supports the [MiSTer FPGA](https://mister-devel.github.io/MkDocs_MiSTer/) platform, with more planned.
 
-[Download](https://github.com/wizzomafizzo/tapto/releases/latest/) | [Vendors](docs/vendors.md) | [Community Projects](docs/community.md) | [Discord](https://wizzo.dev/discord) | [Developer Guide](docs/developers.md) | [API](docs/api.md)
+[Download](https://github.com/wizzomafizzo/tapto/releases/latest/) | [Vendors](docs/vendors.md) | [Community Projects](docs/community.md) | [Discord](https://wizzo.dev/discord) | [Developer Guide](docs/developers.md) | [API](docs/api.md) | [Labels](docs/labels.md)
 
 ## Getting Started
 
