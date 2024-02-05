@@ -42,7 +42,7 @@ Internally, this reader uses a [PN532 module](#pn532-module) and has all the sam
 
 The TapTo NFC-Engine is an alternative case for the DIY NFC Reader which fits around the outside. It's designed in the style of a PC-Engine HuCard loader where NFC cards are slotted into the top and stay for the duration of play. It has a set of HuCard inspired [label templates](labels.md) that match perfectly with the aesthetic!
 
-The model is freely available to [print from Printables](https://www.printables.com/model/719567-tapto-nfc-engine) and is designed by [BedroomNinja](https://www.printables.com/@bedroom_ninj_1665215).
+The model is freely available to [print from Printables](https://www.printables.com/model/737533-tapto-nfc-engine) and is designed by [BedroomNinja](https://www.printables.com/@bedroom_ninj_1665215).
 
 ## ACR122U
 
@@ -75,7 +75,7 @@ These are some confirmed working listings submitted by users:
 
 The TapTo NFC-Engine is an alternative case for the ACR122U which fits around the internal PCB. It's designed in the style of a PC-Engine HuCard loader where NFC cards are slotted into the top and stay for the duration of play. It has a set of HuCard inspired [label templates](labels.md) that match perfectly with the aesthetic!
 
-The model is freely available to [print from Printables](https://www.printables.com/model/722658-tapto-nfc-engine-acr) and is designed by [BedroomNinja](https://www.printables.com/@bedroom_ninj_1665215).
+The model is freely available to [print from Printables](https://www.printables.com/model/737533-tapto-nfc-engine) and is designed by [BedroomNinja](https://www.printables.com/@bedroom_ninj_1665215).
 
 ## PN532 Module
 
