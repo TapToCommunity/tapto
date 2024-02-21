@@ -37,7 +37,7 @@ type TapToConfig struct {
 	DisableSounds      bool   `ini:"disable_sounds,omitempty"`
 	ProbeDevice        bool   `ini:"probe_device,omitempty"`
 	ExitGame           bool   `ini:"exit_game,omitempty"`
-	ExitGameBlocklikst bool   `ini:"exit_game_blocklist,omitempty"`
+	ExitGameBlocklikst string `ini:"exit_game_blocklist,omitempty"`
 	Debug              bool   `ini:"debug,omitempty"`
 }
 
