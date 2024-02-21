@@ -287,7 +287,6 @@ func StartDaemon(cfg *config.UserConfig) (func() error, error) {
 			}
 
 			activeCard := state.GetActiveCard()
-			activeCoreName := mister.GetActiveCoreName()
 			newScanned, removed, err := pollDevice(cfg, &pnd, activeCard, ttp, pbp)
 			if errors.Is(err, nfc.Error(nfc.EIO)) {
 				log.Error().Msgf("error during poll: %s", err)
@@ -307,9 +306,7 @@ func StartDaemon(cfg *config.UserConfig) (func() error, error) {
 
 			state.SetActiveCard(newScanned)
 
-			// to do check string functions in go to check if
-			// activeCoreName is in cfg.TapTo.ExitGame
-			if removed && cfg.TapTo.ExitGame && !state.IsLauncherDisabled() {
+			if removed && cfg.TapTo.ExitGame && strings.Contains(cfg.TapTo.ExitGameBlocklikst, mister.GetActiveCoreName()) && !state.IsLauncherDisabled() {
 				mister.ExitGame()
 				goto end
 			}
