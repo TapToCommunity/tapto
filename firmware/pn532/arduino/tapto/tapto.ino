@@ -1,77 +1,113 @@
 #include <SoftwareSerial.h>
-#include <PN532_SWHSU.h>
-#include <PN532.h>
+#include "PN532_SWHSU.h"
+#include "PN532.h"
+#include "NfcAdapter.h"
 
-int readDelay = 300;
+// pins connected to module SDA and SCL
+#define SDA_PIN 3
+#define SCL_PIN 2
+// pin connected to arduino status LED
+#define LED_PIN LED_BUILTIN
 
-SoftwareSerial SWSerial(2, 3);
-PN532_SWHSU PN532SWHSU(SWSerial);
-PN532 NFC(PN532SWHSU);
+const char *version = "0.1"; // firmware version
+uint16_t readDelay = 300;    // ms between reads
+uint8_t connectMax = 10;     // number of times to try to connect to module
+uint8_t connectDelay = 500;  // ms between connection attempts
 
-void readNFC()
+SoftwareSerial swserial(SDA_PIN, SCL_PIN);
+PN532_SWHSU swhsu(swserial);
+PN532 nfc(swhsu);
+NfcAdapter nfcAdapter(swhsu);
+
+boolean readTag()
 {
-  boolean wasRead;
-  uint8_t uid[] = {0, 0, 0, 0, 0, 0, 0};
-  uint8_t uidLength;
-
-  wasRead = NFC.readPassiveTargetID(PN532_MIFARE_ISO14443A, &uid[0], &uidLength);
-  if (!wasRead)
+  if (!nfcAdapter.tagPresent())
   {
+    digitalWrite(LED_PIN, LOW);
     return;
   }
 
-  char uidString[32] = {0};
+  NfcTag tag = nfcAdapter.read();
 
-  if (uidLength == 4)
-  {
-    sprintf(uidString, "%02X:%02X:%02X:%02X", uid[0], uid[1], uid[2], uid[3]);
-  }
-  else if (uidLength == 7)
-  {
-    sprintf(uidString, "%02X:%02X:%02X:%02X:%02X:%02X:%02X", uid[0], uid[1], uid[2], uid[3], uid[4], uid[5], uid[6]);
-  }
-  else
-  {
-    Serial.println("Invalid UID length");
-  }
+  digitalWrite(LED_PIN, HIGH);
 
-  Serial.print("**read:");
-  Serial.print(uidString);
+  Serial.print("#read=");
+  Serial.print(tag.getUidString());
   Serial.print(",");
-  Serial.println();
 
-  delay(readDelay);
+  NdefMessage message = tag.getNdefMessage();
+
+  if (message.getRecordCount() == 0)
+  {
+    Serial.println();
+    return;
+  }
+
+  tag.print();
+  Serial.println();
+}
+
+void queryModule()
+{
+  uint8_t connectTries = 0;
+  uint32_t moduleVersion = 0;
+  Serial.print("Querying PN53x board...");
+  while (!moduleVersion)
+  {
+    Serial.print(".");
+    moduleVersion = nfc.getFirmwareVersion();
+    connectTries++;
+    if (connectTries > connectMax)
+    {
+      Serial.println();
+      Serial.println("#error=PN53x module not found");
+      while (1)
+      {
+        digitalWrite(LED_PIN, HIGH);
+        delay(connectDelay);
+        digitalWrite(LED_PIN, LOW);
+        delay(connectDelay);
+      }
+    }
+    delay(connectDelay);
+  }
+
+  Serial.print("found chip PN5");
+  Serial.print((moduleVersion >> 24) & 0xFF, HEX);
+  Serial.print(" (firmware v");
+  Serial.print((moduleVersion >> 16) & 0xFF, DEC);
+  Serial.print('.');
+  Serial.print((moduleVersion >> 8) & 0xFF, DEC);
+  Serial.println(")");
 }
 
 void setup()
 {
   Serial.begin(115200);
-  Serial.println("TapTo firmware v0.1");
+  while (!Serial)
+    delay(10);
 
-  NFC.begin();
+  Serial.println("TapTo Firmware v" + String(version));
+  Serial.println("#version=tapto-" + String(version));
 
-  uint32_t pn532_version = NFC.getFirmwareVersion();
-  if (!pn532_version)
-  {
-    Serial.print("PN53X module not found");
-    while (1)
-      ;
-  }
+  pinMode(LED_PIN, OUTPUT);
+  nfc.begin();
 
-  Serial.print("Found module PN5");
-  Serial.println((pn532_version >> 24) & 0xFF, HEX);
-  Serial.print("Firmware v");
-  Serial.print((pn532_version >> 16) & 0xFF, DEC);
-  Serial.print('.');
-  Serial.println((pn532_version >> 8) & 0xFF, DEC);
+  queryModule();
 
-  NFC.SAMConfig();
+  nfc.setPassiveActivationRetries(0xFF);
+  nfc.SAMConfig();
+
+  // TODO: this doubles up on earlier commands, but you can't query version
+  //       info with just the nfcadapter
+  nfcAdapter.begin();
 }
 
 void loop()
 {
   while (1)
   {
-    readNFC();
+    readTag();
+    delay(readDelay);
   }
 }
