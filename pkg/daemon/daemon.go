@@ -139,7 +139,7 @@ func detectConnectionString() string {
 	return ""
 }
 
-func OpenDeviceWithRetries(config config.TapToConfig) (nfc.Device, error) {
+func OpenDeviceWithRetries(config config.TapToConfig, state *State) (nfc.Device, error) {
 	var connectionString = config.ConnectionString
 	if connectionString == "" && config.ProbeDevice == true {
 		connectionString = detectConnectionString()
@@ -150,6 +150,16 @@ func OpenDeviceWithRetries(config config.TapToConfig) (nfc.Device, error) {
 		pnd, err := nfc.Open(connectionString)
 		if err == nil {
 			log.Info().Msgf("successful connect after %d tries", tries)
+
+			proto := strings.SplitN(strings.ToLower(connectionString), ":", 2)[0]
+			if proto == "pn532_uart" {
+				state.SetReaderConnected(ReaderTypePN532)
+			} else if proto == "acr122_usb" {
+				state.SetReaderConnected(ReaderTypeACR122U)
+			} else {
+				state.SetReaderConnected(ReaderTypeUnknown)
+			}
+
 			return pnd, err
 		}
 
@@ -260,12 +270,13 @@ func StartDaemon(cfg *config.UserConfig) (func() error, error) {
 		}
 
 	reconnect:
-		pnd, err = OpenDeviceWithRetries(cfg.TapTo)
+		pnd, err = OpenDeviceWithRetries(cfg.TapTo, state)
 		if err != nil {
 			return
 		}
 
 		defer func(pnd nfc.Device) {
+			state.SetReaderDisconnected()
 			err := pnd.Close()
 			if err != nil {
 				log.Warn().Msgf("error closing device: %s", err)
@@ -273,6 +284,7 @@ func StartDaemon(cfg *config.UserConfig) (func() error, error) {
 		}(pnd)
 
 		if err := pnd.InitiatorInit(); err != nil {
+			state.SetReaderDisconnected()
 			log.Error().Msgf("could not init initiator: %s", err)
 			return
 		}
@@ -289,6 +301,7 @@ func StartDaemon(cfg *config.UserConfig) (func() error, error) {
 			activeCard := state.GetActiveCard()
 			newScanned, removed, err := pollDevice(cfg, &pnd, activeCard, ttp, pbp)
 			if errors.Is(err, nfc.Error(nfc.EIO)) {
+				state.SetReaderDisconnected()
 				log.Error().Msgf("error during poll: %s", err)
 				log.Error().Msg("fatal IO error, device was unplugged, exiting...")
 				if time.Since(lastError) > 1*time.Second {
