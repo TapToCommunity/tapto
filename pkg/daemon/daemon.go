@@ -305,8 +305,7 @@ func pollLoop(
 
 		if removed &&
 			cfg.TapTo.ExitGame &&
-			cfg.TapTo.ExitGame &&
-			!strings.Contains(cfg.TapTo.ExitGameBlocklikst, mister.GetActiveCoreName()) &&
+			!strings.Contains(cfg.TapTo.ExitGameBlocklist, mister.GetActiveCoreName()) &&
 			!state.IsLauncherDisabled() {
 			mister.ExitGame()
 			continue
