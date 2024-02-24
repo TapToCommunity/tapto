@@ -135,7 +135,7 @@ func handleWriteCommand(textToWrite string, svc *mister.Service, cfg config.TapT
 	var pnd nfc.Device
 	var err error
 
-	pnd, err = daemon.OpenDeviceWithRetries(cfg)
+	pnd, err = daemon.OpenDeviceWithRetries(cfg, &daemon.State{})
 	if err != nil {
 		log.Error().Msgf("giving up, exiting: %s")
 		_, _ = fmt.Fprintln(os.Stderr, "Could not open device:", err)
