@@ -29,6 +29,8 @@ import (
 	"strings"
 	"time"
 
+	"golang.org/x/exp/slices"
+
 	"github.com/clausecker/nfc/v2"
 	"github.com/rs/zerolog/log"
 	"github.com/wizzomafizzo/mrext/pkg/input"
@@ -305,7 +307,7 @@ func pollLoop(
 
 		if removed &&
 			cfg.TapTo.ExitGame &&
-			!strings.Contains(cfg.TapTo.ExitGameBlocklist, mister.GetActiveCoreName()) &&
+			!slices.Contains(cfg.TapTo.ExitGameBlocklist, mister.GetActiveCoreName()) &&
 			!state.IsLauncherDisabled() {
 			mister.ExitGame()
 			continue
