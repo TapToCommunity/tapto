@@ -145,16 +145,22 @@ func OpenDeviceWithRetries(config config.TapToConfig, state *State) (nfc.Device,
 		connectionString = detectConnectionString()
 	}
 
+	log.Info().Msgf("connecting to device: %s", connectionString)
+
 	tries := 0
 	for {
 		pnd, err := nfc.Open(connectionString)
 		if err == nil {
 			log.Info().Msgf("successful connect after %d tries", tries)
 
-			proto := strings.SplitN(strings.ToLower(connectionString), ":", 2)[0]
-			if proto == "pn532_uart" {
+			connProto := strings.SplitN(strings.ToLower(connectionString), ":", 2)[0]
+			log.Info().Msgf("connection protocol: %s", connProto)
+			deviceName := pnd.String()
+			log.Info().Msgf("device name: %s", deviceName)
+
+			if connProto == "pn532_uart" {
 				state.SetReaderConnected(ReaderTypePN532)
-			} else if proto == "acr122_usb" {
+			} else if strings.Contains(deviceName, "ACR122U") {
 				state.SetReaderConnected(ReaderTypeACR122U)
 			} else {
 				state.SetReaderConnected(ReaderTypeUnknown)
