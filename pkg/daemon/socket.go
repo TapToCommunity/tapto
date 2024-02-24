@@ -74,6 +74,9 @@ func StartSocketServer(state *State) (net.Listener, error) {
 				case "enable":
 					state.EnableLauncher()
 					log.Info().Msg("launcher enabled")
+				case "connection":
+					connected, rt := state.GetReaderStatus()
+					payload = fmt.Sprintf("%t,%s", connected, rt)
 				default:
 					log.Warn().Msgf("unknown command: %s", strings.TrimRight(string(buf[:n]), "\n"))
 				}
