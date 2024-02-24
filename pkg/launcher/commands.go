@@ -38,7 +38,17 @@ import (
 	"github.com/wizzomafizzo/tapto/pkg/platforms/mister"
 )
 
-func LaunchToken(cfg *config.UserConfig, manual bool, kbd input.Keyboard, text string) error {
+// TODO: split these commands out into separate functions
+// TODO: adding some logging for each command
+
+func LaunchToken(
+	cfg *config.UserConfig,
+	manual bool,
+	kbd input.Keyboard,
+	text string,
+	totalCommands int,
+	currentIndex int,
+) error {
 	// detection can never be perfect, but these characters are illegal in
 	// windows filenames and heavily avoided in linux. use them to mark that
 	// this is a command
@@ -113,7 +123,18 @@ func LaunchToken(cfg *config.UserConfig, manual bool, kbd input.Keyboard, text s
 				return fmt.Errorf("ini id out of range: %d", id)
 			}
 
-			return mrextMister.SetActiveIni(id)
+			doRelaunch := true
+			// only relaunch if there aren't any more commands
+			if totalCommands > 1 && currentIndex < totalCommands-1 {
+				doRelaunch = false
+			}
+
+			err = mrextMister.SetActiveIni(id, doRelaunch)
+			if err != nil {
+				return err
+			}
+
+			return nil
 		case "get":
 			go func() {
 				_, _ = http.Get(args)
