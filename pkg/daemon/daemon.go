@@ -305,10 +305,7 @@ func pollLoop(
 
 		state.SetActiveCard(newScanned)
 
-		if removed &&
-			cfg.TapTo.ExitGame &&
-			!slices.Contains(cfg.TapTo.ExitGameBlocklist, mister.GetActiveCoreName()) &&
-			!state.IsLauncherDisabled() {
+		if removed && cfg.TapTo.ExitGame && !slices.Contains(cfg.TapTo.ExitGameBlocklist, mister.GetActiveCoreName()) && !state.IsLauncherDisabled() {
 			mister.ExitGame()
 			continue
 		}
