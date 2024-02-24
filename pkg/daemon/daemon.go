@@ -231,6 +231,115 @@ func launchCard(cfg *config.UserConfig, state *State, kbd input.Keyboard) error 
 	return nil
 }
 
+func pollLoop(
+	cfg *config.UserConfig,
+	state *State,
+	kbd input.Keyboard,
+) {
+	var pnd nfc.Device
+	var err error
+
+	ttp := TimesToPoll
+	pbp := PeriodBetweenPolls
+
+	var lastError time.Time
+	playFail := func() {
+		if time.Since(lastError) > 1*time.Second {
+			mister.PlayFail(cfg)
+		}
+	}
+
+	if cfg.TapTo.ExitGame {
+		// FIXME: this method makes the activity indicator flicker, is there another way?
+		ttp = 1
+		// TODO: value requires investigation, originally set to 150 which worked for pn532
+		//       but not for acr122u (read once then never again). 200 seems to work ok
+		pbp = 200 * time.Millisecond
+	}
+
+	for {
+		if state.ShouldStopService() {
+			break
+		}
+
+		time.Sleep(periodBetweenLoop)
+
+		if connected, _ := state.GetReaderStatus(); !connected {
+			// TODO: keep track of reconnect attempts?
+			log.Info().Msg("reader not connected, attempting connection....")
+
+			pnd, err = OpenDeviceWithRetries(cfg.TapTo, state)
+			if err != nil {
+				continue
+			}
+
+			if err := pnd.InitiatorInit(); err != nil {
+				state.SetReaderDisconnected()
+				log.Error().Msgf("could not init initiator: %s", err)
+				continue
+			}
+
+			log.Info().Msgf("opened connection: %s %s", pnd, pnd.Connection())
+		}
+
+		activeCard := state.GetActiveCard()
+
+		log.Debug().Msgf("polling for %d times with %s delay", ttp, pbp)
+		newScanned, removed, err := pollDevice(cfg, &pnd, activeCard, ttp, pbp)
+
+		if errors.Is(err, nfc.Error(nfc.EIO)) {
+			state.SetReaderDisconnected()
+			log.Error().Msgf("error during poll: %s", err)
+			log.Error().Msg("fatal IO error, device was possibly unplugged")
+			playFail()
+			lastError = time.Now()
+			continue
+		} else if err != nil {
+			log.Error().Msgf("error during poll: %s", err)
+			playFail()
+			lastError = time.Now()
+			continue
+		}
+
+		state.SetActiveCard(newScanned)
+
+		if removed && cfg.TapTo.ExitGame && !state.IsLauncherDisabled() {
+			mister.ExitGame()
+			continue
+		}
+
+		if newScanned.UID == "" || activeCard.UID == newScanned.UID {
+			continue
+		}
+
+		mister.PlaySuccess(cfg)
+
+		err = writeScanResult(newScanned)
+		if err != nil {
+			log.Error().Msgf("error writing tmp scan result: %s", err)
+		}
+
+		if state.IsLauncherDisabled() {
+			log.Info().Msg("launcher disabled, skipping command action")
+			continue
+		}
+
+		err = launchCard(cfg, state, kbd)
+		if err != nil {
+			log.Error().Msgf("error launching card: %s", err)
+			playFail()
+			lastError = time.Now()
+			continue
+		}
+	}
+
+	state.SetReaderDisconnected()
+	err = pnd.Close()
+	if err != nil {
+		log.Warn().Msgf("error closing device: %s", err)
+	}
+}
+
 func StartDaemon(cfg *config.UserConfig) (func() error, error) {
 	state := &State{}
 
@@ -260,106 +369,7 @@ func StartDaemon(cfg *config.UserConfig) (func() error, error) {
 		state.DisableLauncher()
 	}
 
-	go func() {
-		var pnd nfc.Device
-		var err error
-
-		ttp := TimesToPoll
-		pbp := PeriodBetweenPolls
-
-		if cfg.TapTo.ExitGame {
-			// FIXME: this method makes the activity indicator flicker, is there another way?
-			ttp = 1
-			// TODO: value requires investigation, originally set to 150 which worked for pn532
-			//       but not for acr122u (read once then never again). 200 seems to work ok
-			pbp = 200 * time.Millisecond
-		}
-
-	reconnect:
-		pnd, err = OpenDeviceWithRetries(cfg.TapTo, state)
-		if err != nil {
-			return
-		}
-
-		defer func(pnd nfc.Device) {
-			state.SetReaderDisconnected()
-			err := pnd.Close()
-			if err != nil {
-				log.Warn().Msgf("error closing device: %s", err)
-			}
-		}(pnd)
-
-		if err := pnd.InitiatorInit(); err != nil {
-			state.SetReaderDisconnected()
-			log.Error().Msgf("could not init initiator: %s", err)
-			return
-		}
-
-		log.Info().Msgf("opened connection: %s %s", pnd, pnd.Connection())
-		log.Info().Msgf("polling for %d times with %s delay", ttp, pbp)
-		var lastError time.Time
-
-		for {
-			if state.ShouldStopService() {
-				break
-			}
-
-			activeCard := state.GetActiveCard()
-			newScanned, removed, err := pollDevice(cfg, &pnd, activeCard, ttp, pbp)
-			if errors.Is(err, nfc.Error(nfc.EIO)) {
-				state.SetReaderDisconnected()
-				log.Error().Msgf("error during poll: %s", err)
-				log.Error().Msg("fatal IO error, device was unplugged, exiting...")
-				if time.Since(lastError) > 1*time.Second {
-					mister.PlayFail(cfg)
-				}
-				goto reconnect
-			} else if err != nil {
-				log.Error().Msgf("error during poll: %s", err)
-				if time.Since(lastError) > 1*time.Second {
-					mister.PlayFail(cfg)
-				}
-				lastError = time.Now()
-				goto end
-			}
-
-			state.SetActiveCard(newScanned)
-
-			if removed && cfg.TapTo.ExitGame && !state.IsLauncherDisabled() {
-				mister.ExitGame()
-				goto end
-			}
-
-			if newScanned.UID == "" || activeCard.UID == newScanned.UID {
-				goto end
-			}
-
-			mister.PlaySuccess(cfg)
-
-			err = writeScanResult(newScanned)
-			if err != nil {
-				log.Error().Msgf("error writing tmp scan result: %s", err)
-			}
-
-			if state.IsLauncherDisabled() {
-				log.Info().Msg("launcher disabled, skipping")
-				goto end
-			}
-
-			err = launchCard(cfg, state, kbd)
-			if err != nil {
-				log.Error().Msgf("error launching card: %s", err)
-				if time.Since(lastError) > 1*time.Second {
-					mister.PlayFail(cfg)
-				}
-				lastError = time.Now()
-				goto end
-			}
-
-		end:
-			time.Sleep(periodBetweenLoop)
-		}
-	}()
+	go pollLoop(cfg, state, kbd)
 
 	socket, err := StartSocketServer(state)
 	if err != nil {
