@@ -221,8 +221,8 @@ func launchCard(cfg *config.UserConfig, state *State, kbd input.Keyboard) error 
 	log.Info().Msgf("launching with text: %s", text)
 	cmds := strings.Split(text, "||")
 
-	for _, cmd := range cmds {
-		err := launcher.LaunchToken(cfg, cfg.TapTo.AllowCommands || override, kbd, cmd)
+	for i, cmd := range cmds {
+		err := launcher.LaunchToken(cfg, cfg.TapTo.AllowCommands || override, kbd, cmd, len(cmds), i)
 		if err != nil {
 			return err
 		}
