@@ -67,16 +67,16 @@ fi
 black="\Z0" red="\Z1" green="\Z2" yellow="\Z3" blue="\Z4" magenta="\Z5" cyan="\Z6" white="\Z7" bold="\Zb" unbold="\ZB" reverse="\Zr" unreverse="\ZR" underline="\Zu" noUnderline="\ZU" reset="\Zn"
 
 cmdPalette=(
-  "system"      "Launch a system"
-  "random"      "Launch a random game for a system"
-  "ini"         "Change to the specified MiSTer ini file"
-  "http.get"    "Perform an HTTP GET request to the specified URL"
-  "http.post"   "Perform an HTTP POST request to the specified URL"
-  "key"         "Press a key on the keyboard"
-  "coinp1"      "Insert a coin/credit for player 1"
-  "coinp2"      "Insert a coin/credit for player 2"
-  "delay"       "Delay next command by specified milliseconds"
-  "command"     "Run Linux command"
+  "launch.system"  "Launch a system"
+  "launch.random"  "Launch a random game for a system"
+  "mister.ini"     "Change to the specified MiSTer ini file"
+  "http.get"       "Perform an HTTP GET request to the specified URL"
+  "http.post"      "Perform an HTTP POST request to the specified URL"
+  "input.key"      "Press a key on the keyboard"
+  "input.coinp1"   "Insert a coin/credit for player 1"
+  "input.coinp2"   "Insert a coin/credit for player 2"
+  "delay"          "Delay next command by specified milliseconds"
+  "shell"          "Run Linux command"
 )
 consoles=(
   "AdventureVision"   "Adventure Vision"
@@ -651,14 +651,14 @@ _craftCommand(){
   command="${command}${selected}"
 
   case "${selected}" in
-    system | random)
+    launch.*)
       console="$(_menu \
         --backtitle "${title}" \
         -- "${consoles[@]}" )"
       exitcode="${?}"; [[ "${exitcode}" -ge 1 ]] && { "${FUNCNAME[0]}" ; return ; }
       command="${command}:${console}"
       ;;
-    ini)
+    mister.ini)
       ini="$(_radiolist -- \
         1 one on 2 two off 3 three off 4 four off )"
       exitcode="${?}"; [[ "${exitcode}" -ge 1 ]] && { "${FUNCNAME[0]}" ; return ; }
@@ -670,7 +670,7 @@ _craftCommand(){
       exitcode="${?}"; [[ "${exitcode}" -ge 1 ]] && { "${FUNCNAME[0]}" ; return ; }
       command="${command}:${http}"
       ;;
-    key)
+    input.key)
       key="$(_menu -- "${keycodes[@]}")"
       exitcode="${?}"; [[ "${exitcode}" -ge 1 ]] && { "${FUNCNAME[0]}" ; return ; }
       for ((i=0; i<${#keycodes[@]}; i++)); do
@@ -684,7 +684,7 @@ _craftCommand(){
       done
       command="${command}:${key}"
       ;;
-    coinp1 | coinp2)
+    input.coinp*)
       while true; do
         coin="$(_inputbox "Enter number" "1")"
         exitcode="${?}"; [[ "${exitcode}" -ge 1 ]] && { "${FUNCNAME[0]}" ; return ; }
@@ -693,7 +693,7 @@ _craftCommand(){
       done
       command="${command}:${coin}"
       ;;
-    command)
+    shell)
       while true; do
         linuxcmd="$(_inputbox "Enter Linux command" "reboot" || return )"
         exitcode="${?}"; [[ "${exitcode}" -ge 1 ]] && { "${FUNCNAME[0]}" ; return ; }
