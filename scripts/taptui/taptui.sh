@@ -67,14 +67,16 @@ fi
 black="\Z0" red="\Z1" green="\Z2" yellow="\Z3" blue="\Z4" magenta="\Z5" cyan="\Z6" white="\Z7" bold="\Zb" unbold="\ZB" reverse="\Zr" unreverse="\ZR" underline="\Zu" noUnderline="\ZU" reset="\Zn"
 
 cmdPalette=(
-  "system"  "Launch a system"
-  "random"  "Launch a random game for a system"
-  "ini"     "Change to the specified MiSTer ini file"
-  "get"     "Perform an HTTP GET request to the specified URL"
-  "key"     "Press a key on the keyboard"
-  "coinp1"  "Insert a coin/credit for player 1"
-  "coinp2"  "Insert a coin/credit for player 2"
-  "command" "Run Linux command"
+  "system"      "Launch a system"
+  "random"      "Launch a random game for a system"
+  "ini"         "Change to the specified MiSTer ini file"
+  "http.get"    "Perform an HTTP GET request to the specified URL"
+  "http.post"   "Perform an HTTP POST request to the specified URL"
+  "key"         "Press a key on the keyboard"
+  "coinp1"      "Insert a coin/credit for player 1"
+  "coinp2"      "Insert a coin/credit for player 2"
+  "delay"       "Delay next command by specified milliseconds"
+  "command"     "Run Linux command"
 )
 consoles=(
   "AdventureVision"   "Adventure Vision"
@@ -638,7 +640,7 @@ _commandPalette() {
 # Build a command using a command palette
 # Usage: _craftCommand
 _craftCommand(){
-  local command selected console recursion
+  local command selected console recursion ms
   command="**"
   selected="$(_menu \
     --cancel-label "Back" \
@@ -662,8 +664,9 @@ _craftCommand(){
       exitcode="${?}"; [[ "${exitcode}" -ge 1 ]] && { "${FUNCNAME[0]}" ; return ; }
       command="${command}:${ini}"
       ;;
-    get)
-      http="$(_inputbox "Enter URL" "https://")"
+    http.*)
+      requestType="${selected#*.}"
+      http="$(_inputbox "Enter URL for ${requestType^^}" "https://")"
       exitcode="${?}"; [[ "${exitcode}" -ge 1 ]] && { "${FUNCNAME[0]}" ; return ; }
       command="${command}:${http}"
       ;;
@@ -685,8 +688,8 @@ _craftCommand(){
       while true; do
         coin="$(_inputbox "Enter number" "1")"
         exitcode="${?}"; [[ "${exitcode}" -ge 1 ]] && { "${FUNCNAME[0]}" ; return ; }
-        [[ "${coin}" == ?(-)+([0-9]) ]] && break
-        _error "${coin} is not a number"
+        [[ "${coin}" == +([0-9]) ]] && break
+        _error "${coin} is not a positive number"
       done
       command="${command}:${coin}"
       ;;
@@ -698,6 +701,15 @@ _craftCommand(){
         _error "${linuxcmd%% *} from ${linuxcmd} does not seam to be a valid command"
       done
       command="${command}:${linuxcmd}"
+      ;;
+    delay)
+      while true; do
+        ms="$(_inputbox "Milliseconds (500 is half a second)" "500")"
+        exitcode="${?}"; [[ "${exitcode}" -ge 1 ]] && { "${FUNCNAME[0]}" ; return ; }
+        [[ "${ms}" == +([0-9]) ]] && break
+        _error "${ms} is not a positive number"
+      done
+      command="${command}:${ms}"
       ;;
   esac
   echo "${command}"
