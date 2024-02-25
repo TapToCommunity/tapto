@@ -16,10 +16,12 @@ This text can be as simple as a path to a game file, or perform multiple custom 
     - [Launch a System (launch.system)](#launch-a-system-launchsystem)
     - [Launch a Random Game (launch.random)](#launch-a-random-game-launchrandom)
     - [Change the Actve MiSTer.ini File (mister.ini)](#change-the-actve-misterini-file-misterini)
-    - [Make an HTTP Request to a URL (http.get)](#make-an-http-request-to-a-url-httpget)
+    - [Make an HTTP GET Request to a URL (http.get)](#make-an-http-get-request-to-a-url-httpget)
+    - [Make an HTTP POST Request to a URL (http.post)](#make-an-http-post-request-to-a-url-httppost)
     - [Press a Keyboard Key (input.key)](#press-a-keyboard-key-inputkey)
     - [Insert a Coin/Credit (input.coinp1/input.coinp2)](#insert-a-coincredit-inputcoinp1inputcoinp2)
     - [Run a System/Linux Command (shell)](#run-a-systemlinux-command-shell)
+    - [Delay Command Execution (delay)](#delay-command-execution-delay)
 
 
 ## Setting Up Tokens
@@ -141,7 +143,7 @@ For example:
 
 This switch will not persist after a reboot, same as loading it through the OSD.
 
-### Make an HTTP Request to a URL (http.get)
+### Make an HTTP GET Request to a URL (http.get)
 
 Perform an HTTP GET request to the specified URL. For example:
 ```
@@ -155,7 +157,19 @@ It can be combined with other commands using the `||` separator. For example:
 **http.get:https://example.com||_Console/SNES
 ```
 
-This does *not* check for any errors, and will not show any output. You send the request and off it goes into the ether.
+### Make an HTTP POST Request to a URL (http.post)
+
+Perform an HTTP POST request to the specified URL. For example:
+```
+**http.post:https://example.com|application/json|{"key":"value"}
+```
+
+Or with Remote, to launch the Update All script:
+```
+**http.post:http://localhost:8182/api/scripts/launch/update_all.sh|application/json|
+```
+
+The command is in the format `URL|Content-Type|Body`.
 
 ### Press a Keyboard Key (input.key)
 
@@ -188,4 +202,18 @@ It also supports inserting multiple coins at once. For example (to insert 3 coin
 This command will run a MiSTer Linux command directly. For example:
 ```
 **shell:reboot
+```
+
+### Delay Command Execution (delay)
+
+This command will delay the execution of the next command by the specified number of milliseconds. For example:
+```
+**delay:500
+```
+
+Will delay the next command by 500ms (half a second). This is a *blocking command* and will delay the entire token read by the specified time.
+
+It can be combined with other commands using the `||` separator. For example, to launch SNES, wait 10 seconds, then press F12:
+```
+_Console/SNES||**delay:10000||**input.key:88
 ```
