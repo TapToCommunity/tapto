@@ -30,6 +30,7 @@ import (
 	s "strings"
 	"time"
 
+	"github.com/rs/zerolog/log"
 	"github.com/wizzomafizzo/mrext/pkg/input"
 
 	"github.com/wizzomafizzo/mrext/pkg/games"
@@ -137,9 +138,30 @@ func LaunchToken(
 			return nil
 		case "get":
 			go func() {
-				_, _ = http.Get(args)
+				resp, err := http.Get(args)
+				if err != nil {
+					log.Error().Msgf("error getting url: %s", err)
+					return
+				}
+				resp.Body.Close()
 			}()
 			return nil
+		case "post":
+			parts := s.SplitN(text, "|", 3)
+			if len(parts) < 3 {
+				return fmt.Errorf("invalid post format: %s", text)
+			}
+
+			url, format, data := s.TrimSpace(parts[0]), s.TrimSpace(parts[1]), s.TrimSpace(parts[2])
+
+			go func() {
+				resp, err := http.Post(url, format, s.NewReader(data))
+				if err != nil {
+					log.Error().Msgf("error posting to url: %s", err)
+					return
+				}
+				resp.Body.Close()
+			}()
 		case "key":
 			code, err := strconv.Atoi(args)
 			if err != nil {
