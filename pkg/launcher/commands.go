@@ -41,6 +41,166 @@ import (
 
 // TODO: split these commands out into separate functions
 // TODO: adding some logging for each command
+// TODO: search game file
+// TODO: game file by hash
+// TODO: delay command
+
+type cmdEnv struct {
+	args          string
+	cfg           *config.UserConfig
+	manual        bool
+	kbd           input.Keyboard
+	text          string
+	totalCommands int
+	currentIndex  int
+}
+
+func cmdSystem(env *cmdEnv) error {
+	if s.EqualFold(env.args, "menu") {
+		return mrextMister.LaunchMenu()
+	}
+
+	system, err := games.LookupSystem(env.args)
+	if err != nil {
+		return err
+	}
+
+	return mrextMister.LaunchCore(mister.UserConfigToMrext(env.cfg), *system)
+}
+
+func cmdShell(env *cmdEnv) error {
+	if !env.manual {
+		return fmt.Errorf("commands must be manually run")
+	}
+
+	command := exec.Command("bash", "-c", env.args)
+	err := command.Start()
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func cmdRandom(env *cmdEnv) error {
+	if env.args == "" {
+		return fmt.Errorf("no system specified")
+	}
+
+	if env.args == "all" {
+		return mrextMister.LaunchRandomGame(mister.UserConfigToMrext(env.cfg), games.AllSystems())
+	}
+
+	// TODO: allow multiple systems
+	system, err := games.LookupSystem(env.args)
+	if err != nil {
+		return err
+	}
+
+	return mrextMister.LaunchRandomGame(
+		mister.UserConfigToMrext(env.cfg),
+		[]games.System{*system},
+	)
+}
+
+func cmdIni(env *cmdEnv) error {
+	inis, err := mrextMister.GetAllMisterIni()
+	if err != nil {
+		return err
+	}
+
+	if len(inis) == 0 {
+		return fmt.Errorf("no ini files found")
+	}
+
+	id, err := strconv.Atoi(env.args)
+	if err != nil {
+		return err
+	}
+
+	if id < 1 || id > len(inis) {
+		return fmt.Errorf("ini id out of range: %d", id)
+	}
+
+	doRelaunch := true
+	// only relaunch if there aren't any more commands
+	if env.totalCommands > 1 && env.currentIndex < env.totalCommands-1 {
+		doRelaunch = false
+	}
+
+	err = mrextMister.SetActiveIni(id, doRelaunch)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func cmdHttpGet(env *cmdEnv) error {
+	go func() {
+		resp, err := http.Get(env.args)
+		if err != nil {
+			log.Error().Msgf("error getting url: %s", err)
+			return
+		}
+		resp.Body.Close()
+	}()
+
+	return nil
+}
+
+func cmdHttpPost(env *cmdEnv) error {
+	parts := s.SplitN(env.text, "|", 3)
+	if len(parts) < 3 {
+		return fmt.Errorf("invalid post format: %s", env.text)
+	}
+
+	url, format, data := s.TrimSpace(parts[0]), s.TrimSpace(parts[1]), s.TrimSpace(parts[2])
+
+	go func() {
+		resp, err := http.Post(url, format, s.NewReader(data))
+		if err != nil {
+			log.Error().Msgf("error posting to url: %s", err)
+			return
+		}
+		resp.Body.Close()
+	}()
+
+	return nil
+}
+
+func cmdKey(env *cmdEnv) error {
+	code, err := strconv.Atoi(env.args)
+	if err != nil {
+		return err
+	}
+
+	env.kbd.Press(code)
+
+	return nil
+}
+
+func insertCoin(env *cmdEnv, key int) error {
+	amount, err := strconv.Atoi(env.args)
+	if err != nil {
+		return err
+	}
+
+	for i := 0; i < amount; i++ {
+		env.kbd.Press(key)
+		time.Sleep(100 * time.Millisecond)
+	}
+
+	return nil
+}
+
+func cmdCoinP1(env *cmdEnv) error {
+	return insertCoin(env, 6)
+}
+
+func cmdCoinP2(env *cmdEnv) error {
+	return insertCoin(env, 7)
+}
 
 func LaunchToken(
 	cfg *config.UserConfig,
@@ -62,140 +222,35 @@ func LaunchToken(
 
 		cmd, args := s.TrimSpace(parts[0]), s.TrimSpace(parts[1])
 
-		// TODO: search game file
-		// TODO: game file by hash
+		env := &cmdEnv{
+			args:          args,
+			cfg:           cfg,
+			manual:        manual,
+			kbd:           kbd,
+			text:          text,
+			totalCommands: totalCommands,
+			currentIndex:  currentIndex,
+		}
 
 		switch cmd {
 		case "system":
-			if s.EqualFold(args, "menu") {
-				return mrextMister.LaunchMenu()
-			}
-
-			system, err := games.LookupSystem(args)
-			if err != nil {
-				return err
-			}
-
-			return mrextMister.LaunchCore(mister.UserConfigToMrext(cfg), *system)
+			return cmdSystem(env)
 		case "command":
-			if !manual {
-				return fmt.Errorf("commands must be manually run")
-			}
-
-			command := exec.Command("bash", "-c", args)
-			err := command.Start()
-			if err != nil {
-				return err
-			}
-
-			return nil
+			return cmdShell(env)
 		case "random":
-			if args == "" {
-				return fmt.Errorf("no system specified")
-			}
-
-			if args == "all" {
-				return mrextMister.LaunchRandomGame(mister.UserConfigToMrext(cfg), games.AllSystems())
-			}
-
-			// TODO: allow multiple systems
-			system, err := games.LookupSystem(args)
-			if err != nil {
-				return err
-			}
-
-			return mrextMister.LaunchRandomGame(mister.UserConfigToMrext(cfg), []games.System{*system})
+			return cmdRandom(env)
 		case "ini":
-			inis, err := mrextMister.GetAllMisterIni()
-			if err != nil {
-				return err
-			}
-
-			if len(inis) == 0 {
-				return fmt.Errorf("no ini files found")
-			}
-
-			id, err := strconv.Atoi(args)
-			if err != nil {
-				return err
-			}
-
-			if id < 1 || id > len(inis) {
-				return fmt.Errorf("ini id out of range: %d", id)
-			}
-
-			doRelaunch := true
-			// only relaunch if there aren't any more commands
-			if totalCommands > 1 && currentIndex < totalCommands-1 {
-				doRelaunch = false
-			}
-
-			err = mrextMister.SetActiveIni(id, doRelaunch)
-			if err != nil {
-				return err
-			}
-
-			return nil
+			return cmdIni(env)
 		case "get":
-			go func() {
-				resp, err := http.Get(args)
-				if err != nil {
-					log.Error().Msgf("error getting url: %s", err)
-					return
-				}
-				resp.Body.Close()
-			}()
-			return nil
+			return cmdHttpGet(env)
 		case "post":
-			parts := s.SplitN(text, "|", 3)
-			if len(parts) < 3 {
-				return fmt.Errorf("invalid post format: %s", text)
-			}
-
-			url, format, data := s.TrimSpace(parts[0]), s.TrimSpace(parts[1]), s.TrimSpace(parts[2])
-
-			go func() {
-				resp, err := http.Post(url, format, s.NewReader(data))
-				if err != nil {
-					log.Error().Msgf("error posting to url: %s", err)
-					return
-				}
-				resp.Body.Close()
-			}()
+			return cmdHttpPost(env)
 		case "key":
-			code, err := strconv.Atoi(args)
-			if err != nil {
-				return err
-			}
-
-			kbd.Press(code)
-
-			return nil
+			return cmdKey(env)
 		case "coinp1":
-			amount, err := strconv.Atoi(args)
-			if err != nil {
-				return err
-			}
-
-			for i := 0; i < amount; i++ {
-				kbd.Press(6)
-				time.Sleep(100 * time.Millisecond)
-			}
-
-			return nil
+			return cmdCoinP1(env)
 		case "coinp2":
-			// TODO: this is lazy, make a function
-			amount, err := strconv.Atoi(args)
-			if err != nil {
-				return err
-			}
-
-			for i := 0; i < amount; i++ {
-				kbd.Press(7)
-				time.Sleep(100 * time.Millisecond)
-			}
-
-			return nil
+			return cmdCoinP2(env)
 		default:
 			return fmt.Errorf("unknown command: %s", cmd)
 		}
