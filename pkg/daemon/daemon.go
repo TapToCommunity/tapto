@@ -197,6 +197,14 @@ func writeScanResult(card Token) error {
 	return nil
 }
 
+func inExitGameBlocklist(cfg *config.UserConfig) bool {
+	var blocklist []string
+	for _, v := range cfg.TapTo.ExitGameBlocklist {
+		blocklist = append(blocklist, strings.ToLower(v))
+	}
+	return slices.Contains(blocklist, strings.ToLower(mister.GetActiveCoreName()))
+}
+
 func launchCard(cfg *config.UserConfig, state *State, kbd input.Keyboard) error {
 	card := state.GetActiveCard()
 	uidMap, textMap := state.GetDB()
@@ -305,7 +313,7 @@ func pollLoop(
 
 		state.SetActiveCard(newScanned)
 
-		if removed && cfg.TapTo.ExitGame && !slices.Contains(cfg.TapTo.ExitGameBlocklist, mister.GetActiveCoreName()) && !state.IsLauncherDisabled() {
+		if removed && cfg.TapTo.ExitGame && !inExitGameBlocklist(cfg) && !state.IsLauncherDisabled() {
 			mister.ExitGame()
 			continue
 		}
