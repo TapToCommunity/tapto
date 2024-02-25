@@ -1,7 +1,5 @@
 # Token Commands
 
-:warning: These commands are not finalized. We'll try as much as possible to prevent any breaking changes, but they are subject to change until a stable release is complete.
-
 Tokens are set up to work with TapTo by writing a small piece of text to them, telling TapTo what it should do when it's read. The most common action is to launch a game, but it can perform other actions like launching a random game or even making an HTTP request.
 
 This text can be as simple as a path to a game file, or perform multiple custom comands in a row.
@@ -15,13 +13,13 @@ This text can be as simple as a path to a game file, or perform multiple custom 
   - [Combining Commands](#combining-commands)
   - [Launching Games and Cores](#launching-games-and-cores)
   - [Custom Commands](#custom-commands)
-    - [Launch a System (system)](#launch-a-system-system)
-    - [Launch a Random Game (random)](#launch-a-random-game-random)
-    - [Change the Actve MiSTer.ini File (ini)](#change-the-actve-misterini-file-ini)
-    - [Make an HTTP Request to a URL (get)](#make-an-http-request-to-a-url-get)
-    - [Press a Keyboard Key (key)](#press-a-keyboard-key-key)
-    - [Insert a Coin/Credit (coinp1/coinp2)](#insert-a-coincredit-coinp1coinp2)
-    - [Run a System/Linux Command (command)](#run-a-systemlinux-command-command)
+    - [Launch a System (launch.system)](#launch-a-system-launchsystem)
+    - [Launch a Random Game (launch.random)](#launch-a-random-game-launchrandom)
+    - [Change the Actve MiSTer.ini File (mister.ini)](#change-the-actve-misterini-file-misterini)
+    - [Make an HTTP Request to a URL (http.get)](#make-an-http-request-to-a-url-httpget)
+    - [Press a Keyboard Key (input.key)](#press-a-keyboard-key-inputkey)
+    - [Insert a Coin/Credit (input.coinp1/input.coinp2)](#insert-a-coincredit-inputcoinp1inputcoinp2)
+    - [Run a System/Linux Command (shell)](#run-a-systemlinux-command-shell)
 
 
 ## Setting Up Tokens
@@ -34,7 +32,7 @@ Download it to the `Scripts` folder on your MiSTer's SD card and run it from the
 
 ### Remote
 
-The [Remote](https://github.com/wizzomafizzo/mrext/blob/main/docs/remote.md) app now has basic support for writing games to tokens through the TapTo service. If you have TapTo running, a button to write a game to a token will be displayed when selected games in search results and the games browser.
+The [Remote](https://github.com/wizzomafizzo/mrext/blob/main/docs/remote.md) app has basic support for writing games to tokens through the TapTo service. If you have TapTo running, a button to write a game to a token will be displayed when selected games in search results and the games browser.
 
 ### Phone
 
@@ -46,7 +44,7 @@ You'll want to write a *Text record* with it for all the supported NFC service f
 
 ### Desktop
 
-NFC Tools also has a free version for [Windows, Mac and Linux](https://www.wakdev.com/en/apps/nfc-tools-pc-mac.html) that works well. Don't forget you can plug your NFC reader into your desktop and use it from there too!
+NFC Tools also has a free version for [Windows, Mac and Linux](https://www.wakdev.com/en/apps/nfc-tools-pc-mac.html) that works well. ACR122U readers will also work natively with most desktop operating systems.
 
 ## Combining Commands
 
@@ -54,12 +52,12 @@ All commands and game/core launches can be combined on a single token if space p
 
 For example, to switch to MiSTer.ini number 3 and launch the SNES core:
 ```
-**ini:3||_Console/SNES
+**mister.ini:3||_Console/SNES
 ```
 
 Or launch a game and notify an HTTP service:
 ```
-_Console/SNES||**get:https://example.com
+_Console/SNES||**http.get:https://example.com
 ```
 
 As many of these can be combined as you like.
@@ -104,7 +102,7 @@ Genesis/@Genesis - MegaSD Mega EverDrive 2022-05-18.zip/1 US - Q-Z/Road Rash (US
 There are a small set of special commands that can be written to tokens to perform dynamic actions. These are marked in
 a token by putting `**` at the start of the stored text.
 
-### Launch a System (system)
+### Launch a System (launch.system)
 
 This command will launch a system, based on MiSTer Extensions own internal list of system IDs
 [here](https://github.com/wizzomafizzo/mrext/blob/main/docs/systems.md). This can be useful for "meta systems" such as
@@ -112,25 +110,25 @@ Atari 2600 and WonderSwan Color which don't have their own core .RBF file.
 
 For example:
 ```
-**system:Atari2600
+**launch.system:Atari2600
 ```
 ```
-**system:WonderSwanColor
+**launch.system:WonderSwanColor
 ```
 
 It also works for any other system if you prefer this method over the standard core .RBF file one.
 
-### Launch a Random Game (random)
+### Launch a Random Game (launch.random)
 
 This command will launch a game a random for the given system. For example:
 ```
-**random:snes
+**launch.random:snes
 ```
 This will launch a random SNES game each time you read the token.
 
-You can also select all systems with `**random:all`.
+You can also select all systems with `**launch.random:all`.
 
-### Change the Actve MiSTer.ini File (ini)
+### Change the Actve MiSTer.ini File (mister.ini)
 
 Loads the specified MiSTer.ini file and relaunches the menu core if open.
 
@@ -138,41 +136,41 @@ Specify the .ini file with its index in the list shown in the MiSTer menu. Numbe
 
 For example:
 ```
-**ini:1
+**mister.ini:1
 ```
 
 This switch will not persist after a reboot, same as loading it through the OSD.
 
-### Make an HTTP Request to a URL (get)
+### Make an HTTP Request to a URL (http.get)
 
 Perform an HTTP GET request to the specified URL. For example:
 ```
-**get:https://example.com
+**http.get:https://example.com
 ```
 
 This is useful for triggering webhooks or other web services.
 
 It can be combined with other commands using the `||` separator. For example:
 ```
-**get:https://example.com||_Console/SNES
+**http.get:https://example.com||_Console/SNES
 ```
 
 This does *not* check for any errors, and will not show any output. You send the request and off it goes into the ether.
 
-### Press a Keyboard Key (key)
+### Press a Keyboard Key (input.key)
 
 Press a key on the keyboard using its uinput code. For example (to press F12 to bring up the OSD):
 ```
-**key:88
+**input.key:88
 ```
 
 See a full list of key codes [here](https://pkg.go.dev/github.com/bendahl/uinput@v1.6.0#pkg-constants).
 
-### Insert a Coin/Credit (coinp1/coinp2)
+### Insert a Coin/Credit (input.coinp1/input.coinp2)
 
 Insert a coin/credit for player 1 or 2. For example (to insert 1 coin for player 1):
 ```
-**coinp1:1
+**input.coinp1:1
 ```
 
 This command presses the `5` and `6` key on the keyboard respectively, which is generally accepted as the coin insert
@@ -180,14 +178,14 @@ keys in MiSTer arcade cores. If it doesn't work, try manually mapping the coin i
 
 It also supports inserting multiple coins at once. For example (to insert 3 coins for player 2):
 ```
-**coinp2:3
+**input.coinp2:3
 ```
 
-### Run a System/Linux Command (command)
+### Run a System/Linux Command (shell)
 
-**This feature is intentionally disabled for security reasons when run straight from a token. You can still use it, but only via the `nfc.csv` file explained below or by enabling the `allow_commands` option in `tapto.ini`.**
+**This feature is intentionally disabled for security reasons when run straight from a token. You can still use it, but only via the `nfc.csv` file [explained here](mister.md#mappings-database) or by enabling the `allow_commands` option in `tapto.ini`.**
 
 This command will run a MiSTer Linux command directly. For example:
 ```
-**command:reboot
+**shell:reboot
 ```
