@@ -45,6 +45,31 @@ import (
 // TODO: game file by hash
 // TODO: delay command
 
+var commandMappings = map[string]func(*cmdEnv) error{
+	"launch.system": cmdSystem,
+	"launch.random": cmdRandom,
+
+	"shell": cmdShell,
+
+	"mister.ini": cmdIni,
+
+	"http.get":  cmdHttpGet,
+	"http.post": cmdHttpPost,
+
+	"input.key":    cmdKey,
+	"input.coinp1": cmdCoinP1,
+	"input.coinp2": cmdCoinP2,
+
+	"key":     cmdKey,     // DEPRECATED
+	"coinp1":  cmdCoinP1,  // DEPRECATED
+	"coinp2":  cmdCoinP2,  // DEPRECATED
+	"random":  cmdRandom,  // DEPRECATED
+	"command": cmdShell,   // DEPRECATED
+	"ini":     cmdIni,     // DEPRECATED
+	"system":  cmdSystem,  // DEPRECATED
+	"get":     cmdHttpGet, // DEPRECATED
+}
+
 type cmdEnv struct {
 	args          string
 	cfg           *config.UserConfig
@@ -220,7 +245,7 @@ func LaunchToken(
 			return fmt.Errorf("invalid command: %s", text)
 		}
 
-		cmd, args := s.TrimSpace(parts[0]), s.TrimSpace(parts[1])
+		cmd, args := s.ToLower(s.TrimSpace(parts[0])), s.TrimSpace(parts[1])
 
 		env := &cmdEnv{
 			args:          args,
@@ -232,26 +257,9 @@ func LaunchToken(
 			currentIndex:  currentIndex,
 		}
 
-		switch cmd {
-		case "system":
-			return cmdSystem(env)
-		case "command":
-			return cmdShell(env)
-		case "random":
-			return cmdRandom(env)
-		case "ini":
-			return cmdIni(env)
-		case "get":
-			return cmdHttpGet(env)
-		case "post":
-			return cmdHttpPost(env)
-		case "key":
-			return cmdKey(env)
-		case "coinp1":
-			return cmdCoinP1(env)
-		case "coinp2":
-			return cmdCoinP2(env)
-		default:
+		if f, ok := commandMappings[cmd]; ok {
+			return f(env)
+		} else {
 			return fmt.Errorf("unknown command: %s", cmd)
 		}
 	}
