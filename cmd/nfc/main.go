@@ -246,6 +246,7 @@ func main() {
 	log.Info().Msgf("disable_sounds = %t", cfg.TapTo.DisableSounds)
 	log.Info().Msgf("probe_device = %t", cfg.TapTo.ProbeDevice)
 	log.Info().Msgf("exit_game = %t", cfg.TapTo.ExitGame)
+	log.Info().Msgf("exit_game_blocklist = %s", cfg.TapTo.ExitGameBlocklist)
 	log.Info().Msgf("debug = %t", cfg.TapTo.Debug)
 
 	if cfg.TapTo.Debug {

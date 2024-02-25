@@ -65,3 +65,11 @@ func PlayFail(cfg *config.UserConfig) {
 func ExitGame() {
 	_ = mrextMister.LaunchMenu()
 }
+
+func GetActiveCoreName() string {
+	coreName, err := mrextMister.GetActiveCoreName()
+	if err != nil {
+		log.Error().Msgf("error trying to get the core name: %s", err)
+	}
+	return coreName
+}
