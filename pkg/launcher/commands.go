@@ -39,17 +39,16 @@ import (
 	"github.com/wizzomafizzo/tapto/pkg/platforms/mister"
 )
 
-// TODO: split these commands out into separate functions
 // TODO: adding some logging for each command
 // TODO: search game file
 // TODO: game file by hash
-// TODO: delay command
 
 var commandMappings = map[string]func(*cmdEnv) error{
 	"launch.system": cmdSystem,
 	"launch.random": cmdRandom,
 
 	"shell": cmdShell,
+	"delay": cmdDelay,
 
 	"mister.ini": cmdIni,
 
@@ -225,6 +224,17 @@ func cmdCoinP1(env *cmdEnv) error {
 
 func cmdCoinP2(env *cmdEnv) error {
 	return insertCoin(env, 7)
+}
+
+func cmdDelay(env *cmdEnv) error {
+	amount, err := strconv.Atoi(env.args)
+	if err != nil {
+		return err
+	}
+
+	time.Sleep(time.Duration(amount) * time.Millisecond)
+
+	return nil
 }
 
 func LaunchToken(
