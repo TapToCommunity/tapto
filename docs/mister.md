@@ -10,6 +10,7 @@
     - [Disable Sounds After a Read (disable\_sounds)](#disable-sounds-after-a-read-disable_sounds)
     - [Probe for Serial Devices (probe\_device)](#probe-for-serial-devices-probe_device)
     - [Exit Game When Token Is Removed (exit\_game)](#exit-game-when-token-is-removed-exit_game)
+    - [Exit Game Core Blocklist (exit\_game\_blocklist)](#exit-game-core-blocklist-exit_game_blocklist)
   - [Mappings Database](#mappings-database)
 
 ## Installation
@@ -118,6 +119,23 @@ Enables exiting the current game when a token is removed from the reader.
 
 :warning: This does not trigger a save file to be written in MiSTer, you have to do that manually.
 
+### Exit Game Core Blocklist (exit_game_blocklist)
+
+| Key                   | Default Value |
+|-----------------------|---------------|
+| `exit_game_blocklist` |               |
+
+A comma separated list of cores to ignore the `exit_game` option for. For example, to ignore the `exit_game` option for the NES and SNES cores:
+
+```ini
+[tapto]
+exit_game=yes
+exit_game_blocklist=NES,SNES
+```
+
+With this configuration, removing a token will not exit the game when using the NES or SNES cores, but will for all other cores.
+
+The core name is the same as the name that shows on the left sidebar of the OSD when in a core.
 
 ## Mappings Database
 
