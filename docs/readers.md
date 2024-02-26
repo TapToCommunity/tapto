@@ -35,6 +35,7 @@ Internally, this reader uses a [PN532 module](#pn532-module) and has all the sam
 ### Where To Buy
 
 - **[Grumpy Old Gamer](https://www.ebay.co.uk/usr/grumpyoldgamer)** &mdash; £24.99, UK based, ships worldwide &mdash; this is a great complete starter kit including USB cable, NFC cards, NFC stickers and rubber feet.
+- **[wizzo](https://wizzo.dev/shop)** &mdash; $15-$19, Australia based, ships worldwide &mdash; basic reader plus cards bundle or build kits without a PN532 module
 
 ### TapTo NFC-Engine
 
