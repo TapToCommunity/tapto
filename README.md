@@ -11,7 +11,7 @@ TapTo is currently supported on these platforms:
 - [Commodore 64 (via TeensyROM)](https://github.com/SensoriumEmbedded/TeensyROM/blob/main/docs/NFC_Loader.md)
 
 ***
-[Download](https://github.com/wizzomafizzo/tapto/releases/latest/) | [Labels](docs/labels.md) | [Vendors](docs/vendors.md) | [Community Projects](docs/community.md) | [API](docs/api.md)
+[Download](https://github.com/wizzomafizzo/tapto/releases/latest/) | [TapTo Designer](https://tapto-designer.netlify.app/) | [Labels](docs/labels.md) | [Reader Cases](docs/community.md#cases) | [Vendors](docs/vendors.md) | [Community Projects](docs/community.md) | [API](docs/api.md)
 ***
 
 ## Getting Started
