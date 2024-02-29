@@ -2,19 +2,23 @@
   <img width="60%" title="TapTo" src="assets/images/logo/tapto_gitbhub_logo.png" />
 </h1>
 
-TapTo is an open source system for launching games and custom actions using physical objects. It's a great way to make launching games more accessible and add some fun to your gaming setup!
+TapTo is an open source system for launching games and scripted actions using physical objects like NFC cards. It's a great way to make playing games more accessible and add some fun to your gaming setup!
 
-- The project includes everything necessary to get running.
-- All hardware required is inexpensive and readily available.
-- It currently supports the [MiSTer FPGA](https://mister-devel.github.io/MkDocs_MiSTer/) platform, with more planned.
+See the [Getting Started](#getting-started) section below for everything you need to get up and running. Additional hardware is required but is aimed to be cheap and easily available. Please [join the Discord](https://wizzo.dev/discord) if you need any help or want to show off your work!
 
-[Download](https://github.com/wizzomafizzo/tapto/releases/latest/) | [Vendors](docs/vendors.md) | [Community Projects](docs/community.md) | [Discord](https://wizzo.dev/discord) | [Developer Guide](docs/developers.md) | [API](docs/api.md) | [Labels](docs/labels.md)
+TapTo is currently supported on these platforms:
+- [MiSTer FPGA](https://mister-devel.github.io/MkDocs_MiSTer/)
+- [Commodore 64 (via TeensyROM)](https://github.com/SensoriumEmbedded/TeensyROM/blob/main/docs/NFC_Loader.md)
+
+***
+[Download](https://github.com/wizzomafizzo/tapto/releases/latest/) | [Labels](docs/labels.md) | [Vendors](docs/vendors.md) | [Community Projects](docs/community.md) | [API](docs/api.md)
+***
 
 ## Getting Started
 
 1. Buy or build a compatible NFC reader: [Reader Hardware](docs/readers.md)
 2. Buy some compatible NFC cards or tags: [Token Hardware](docs/tokens.md)
-3. Install the TapTo software on your MiSTer: [MiSTer Setup](docs/mister.md)
+3. Set up the software for your platform: [MiSTer FPGA](docs/mister.md) | [Commodore 64](https://github.com/SensoriumEmbedded/TeensyROM/blob/main/docs/NFC_Loader.md)
 4. Set up your cards or tags to launch games: [Token Commands](docs/commands.md)
 5. Make or buy some awesome labels: [Custom Labels](docs/labels.md)
 
@@ -28,6 +32,7 @@ TapTo has been a community effort from day one. Everyone's contributions are app
 - **Gaz** &mdash; developer &mdash; [GitHub](https://github.com/symm) | [Twitter](https://twitter.com/gazj)
 - **Ranny Snice** &mdash; logo creator &mdash; [GitHub](https://github.com/Ranny-Snice) | [Twitter](https://twitter.com/RannySnice)
 - **RetroCastle** &mdash; PCB designer &mdash; [Store](https://www.aliexpress.com/store/912024455) | [Twitter](https://twitter.com/zhangch93067765)
+- **Sensorium** &mdash; C64 support &mdash; [GitHub](https://www.github.com/SensoriumEmbedded) | [Twitter](https://twitter.com/SensoriumEmb)
 - **theypsilon** &mdash; developer &mdash; [GitHub](https://www.github.com/theypsilon) | [Patreon](https://www.patreon.com/theypsilon) | [Twitter](https://twitter.com/josembarroso)
 - **Tim Wilsie** &mdash; template designer &mdash; [GitHub](https://github.com/timwilsie) | [Twitter](https://twitter.com/timwilsie)
 - **wizzo** &mdash; developer &mdash; [GitHub](https://github.com/wizzomafizzo) | [Patreon](https://patreon.com/wizzo) | [Twitter](https://twitter.com/wizzomafizzo)
