@@ -12,9 +12,12 @@ TapTo uses the [libnfc](https://nfc-tools.github.io/projects/libnfc/) library, s
     - [Known Issues](#known-issues)
     - [Where To Buy](#where-to-buy-1)
     - [TapTo NFC-Engine](#tapto-nfc-engine-1)
-  - [PN532 Module](#pn532-module)
+  - [PN532 NFC USB Module - Type C](#pn532-nfc-usb-module---type-c)
     - [Known Issues](#known-issues-1)
     - [Where To Buy](#where-to-buy-2)
+  - [PN532 Module](#pn532-module)
+    - [Known Issues](#known-issues-2)
+    - [Where To Buy](#where-to-buy-3)
 
 ## DIY NFC Reader
 
@@ -78,18 +81,39 @@ The TapTo NFC-Engine is an alternative case for the ACR122U which fits around th
 
 The model is freely available to [print from Printables](https://www.printables.com/model/737533-tapto-nfc-engine) and is designed by [BedroomNinja](https://www.printables.com/@bedroom_ninj_1665215).
 
+## PN532 NFC USB Module - Type C
+
+- Plug and play.
+- Good price at around $20 USD.
+- Has the same level of support as all other PN532 based readers.
+- USB type C plug.
+- Very small size.
+- Does not come with a case, but should fit in currently available community cases.
+
+### Known Issues
+
+This reader has not been thoroughly tested yet, but it shouldn't have any problems working with TapTo.
+
+Be cautious of quality from clone listings.
+
+### Where To Buy
+
+Can be bought directly [from Elechouse](https://www.elechouse.com/product/pn532-nfc-usb-module/).
+
+Clones are also available on AliExpress by searching for "pn532 type c".
+
 ## PN532 Module
 
 :exclamation: More informaton required about compatible converters.
 
-:warning: The PN532 module is **not** a ready-to-use reader, it's a bare PCB module intended for custom projects. It can used directly with TapTo via a *USB to TTL converter*.
+:warning: The PN532 module is **not** a ready-to-use reader, it's a bare PCB module intended for custom projects. It can used directly with TapTo via a *USB to serial adapter*.
 
 <img src="../assets/images/readers/pn532.jpg" width=200 />
 
 - Very cheap price, sometimes as little as $1 USD.
 - Very small footprint and is great for custom projects.
 - High quality modules have excellent short and long range reading (up to 5cm without interference).
-- Plug and play when paired with a USB to TTL converter.
+- Plug and play when paired with a USB to serial adapter (UART).
 - Has no case and will not function at all without additonal components.
 - Build quality can be very variable depending on vendor, resulting in non-functioning modules or poor read range.
 - Requires soldering equipment (but is a great beginner project).
