@@ -128,6 +128,12 @@ This command will launch a game a random for the given system. For example:
 ```
 This will launch a random SNES game each time you read the token.
 
+System IDs can also be combined with the `,` separator. For example:
+```
+**launch.random:snes,nes
+```
+This will launch a random game from either the SNES or NES systems.
+
 You can also select all systems with `**launch.random:all`.
 
 ### Change the Actve MiSTer.ini File (mister.ini)
