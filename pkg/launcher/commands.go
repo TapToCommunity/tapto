@@ -115,15 +115,22 @@ func cmdRandom(env *cmdEnv) error {
 		return mrextMister.LaunchRandomGame(mister.UserConfigToMrext(env.cfg), games.AllSystems())
 	}
 
-	// TODO: allow multiple systems
-	system, err := games.LookupSystem(env.args)
-	if err != nil {
-		return err
+	systemIds := s.Split(env.args, ",")
+	systems := make([]games.System, 0, len(systemIds))
+
+	for _, id := range systemIds {
+		system, err := games.LookupSystem(id)
+		if err != nil {
+			log.Error().Err(err).Msgf("error looking up system: %s", id)
+			continue
+		}
+
+		systems = append(systems, *system)
 	}
 
 	return mrextMister.LaunchRandomGame(
 		mister.UserConfigToMrext(env.cfg),
-		[]games.System{*system},
+		systems,
 	)
 }
 
