@@ -181,7 +181,7 @@ func cmdHttpGet(env *cmdEnv) error {
 }
 
 func cmdHttpPost(env *cmdEnv) error {
-	parts := s.SplitN(env.args, "|", 3)
+	parts := s.SplitN(env.args, ",", 3)
 	if len(parts) < 3 {
 		return fmt.Errorf("invalid post format: %s", env.args)
 	}
