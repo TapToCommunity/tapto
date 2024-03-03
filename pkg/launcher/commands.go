@@ -286,16 +286,16 @@ func LaunchToken(
 		return mrextMister.LaunchGenericFile(mister.UserConfigToMrext(cfg), text)
 	}
 
-	// if it's a relative path with no extension, assume it's a core
-	if filepath.Ext(text) == "" {
+	// if it's a relative path with no extension or games folder match, assume it's a core name
+	if filepath.Ext(text) == "" && len(games.FolderToSystems(mister.UserConfigToMrext(cfg), text)) == 0 {
 		return mrextMister.LaunchShortCore(text)
 	}
 
 	// if the file is in a .zip, just check .zip exists in each games folder
-	parts := s.Split(text, "/")
-	for i, part := range parts {
+	ps := s.Split(text, "/")
+	for i, part := range ps {
 		if s.HasSuffix(s.ToLower(part), ".zip") {
-			zipPath := filepath.Join(parts[:i+1]...)
+			zipPath := filepath.Join(ps[:i+1]...)
 			for _, folder := range games.GetGamesFolders(mister.UserConfigToMrext(cfg)) {
 				if _, err := os.Stat(filepath.Join(folder, zipPath)); err == nil {
 					return mrextMister.LaunchGenericFile(mister.UserConfigToMrext(cfg), filepath.Join(folder, text))
@@ -313,5 +313,23 @@ func LaunchToken(
 		}
 	}
 
-	return fmt.Errorf("could not find file: %s", text)
+	// finally, assume it's in the format <system>/<game>
+	ps = s.SplitN(text, "/", 2)
+	if len(ps) < 2 {
+		return fmt.Errorf("could not parse game command: %s", text)
+	}
+
+	system, err := games.LookupSystem(ps[0])
+	if err != nil {
+		return err
+	}
+
+	gamesFolder := games.GetActiveSystemPaths(mister.UserConfigToMrext(cfg), []games.System{*system})
+	if len(gamesFolder) == 0 {
+		return fmt.Errorf("no active games folder found for system: %s", ps[0])
+	}
+
+	path := filepath.Join(gamesFolder[0].Path, ps[1])
+
+	return mrextMister.LaunchGenericFile(mister.UserConfigToMrext(cfg), path)
 }
