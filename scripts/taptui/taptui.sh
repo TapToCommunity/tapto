@@ -464,6 +464,10 @@ keycodes=(
 #  "ButtonMode"         "0x13c" # This is the special button that usually bears the Xbox or Playstation logo
 )
 
+jsonTemplate='{"key":"value"}'
+
+xformTemplate='key1=value1&key2=value2'
+
 _depends() {
   if ! [[ -x "$(command -v dialog)" ]]; then
     echo "dialog not installed." >"$(tty)"
@@ -640,7 +644,7 @@ _commandPalette() {
 # Build a command using a command palette
 # Usage: _craftCommand
 _craftCommand(){
-  local command selected console recursion ms bulletList
+  local command selected console recursion ms bulletList contentType tempFile postData
   command="**"
   selected="$(_menu \
     --cancel-label "Back" \
@@ -688,11 +692,40 @@ _EOF_
       exitcode="${?}"; [[ "${exitcode}" -ge 1 ]] && { "${FUNCNAME[0]}" ; return ; }
       command="${command}:${ini}"
       ;;
-    http.*)
-      requestType="${selected#*.}"
-      http="$(_inputbox "Enter URL for ${requestType^^}" "https://")"
+    http.get)
+      http="$(_inputbox "Enter URL for GET" "https://")"
       exitcode="${?}"; [[ "${exitcode}" -ge 1 ]] && { "${FUNCNAME[0]}" ; return ; }
+      # use wget to encode the url
+      http="$(wget --spider "${http}" 2>&1 | awk -F'--  ' '/--  /{print $2; exit}')"
       command="${command}:${http}"
+      ;;
+    http.post)
+      http="$(_inputbox "Enter URL for POST" "https://")"
+      exitcode="${?}"; [[ "${exitcode}" -ge 1 ]] && { "${FUNCNAME[0]}" ; return ; }
+      # use wget to encode the url
+      http="$(wget --spider "${http}" 2>&1 | awk -F'--  ' '/--  /{print $2; exit}')"
+      # Add content type
+      menuOptions=(
+          "application/json" ""
+          "application/x-www-form-urlencoded" ""
+          "custom" ""
+        )
+      contentType="$(_menu -- "${menuOptions[@]}")"
+      # Add data
+      if [[ "${contentType}" == "application/json" ]]; then
+        tempFile="$(mktemp)"
+        jq '.' <<< "${jsonTemplate}" > "${tempFile}"
+        _textEditor "${tempFile}"
+        postData="$(jq -c '.' "${tempFile}")"
+        rm "${tempFile}"
+      elif [[ "${contentType}" == "application/x-www-form-urlencoded" ]]; then
+        postData="$(_inputbox "Enter POST data" "${xformTemplate}" )"
+      else
+        contentType="$(_inputbox "Content-Type:" "")"
+        postData="$(_inputbox "Enter POST data" "" )"
+      fi
+
+      command="${command}:${http},${contentType},${postData}"
       ;;
     input.key)
       key="$(_menu -- "${keycodes[@]}")"
@@ -1405,6 +1438,37 @@ _isInArray() {
   done
 
   return 1
+}
+
+_textEditor() {
+  local opts file editorChoice exitcode output
+  file="${1}"
+  shift 1
+  opts=("${@}")
+
+  editors=(
+    "builtin" "Keyboard needed to type"
+    "nano" "Warning: Keyboard required to exit"
+    "vim"  "Warning: Keyboard required to exit"
+    )
+  editorChoice="$(msg="Chose editor:" _menu -- "${editors[@]}")"
+
+  case "${editorChoice}" in
+    builtin)
+      output="$( dialog \
+        --backtitle "${title}" \
+        "${opts[@]}" \
+        --editbox "${file}" \
+        22 77 3>&1 1>&2 2>&3 >"$(tty)" <"$(tty)" )"
+      exitcode="${?}"; [[ "${exitcode}" -eq 0 ]] && echo -n "${output}" > "${file}"
+    ;;
+    *)
+      "${editorChoice}" "${file}" >"$(tty)" <"$(tty)"
+      exitcode="${?}"
+    ;;
+  esac
+
+  return "${exitcode}"
 }
 
 # Ask user for a string
