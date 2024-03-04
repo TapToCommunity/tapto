@@ -251,11 +251,12 @@ func cmdLaunchCore(env *cmdEnv) error {
 
 // Check all games folders for a relative path to a file
 func findFile(cfg *config.UserConfig, path string) (string, error) {
+	// TODO: can do basic check here too
 	if filepath.IsAbs(path) {
 		return path, nil
 	}
 
-	ps := filepath.SplitList(path)
+	ps := strings.Split(path, string(filepath.Separator))
 	statPath := path
 
 	// if the file is inside a zip or virtual list, we just check that file exists
@@ -265,7 +266,8 @@ func findFile(cfg *config.UserConfig, path string) (string, error) {
 	for i, p := range ps {
 		ext := filepath.Ext(strings.ToLower(p))
 		if ext == ".zip" || ext == ".txt" {
-			statPath = filepath.Join(ps[:i]...)
+			statPath = filepath.Join(ps[:i+1]...)
+			log.Debug().Msgf("found zip/txt, setting stat path: %s", statPath)
 			break
 		}
 	}
@@ -274,11 +276,12 @@ func findFile(cfg *config.UserConfig, path string) (string, error) {
 	for _, gf := range games.GetGamesFolders(mister.UserConfigToMrext(cfg)) {
 		fullPath := filepath.Join(gf, statPath)
 		if _, err := os.Stat(fullPath); err == nil {
-			return fullPath, nil
+			log.Debug().Msgf("found file: %s", fullPath)
+			return filepath.Join(gf, path), nil
 		}
 	}
 
-	return path, fmt.Errorf("file not found: %s (%s)", path, statPath)
+	return path, fmt.Errorf("file not found: %s", path)
 }
 
 func cmdLaunch(env *cmdEnv) error {
