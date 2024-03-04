@@ -51,6 +51,7 @@ var commandMappings = map[string]func(*cmdEnv) error{
 	"delay": cmdDelay,
 
 	"mister.ini": cmdIni,
+	"mister.rbf": cmdLaunchRbf,
 
 	"http.get":  cmdHttpGet,
 	"http.post": cmdHttpPost,
@@ -244,6 +245,10 @@ func cmdDelay(env *cmdEnv) error {
 	return nil
 }
 
+func cmdLaunchRbf(env *cmdEnv) error {
+	return mrextMister.LaunchShortCore(env.args)
+}
+
 func LaunchToken(
 	cfg *config.UserConfig,
 	manual bool,
@@ -284,11 +289,6 @@ func LaunchToken(
 	// if it's not a command, assume it's some kind of file path
 	if filepath.IsAbs(text) {
 		return mrextMister.LaunchGenericFile(mister.UserConfigToMrext(cfg), text)
-	}
-
-	// if it's a relative path with no extension or games folder match, assume it's a core name
-	if filepath.Ext(text) == "" && len(games.FolderToSystems(mister.UserConfigToMrext(cfg), text)) == 0 {
-		return mrextMister.LaunchShortCore(text)
 	}
 
 	// if the file is in a .zip, just check .zip exists in each games folder
