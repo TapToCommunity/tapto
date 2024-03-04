@@ -640,7 +640,7 @@ _commandPalette() {
 # Build a command using a command palette
 # Usage: _craftCommand
 _craftCommand(){
-  local command selected console recursion ms
+  local command selected console recursion ms bulletList
   command="**"
   selected="$(_menu \
     --cancel-label "Back" \
@@ -651,11 +651,35 @@ _craftCommand(){
   command="${command}${selected}"
 
   case "${selected}" in
-    launch.*)
+    launch.system)
       console="$(_menu \
         --backtitle "${title}" \
         -- "${consoles[@]}" )"
       exitcode="${?}"; [[ "${exitcode}" -ge 1 ]] && { "${FUNCNAME[0]}" ; return ; }
+      command="${command}:${console}"
+      ;;
+    launch.random)
+      console="$(_menu \
+        --backtitle "${title}" \
+        -- "${consoles[@]}" )"
+      exitcode="${?}"; [[ "${exitcode}" -ge 1 ]] && { "${FUNCNAME[0]}" ; return ; }
+      while true; do
+        read -rd '' message <<_EOF_
+Would you like to add more systems to the NFC tag?
+
+Current random systems:
+$(IFS=',' read -ra bulletList <<< "${console}"; printf "* %s\n" "${bulletList[@]}")
+_EOF_
+        _yesno "${message}" || break
+        console="${console},$(msg="${console}" _menu \
+          --backtitle "${title}" \
+          -- "${consoles[@]}" )"
+        exitcode="${?}"
+        console="$(tr ',' '\n' <<< "${console}" | sort -u | tr '\n' ',')"
+        console="${console#,}"
+        console="${console%,}"
+        [[ "${exitcode}" -ge 1 ]] && break
+      done
       command="${command}:${console}"
       ;;
     mister.ini)
