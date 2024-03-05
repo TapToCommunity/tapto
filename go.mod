@@ -39,5 +39,5 @@ require (
 	github.com/hsanjuan/go-ndef v0.0.1
 	github.com/joho/godotenv v1.5.1
 	github.com/rs/zerolog v1.31.0
-	github.com/wizzomafizzo/mrext v0.0.0-20240224140822-3314a169bb9b
+	github.com/wizzomafizzo/mrext v0.0.0-20240303122843-4575382d468a
 )

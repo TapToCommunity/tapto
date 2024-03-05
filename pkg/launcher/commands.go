@@ -27,7 +27,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strconv"
-	s "strings"
+	"strings"
 	"time"
 
 	"github.com/rs/zerolog/log"
@@ -50,7 +50,8 @@ var commandMappings = map[string]func(*cmdEnv) error{
 	"shell": cmdShell,
 	"delay": cmdDelay,
 
-	"mister.ini": cmdIni,
+	"mister.ini":  cmdIni,
+	"mister.core": cmdLaunchCore,
 
 	"http.get":  cmdHttpGet,
 	"http.post": cmdHttpPost,
@@ -80,7 +81,7 @@ type cmdEnv struct {
 }
 
 func cmdSystem(env *cmdEnv) error {
-	if s.EqualFold(env.args, "menu") {
+	if strings.EqualFold(env.args, "menu") {
 		return mrextMister.LaunchMenu()
 	}
 
@@ -115,7 +116,7 @@ func cmdRandom(env *cmdEnv) error {
 		return mrextMister.LaunchRandomGame(mister.UserConfigToMrext(env.cfg), games.AllSystems())
 	}
 
-	systemIds := s.Split(env.args, ",")
+	systemIds := strings.Split(env.args, ",")
 	systems := make([]games.System, 0, len(systemIds))
 
 	for _, id := range systemIds {
@@ -181,15 +182,15 @@ func cmdHttpGet(env *cmdEnv) error {
 }
 
 func cmdHttpPost(env *cmdEnv) error {
-	parts := s.SplitN(env.args, "|", 3)
+	parts := strings.SplitN(env.args, ",", 3)
 	if len(parts) < 3 {
 		return fmt.Errorf("invalid post format: %s", env.args)
 	}
 
-	url, format, data := s.TrimSpace(parts[0]), s.TrimSpace(parts[1]), s.TrimSpace(parts[2])
+	url, format, data := strings.TrimSpace(parts[0]), strings.TrimSpace(parts[1]), strings.TrimSpace(parts[2])
 
 	go func() {
-		resp, err := http.Post(url, format, s.NewReader(data))
+		resp, err := http.Post(url, format, strings.NewReader(data))
 		if err != nil {
 			log.Error().Msgf("error posting to url: %s", err)
 			return
@@ -244,6 +245,89 @@ func cmdDelay(env *cmdEnv) error {
 	return nil
 }
 
+func cmdLaunchCore(env *cmdEnv) error {
+	return mrextMister.LaunchShortCore(env.args)
+}
+
+// Check all games folders for a relative path to a file
+func findFile(cfg *config.UserConfig, path string) (string, error) {
+	// TODO: can do basic check here too
+	if filepath.IsAbs(path) {
+		return path, nil
+	}
+
+	ps := strings.Split(path, string(filepath.Separator))
+	statPath := path
+
+	// if the file is inside a zip or virtual list, we just check that file exists
+	// TODO: both of these things are very specific to mister, it would be good to
+	//       have a more generic way of handling this for other platforms, or
+	//       implement them from tapto(?)
+	for i, p := range ps {
+		ext := filepath.Ext(strings.ToLower(p))
+		if ext == ".zip" || ext == ".txt" {
+			statPath = filepath.Join(ps[:i+1]...)
+			log.Debug().Msgf("found zip/txt, setting stat path: %s", statPath)
+			break
+		}
+	}
+
+	// TODO: make sure these games folders are in the correct order
+	for _, gf := range games.GetGamesFolders(mister.UserConfigToMrext(cfg)) {
+		fullPath := filepath.Join(gf, statPath)
+		if _, err := os.Stat(fullPath); err == nil {
+			log.Debug().Msgf("found file: %s", fullPath)
+			return filepath.Join(gf, path), nil
+		}
+	}
+
+	return path, fmt.Errorf("file not found: %s", path)
+}
+
+func cmdLaunch(env *cmdEnv) error {
+	// if it's an absolute path, just try launch it
+	if filepath.IsAbs(env.args) {
+		log.Debug().Msgf("launching absolute path: %s", env.args)
+		return mrextMister.LaunchGenericFile(mister.UserConfigToMrext(env.cfg), env.args)
+	}
+
+	// for relative paths, perform a basic check if the file exists in a games folder
+	// this always takes precedence over the system/path format (but is not totally cross platform)
+	if p, err := findFile(env.cfg, env.args); err == nil {
+		log.Debug().Msgf("launching found relative path: %s", p)
+		return mrextMister.LaunchGenericFile(mister.UserConfigToMrext(env.cfg), p)
+	} else {
+		log.Debug().Err(err).Msgf("error finding file: %s", env.args)
+	}
+
+	// attempt to parse the <system>/<path> format
+	ps := strings.SplitN(env.text, "/", 2)
+	if len(ps) < 2 {
+		return fmt.Errorf("invalid launch format: %s", env.text)
+	}
+
+	systemId, path := ps[0], ps[1]
+
+	system, err := games.LookupSystem(systemId)
+	if err != nil {
+		return err
+	}
+
+	log.Info().Msgf("launching system: %s, path: %s", systemId, path)
+
+	for _, f := range system.Folder {
+		systemPath := filepath.Join(f, path)
+		if fp, err := findFile(env.cfg, systemPath); err == nil {
+			log.Debug().Msgf("launching found system path: %s", fp)
+			return mrextMister.LaunchGenericFile(mister.UserConfigToMrext(env.cfg), fp)
+		} else {
+			log.Debug().Err(err).Msgf("error finding system file: %s", path)
+		}
+	}
+
+	return fmt.Errorf("file not found: %s", env.args)
+}
+
 func LaunchToken(
 	cfg *config.UserConfig,
 	manual bool,
@@ -252,17 +336,15 @@ func LaunchToken(
 	totalCommands int,
 	currentIndex int,
 ) error {
-	// detection can never be perfect, but these characters are illegal in
-	// windows filenames and heavily avoided in linux. use them to mark that
-	// this is a command
-	if s.HasPrefix(text, "**") {
-		text = s.TrimPrefix(text, "**")
-		parts := s.SplitN(text, ":", 2)
-		if len(parts) < 2 {
+	// explicit commands must begin with **
+	if strings.HasPrefix(text, "**") {
+		text = strings.TrimPrefix(text, "**")
+		ps := strings.SplitN(text, ":", 2)
+		if len(ps) < 2 {
 			return fmt.Errorf("invalid command: %s", text)
 		}
 
-		cmd, args := s.ToLower(s.TrimSpace(parts[0])), s.TrimSpace(parts[1])
+		cmd, args := strings.ToLower(strings.TrimSpace(ps[0])), strings.TrimSpace(ps[1])
 
 		env := &cmdEnv{
 			args:          args,
@@ -281,37 +363,14 @@ func LaunchToken(
 		}
 	}
 
-	// if it's not a command, assume it's some kind of file path
-	if filepath.IsAbs(text) {
-		return mrextMister.LaunchGenericFile(mister.UserConfigToMrext(cfg), text)
-	}
-
-	// if it's a relative path with no extension, assume it's a core
-	if filepath.Ext(text) == "" {
-		return mrextMister.LaunchShortCore(text)
-	}
-
-	// if the file is in a .zip, just check .zip exists in each games folder
-	parts := s.Split(text, "/")
-	for i, part := range parts {
-		if s.HasSuffix(s.ToLower(part), ".zip") {
-			zipPath := filepath.Join(parts[:i+1]...)
-			for _, folder := range games.GetGamesFolders(mister.UserConfigToMrext(cfg)) {
-				if _, err := os.Stat(filepath.Join(folder, zipPath)); err == nil {
-					return mrextMister.LaunchGenericFile(mister.UserConfigToMrext(cfg), filepath.Join(folder, text))
-				}
-			}
-			break
-		}
-	}
-
-	// then try check for the whole path in each game folder
-	for _, folder := range games.GetGamesFolders(mister.UserConfigToMrext(cfg)) {
-		path := filepath.Join(folder, text)
-		if _, err := os.Stat(path); err == nil {
-			return mrextMister.LaunchGenericFile(mister.UserConfigToMrext(cfg), path)
-		}
-	}
-
-	return fmt.Errorf("could not find file: %s", text)
+	// if it's not a command, treat it as a generic launch command
+	return cmdLaunch(&cmdEnv{
+		args:          text,
+		cfg:           cfg,
+		manual:        manual,
+		kbd:           kbd,
+		text:          text,
+		totalCommands: totalCommands,
+		currentIndex:  currentIndex,
+	})
 }

@@ -27,18 +27,21 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 
+	"github.com/wizzomafizzo/tapto/pkg/launcher"
 	"github.com/wizzomafizzo/tapto/pkg/platforms/mister"
 	"github.com/wizzomafizzo/tapto/pkg/tokens"
 	"github.com/wizzomafizzo/tapto/pkg/utils"
 
 	gc "github.com/rthornton128/goncurses"
 	"github.com/wizzomafizzo/mrext/pkg/curses"
+	"github.com/wizzomafizzo/mrext/pkg/input"
 
 	"github.com/wizzomafizzo/tapto/pkg/config"
 	"github.com/wizzomafizzo/tapto/pkg/daemon"
@@ -219,6 +222,7 @@ func handleWriteCommand(textToWrite string, svc *mister.Service, cfg config.TapT
 func main() {
 	svcOpt := flag.String("service", "", "manage TapTo service (start, stop, restart, status)")
 	writeOpt := flag.String("write", "", "write text to tag")
+	launchOpt := flag.String("launch", "", "execute given text as if it were a token")
 	flag.Parse()
 
 	err := utils.InitLogging()
@@ -271,6 +275,28 @@ func main() {
 
 	if *writeOpt != "" {
 		handleWriteCommand(*writeOpt, svc, cfg.TapTo)
+	}
+
+	if *launchOpt != "" {
+		kbd, err := input.NewKeyboard()
+		if err != nil {
+			log.Error().Msgf("error creating keyboard: %s", err)
+			fmt.Println("Error creating keyboard:", err)
+			os.Exit(1)
+		}
+
+		// TODO: this is doubling up on the split logic in daemon
+		cmds := strings.Split(*launchOpt, "||")
+		for i, cmd := range cmds {
+			err := launcher.LaunchToken(cfg, true, kbd, cmd, len(cmds), i)
+			if err != nil {
+				log.Error().Msgf("error launching token: %s", err)
+				fmt.Println("Error launching token:", err)
+				os.Exit(1)
+			}
+		}
+
+		os.Exit(0)
 	}
 
 	svc.ServiceHandler(svcOpt)
