@@ -1055,8 +1055,8 @@ _EOF_
 
     readarray -t currentDirContents <<< "$( \
       find "${fullPath}" -mindepth 1 -maxdepth 1 \
-      \( -type d -printf '%P\nDirectory\n' \) \
-      -o \( -type f -printf '%P\nFile\n' \))"
+      \( -type d -printf '%P\tDirectory\n' \) \
+      -o \( -type f -printf '%P\tFile\n' \)|sort|tr '\t' '\n')"
 
     selected="$(msg="Pick a game" \
       _menu  --title "${fullPath}" -- "${relativeComponents[@]}" "${currentDirContents[@]}" )"
