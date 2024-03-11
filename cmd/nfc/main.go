@@ -59,7 +59,7 @@ import (
 
 const (
 	appName    = "tapto"
-	appVersion = "1.1"
+	appVersion = "1.2"
 )
 
 func addToStartup() error {
