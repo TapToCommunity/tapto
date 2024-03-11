@@ -21,7 +21,7 @@
 
 title="TapTo"
 scriptdir="$(dirname "$(readlink -f "${0}")")"
-version="0.3"
+version="0.4"
 fullFileBrowser="false"
 basedir="/media"
 sdroot="${basedir}/fat"
