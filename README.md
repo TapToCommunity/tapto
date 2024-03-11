@@ -21,6 +21,7 @@ TapTo is currently supported on these platforms:
 3. Set up the software for your platform: [MiSTer FPGA](docs/mister.md) | [Commodore 64](https://github.com/SensoriumEmbedded/TeensyROM/blob/main/docs/NFC_Loader.md)
 4. Set up your cards or tags to launch games: [Token Commands](docs/commands.md)
 5. Make or buy some awesome labels: [Custom Labels](docs/labels.md)
+6. Fabricate or buy some cool PCB cards: [PCB cards](docs/PCB_cards.md)
 
 ## Contributors
 
@@ -37,6 +38,7 @@ TapTo has been a community effort from day one. Everyone's contributions are app
 - **Tim Wilsie** &mdash; template designer &mdash; [GitHub](https://github.com/timwilsie) | [Twitter](https://twitter.com/timwilsie)
 - **wizzo** &mdash; developer &mdash; [GitHub](https://github.com/wizzomafizzo) | [Patreon](https://patreon.com/wizzo) | [Twitter](https://twitter.com/wizzomafizzo)
 - **Ziggurat** &mdash; developer &mdash; [Github](https://github.com/sigboe)
+- **TheTrain** &mdash; PCB designer &mdash; [GP2040-CE GitHub](https://github.com/OpenStickCommunity/GP2040-CE) | [Twitter](https://twitter.com/thetrain24)
 
 Special thanks to **Gaz** for starting the project originally, and to **[javiwwweb](https://github.com/javiwwweb/MisTerRFID)** and **[Conner](https://github.com/ElRojo/MiSTerRFID)** for their existing MiSTerRFID projects.
 
