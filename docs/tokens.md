@@ -12,6 +12,7 @@ NFC tokens come in many form factors and standards. The form factor is entirely 
   - [MIFARE](#mifare)
   - [Amiibos](#amiibos)
   - [Lego Dimensions](#lego-dimensions)
+  - [PCB Cards](#pcb-cards)
 
 ## Where To Buy
 
@@ -46,3 +47,9 @@ Reading Amiibos is supported by TapTo. Internally they are NTAG215 tokens. They 
 ## Lego Dimensions
 
 Reading Lego Dimensions figurines is supported by TapTo. Internally they are NTAG213 tokens. They can't be written to, but their UID can be read and [mapped to a custom action](mister.md#mappings-database) with TapTo.
+
+## PCB Cards
+
+Want to have some cool little PCB cards for your favorite games?  All you need to do is order some PCBs, print some labels and stick on an NFC sticker tag.
+
+Check out the [instructions for how to make them](pcbcards.md) yourself!

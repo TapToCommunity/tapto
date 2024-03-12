@@ -1,19 +1,22 @@
 # PCB Cards
-Want to have some cool little PCB cards for your favorite games?  All you need to fo is order some of these, print some labels and stick on an NFC sticker tag.
+
+Want to have some cool little PCB cards for your favorite games?  All you need to do is order some of these, print some labels and stick on an NFC sticker tag.
 
 Please note that the small Switch cards will need to smaller rectangle type NFC tag but the medium and large sized cards can take either.
 
 ## Ordering PCBs
 
 ### Which PCB Type To Order?
-These cards are currently done in either 2-layer PCBs or 6-layer PCBs.  This is because JLC PCB has great offers for doing small batch runs of green 6-layer PCBs with ENIG (gold) finish.  Due to size limitations on this deal (max 50mm x 50mm) it will only work for the switch and medium sized cards and you are limited to green PCBs.  If you want to get another color, or do normal sized cards you will need to get some of the 2-layer PCB files.  JLC PCB has the same great offers on 2-layer PCBs without ENIG finish (boards will be silver) at a size up to 100mm x 100mm.
 
-Switch card PCB v3.0 - MiSTer Logo - **6-layer**
-Switch card PCB v3.0 - NeoGeo Logo - **2-layer**
-Switch card PCB v3.0 - SNES Logo - **2-layer**
-Switch card PCB v3.0 - Tapto Logo - **6-layer**
+These cards are currently done in either 2-layer PCBs or 6-layer PCBs.  This is because JLC PCB has great offers for doing small batch runs of green 6-layer PCBs with ENIG (gold) finish.
 
-Medium card PCB v3.0 - MiSTer and Tapto Logo - **6-layer**
+Due to size limitations on this deal (max 50mm x 50mm) it will only work for the switch and medium sized cards and you are limited to green PCBs.  If you want to get another color, or do normal sized cards you will need to get some of the 2-layer PCB files.
+
+JLC PCB has the same great offers on 2-layer PCBs without ENIG finish (boards will be silver) at a size up to 100mm x 100mm.
+
+- [Switch card PCB v3.0 - MiSTer Logo](../assets/pcbcards/switchcard/Gerber%20-%20Switch%20card%20PCB%20v3.0%20-%20MiSTer%20Logo.zip) - **6-layer**
+- [Switch card PCB v3.0 - Tapto Logo](../assets/pcbcards/switchcard/Gerber%20-%20Switch%20card%20PCB%20v3.0%20-%20Tapto%20Logo.zip) - **6-layer**
+- [Medium card PCB v3.0 - MiSTer and Tapto Logo](../assets/pcbcards/mediumcard/Gerber%20-%20Medium%20card%20PCB%20v3.0%20-%20MiSTer%20and%20Tapto%20Logo.zip) - **6-layer**
 
 ### 2-Layer PCBs from JLC PCB
 1 - Go to JLCPCB.com<br/>
