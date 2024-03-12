@@ -33,6 +33,7 @@ TapTo has been a community effort from day one. Everyone's contributions are app
 - **Ranny Snice** &mdash; logo creator &mdash; [GitHub](https://github.com/Ranny-Snice) | [Twitter](https://twitter.com/RannySnice)
 - **RetroCastle** &mdash; PCB designer &mdash; [Store](https://www.aliexpress.com/store/912024455) | [Twitter](https://twitter.com/zhangch93067765)
 - **Sensorium** &mdash; C64 support &mdash; [GitHub](https://www.github.com/SensoriumEmbedded) | [Twitter](https://twitter.com/SensoriumEmb)
+- **TheTrain** &mdash; PCB designer &mdash; [GP2040-CE GitHub](https://github.com/OpenStickCommunity/GP2040-CE) | [Twitter](https://twitter.com/thetrain24)
 - **theypsilon** &mdash; developer &mdash; [GitHub](https://www.github.com/theypsilon) | [Patreon](https://www.patreon.com/theypsilon) | [Twitter](https://twitter.com/josembarroso)
 - **Tim Wilsie** &mdash; template designer &mdash; [GitHub](https://github.com/timwilsie) | [Twitter](https://twitter.com/timwilsie)
 - **wizzo** &mdash; developer &mdash; [GitHub](https://github.com/wizzomafizzo) | [Patreon](https://patreon.com/wizzo) | [Twitter](https://twitter.com/wizzomafizzo)
