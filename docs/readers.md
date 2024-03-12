@@ -21,8 +21,6 @@ TapTo uses the [libnfc](https://nfc-tools.github.io/projects/libnfc/) library, s
 
 ## DIY NFC Reader
 
-:question: Are you a potential vendor? This reader is fully open source and we're always looking for more vendors to offer it for sale. Check out the [DIY NFC Reader Build Guide](diyreader.md) for details.
-
 <img src="../assets/images/readers/diyreader.jpg" width=300 />
 
 The DIY NFC Reader is a TapTo community project aiming to offer a high quality and reliable reader at a low price, which is guaranteed to work with TapTo software.
@@ -55,7 +53,7 @@ The model is freely available to [print from Printables](https://www.printables.
 - Plug and play.
 - Reasonably priced from around $30 to $50 USD depending on vendor.
 - Comes with a nice injection molded case and integrated USB cable.
-- Has excellent short range reading but poor range beyond that.
+- Has excellent short range reading but poor long range.
 - The PCB is quite large which can make it difficult to use in custom projects.
 
 ### Known Issues
@@ -70,8 +68,11 @@ The ACR122U has been cloned for years and is readily available by searching for 
 
 These are some confirmed working listings submitted by users:
 
-- https://www.amazon.com/dp/B07KRKPWYC
-- https://www.ebay.co.uk/itm/145044206870
+- [Amazon (US) - Yosoo Store](https://www.amazon.com/dp/B00GYPIZG6/?tag=theverge02-20)
+- [Amazon (US) - ACS Store](https://www.amazon.com/dp/B07KRKPWYC)
+- [Kogan (Australia)](https://www.kogan.com/au/buy/zoestore-kkmoon-nfc-acr122u-rfid-contactless-smart-reader-writerusb-sdk-c-card-d8a0-h10391/)
+- [Everything ID (Australia)](https://www.everythingid.com.au/rfid-equipment-c-13/acr122u-usb-nfc-rfid-card-reader-writer-mifare-nfc-p-324)
+- [AliExpress (China) - 5YOA Official Store](https://www.aliexpress.us/item/2251832554165448.html)
 
 ### TapTo NFC-Engine
 
@@ -83,18 +84,18 @@ The model is freely available to [print from Printables](https://www.printables.
 
 ## PN532 NFC USB Module - Type C
 
+<img src="../assets/images/readers/pn532typec.jpg" width=200 />
+
 - Plug and play.
-- Good price at around $20 USD.
+- Great price starting at around $8 USD.
 - Has the same level of support as all other PN532 based readers.
 - USB type C plug.
 - Very small size.
-- Does not come with a case, but should fit in currently available community cases.
+- Does not come with a case, but fits in currently available community cases.
 
 ### Known Issues
 
-This reader has not been thoroughly tested yet, but it shouldn't have any problems working with TapTo.
-
-Be cautious of quality from clone listings.
+This reader has not been thoroughly tested yet, but it shouldn't have any problems working with TapTo. Be cautious of quality from clone listings.
 
 ### Where To Buy
 
@@ -102,16 +103,16 @@ Can be bought directly [from Elechouse](https://www.elechouse.com/product/pn532-
 
 Clones are also available on AliExpress by searching for "pn532 type c".
 
-## PN532 Module
+- [AliExpress (China) - Allinbest Store](https://www.aliexpress.us/item/1005006326438326.html)
 
-:exclamation: More informaton required about compatible converters.
+## PN532 Module
 
 :warning: The PN532 module is **not** a ready-to-use reader, it's a bare PCB module intended for custom projects. It can used directly with TapTo via a *USB to serial adapter*.
 
 <img src="../assets/images/readers/pn532.jpg" width=200 />
 
-- Very cheap price, sometimes as little as $1 USD.
-- Very small footprint and is great for custom projects.
+- Very cheap price, starting at around $3 USD.
+- Small footprint and is great for custom projects.
 - High quality modules have excellent short and long range reading (up to 5cm without interference).
 - Plug and play when paired with a USB to serial adapter (UART).
 - Has no case and will not function at all without additonal components.
@@ -120,14 +121,16 @@ Clones are also available on AliExpress by searching for "pn532 type c".
 
 ### Known Issues
 
-Build quality of these modules can vary a lot between vendors. In general they are fine, but be cautious about choosing the cheapest possible option. One concern is shipping, sometimes modules can be shipped loose and unprotected, and are easy to be damaged.
+Build quality and shipping of these modules can vary a lot between vendors. In general they are ok, but be cautious about choosing the cheapest possible option.
 
 Some modules may use low quality inductors connecting the antenna. This can result in a module that appears to function fine, but has extremely poor read range. It is possible to replace the inductors with new ones that are to spec.
 
-:exclamation: Add photos of inductor comparison.
-
-Not necessarily related to the module, but some USB to TTL converters can have poor quality voltage regulators which are not enough to power the module properly.
+Not necessarily related to the module, but some USB to serial adapters can have poor quality voltage regulators, which are not good enough to power the module properly.
 
 ### Where To Buy
 
+Can be bought directly [from Elechouse](https://www.elechouse.com/product/pn532-nfc-rfid-module-v4/).
+
 The PN532 module is extremely common in the hobby electronics space and very easy to find. You can search for "PN532 module" on sites such as Amazon, eBay and AliExpress, or check out your local hobby electronics shops and websites.
+
+- [AliExpress (China) - TENSTAR ROBOT Store](https://www.aliexpress.com/item/1005005973913526.html)
