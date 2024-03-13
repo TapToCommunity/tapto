@@ -27,7 +27,7 @@ TapTo is currently supported on these platforms:
 TapTo has been a community effort from day one. Everyone's contributions are appreciated and encouraged! Want to contribute too? Check out the [Developer Guide](docs/developers.md).
 
 - **Aitor Gómez García** &mdash; developer &mdash; [GitHub](https://github.com/spark2k06) | [Ko-Fi](https://ko-fi.com/spark2k06) | [Web](https://aitorgomez.net/) | [Twitter](https://twitter.com/spark2k06)
-- **Andrea Bogazzi** &mdash; developer &mdash; [GitHub](https://github.com/asturur) | [Patreon](https://www.patreon.com/fabricJS) | [Twitter](https://twitter.com/AndreaBogazzi)
+- **Andrea Bogazzi** &mdash; developer &mdash; [GitHub](https://github.com/asturur) | [Sponsor](https://github.com/sponsors/asturur) | [Twitter](https://twitter.com/AndreaBogazzi)
 - **ArielAces** &mdash; label designer &mdash; [Store](https://www.artisticpixels305.com/) | [Twitter](https://twitter.com/ArielAces)
 - **batty** &mdash; writer &mdash; [GitHub](https://github.com/protogem2) | [Twitter](https://twitter.com/goddamnbathead)
 - **BedroomNinja** &mdash; case designer &mdash; [Printables](https://www.printables.com/@bedroom_ninj_1665215) | [Store](https://ko-fi.com/ninja3dp) | [Twitter](https://twitter.com/Bedroom_Ninja)
