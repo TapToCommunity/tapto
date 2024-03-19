@@ -32,6 +32,28 @@ If you only want TapTo, add the following text to the `downloader.ini` file on y
 db_url = https://github.com/wizzomafizzo/tapto/raw/main/scripts/mister/repo/tapto.json
 ```
 
+### Main Alternative
+
+An alternative version the the MiSTer Main application is also available by developer [spark2k06](https://github.com/spark2k06), which adds many great TapTo related features to the core of MiSTer. It's already being used by many people in the community, and is easy to install.
+
+Features include:
+- Rich game loading screens, show cover art on screen when a game is launched.
+- Custom TapTo standyby screen when waiting for a token to be inserted.
+- Detection of TapTo in settings and status icons of main menu.
+- TapTo integration with ao4886 and PCXT cores.
+- New MGL file tags for customising loading experience.
+
+Please check [spark2k06's repo](https://github.com/spark2k06/Main_MiSTer) for more details.
+
+It can be installed and updated automatically through Downloader by changing the `[distribution_mister]` section of `downloader.ini` like this:
+
+```
+[distribution_mister]
+db_url = https://raw.githubusercontent.com/spark2k06/Main_MiSTer/new-features/db.json.zip
+```
+
+This will not affect any other system files besides the Main binary.
+
 ### Hardware Setup
 
 Your reader may work out of the box with no extra configuration. Run `tapto` from the `Scripts` menu, plug it in, and check if it shows as connected in the log view.
