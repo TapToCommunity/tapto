@@ -379,6 +379,8 @@ func StartDaemon(cfg *config.UserConfig) (func() error, error) {
 		state.DisableLauncher()
 	}
 
+	go runApiServer(cfg, state, kbd)
+
 	go pollLoop(cfg, state, kbd)
 
 	socket, err := StartSocketServer(state)
