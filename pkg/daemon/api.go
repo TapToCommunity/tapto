@@ -363,6 +363,78 @@ func handleSystems() http.HandlerFunc {
 	}
 }
 
+func handleGames() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		log.Info().Msg("received games request")
+
+		query := r.URL.Query().Get("query")
+		system := r.URL.Query().Get("system")
+
+		if query == "" && system == "" {
+			http.Error(w, "query or system required", http.StatusBadRequest)
+			return
+		}
+
+		var results = make([]SearchResultGame, 0)
+		var search []gamesdb.SearchResult
+		var err error
+
+		if system == "all" || system == "" {
+			search, err = gamesdb.SearchNamesWords(games.AllSystems(), query)
+		} else {
+			system, errSys := games.GetSystem(system)
+			if errSys != nil {
+				http.Error(w, errSys.Error(), http.StatusBadRequest)
+				log.Error().Err(errSys).Msg("error getting system")
+				return
+			}
+			search, err = gamesdb.SearchNamesWords([]games.System{*system}, query)
+		}
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			log.Error().Err(err).Msg("error searching games")
+			return
+		}
+
+		for _, result := range search {
+			system, err := games.GetSystem(result.SystemId)
+			if err != nil {
+				continue
+			}
+
+			results = append(results, SearchResultGame{
+				System: System{
+					Id:       system.Id,
+					Name:     system.Name,
+					Category: system.Category,
+				},
+				Name: result.Name,
+				Path: result.Path,
+			})
+		}
+
+		total := len(results)
+
+		if len(results) > pageSize {
+			results = results[:pageSize]
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+
+		err = json.NewEncoder(w).Encode(&SearchResults{
+			Data:     results,
+			Total:    total,
+			PageSize: pageSize,
+			Page:     1,
+		})
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			log.Error().Err(err).Msg("error encoding games response")
+			return
+		}
+	}
+}
+
 func runApiServer(
 	cfg *config.UserConfig,
 	state *State,
@@ -379,8 +451,7 @@ func runApiServer(
 	// GET /readers/0/read
 	// POST /readers/0/write
 
-	// GET /games
-
+	s.Handle("/games", handleGames()).Methods(http.MethodGet)
 	s.Handle("/systems", handleSystems()).Methods(http.MethodGet)
 
 	// GET /mappings
