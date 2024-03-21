@@ -30,6 +30,7 @@ type State struct {
 	lastScanned     Token
 	stopService     bool
 	disableLauncher bool
+	writeRequest    string
 	dbLoadTime      time.Time
 	uidMap          map[string]string
 	textMap         map[string]string
@@ -130,4 +131,16 @@ func (s *State) GetReaderStatus() (bool, string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return s.readerConnected, s.readerType
+}
+
+func (s *State) SetWriteRequest(req string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.writeRequest = req
+}
+
+func (s *State) GetWriteRequest() string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.writeRequest
 }

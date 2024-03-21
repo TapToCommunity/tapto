@@ -208,6 +208,66 @@ func readerPollLoop(
 		}
 
 		activeCard := state.GetActiveCard()
+		writeRequest := state.GetWriteRequest()
+
+		if writeRequest != "" {
+			log.Info().Msgf("write request: %s", writeRequest)
+
+			var count int
+			var target nfc.Target
+			tries := 6 // ~30 seconds
+
+			for tries > 0 {
+				count, target, err = pnd.InitiatorPollTarget(tokens.SupportedCardTypes, ttp, pbp)
+
+				if err != nil && err.Error() != "timeout" {
+					log.Error().Msgf("could not poll: %s", err)
+				}
+
+				if count > 0 {
+					break
+				}
+
+				tries--
+			}
+
+			if count == 0 {
+				log.Error().Msgf("could not detect a card")
+				state.SetWriteRequest("")
+				continue
+			}
+
+			cardUid := tokens.GetCardUID(target)
+			log.Info().Msgf("found card with UID: %s", cardUid)
+
+			cardType := tokens.GetCardType(target)
+			var bytesWritten []byte
+
+			switch cardType {
+			case tokens.TypeMifare:
+				bytesWritten, err = tokens.WriteMifare(pnd, writeRequest, cardUid)
+				if err != nil {
+					log.Error().Msgf("error writing to mifare: %s", err)
+					state.SetWriteRequest("")
+					continue
+				}
+			case tokens.TypeNTAG:
+				bytesWritten, err = tokens.WriteNtag(pnd, writeRequest)
+				if err != nil {
+					log.Error().Msgf("error writing to ntag: %s", err)
+					state.SetWriteRequest("")
+					continue
+				}
+			default:
+				log.Error().Msgf("unsupported card type: %s", cardType)
+				state.SetWriteRequest("")
+				continue
+			}
+
+			log.Info().Msgf("successfully wrote to card: %s", hex.EncodeToString(bytesWritten))
+			state.SetWriteRequest("")
+			continue
+		}
 
 		log.Debug().Msgf("polling for %d times with %s delay", ttp, pbp)
 		newScanned, removed, err := pollDevice(cfg, &pnd, activeCard, ttp, pbp)

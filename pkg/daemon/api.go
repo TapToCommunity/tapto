@@ -587,6 +587,26 @@ func handleSettingsLog() http.HandlerFunc {
 	}
 }
 
+type ReaderWroteRequest struct {
+	Text string `json:"text"`
+}
+
+func handleReaderWrite(state *State) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		log.Info().Msg("received reader write request")
+
+		var req ReaderWroteRequest
+		err := json.NewDecoder(r.Body).Decode(&req)
+		if err != nil {
+			log.Error().Err(err).Msg("error decoding request")
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		state.SetWriteRequest(req.Text)
+	}
+}
+
 func runApiServer(
 	cfg *config.UserConfig,
 	state *State,
@@ -602,8 +622,8 @@ func runApiServer(
 	s.Handle("/launch/{rest:.*}", handleLaunchBasic(cfg, state, tq, kbd)).Methods(http.MethodGet)
 
 	// GET /readers/0/read
-	// POST /readers/0/write
 
+	s.Handle("/readers/0/write", handleReaderWrite(state)).Methods(http.MethodPost)
 	s.Handle("/games", handleGames()).Methods(http.MethodGet)
 	s.Handle("/systems", handleSystems()).Methods(http.MethodGet)
 	s.Handle("/mappings", handleMappings(db)).Methods(http.MethodGet)
