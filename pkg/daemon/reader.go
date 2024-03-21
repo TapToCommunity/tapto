@@ -239,11 +239,6 @@ func readerPollLoop(
 
 		mister.PlaySuccess(cfg)
 
-		err = writeScanResult(newScanned)
-		if err != nil {
-			log.Error().Msgf("error writing tmp scan result: %s", err)
-		}
-
 		if state.IsLauncherDisabled() {
 			continue
 		}

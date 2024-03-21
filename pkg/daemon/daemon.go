@@ -32,6 +32,7 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/wizzomafizzo/mrext/pkg/input"
 	"github.com/wizzomafizzo/tapto/pkg/config"
+	"github.com/wizzomafizzo/tapto/pkg/database"
 	"github.com/wizzomafizzo/tapto/pkg/launcher"
 	"github.com/wizzomafizzo/tapto/pkg/platforms/mister"
 )
@@ -119,19 +120,46 @@ func launchCard(cfg *config.UserConfig, state *State, kbd input.Keyboard) error 
 	return nil
 }
 
-func processLaunchQueue(cfg *config.UserConfig, state *State, tq *TokenQueue, kbd input.Keyboard) {
+func processLaunchQueue(
+	cfg *config.UserConfig,
+	state *State,
+	tq *TokenQueue,
+	db *database.Database,
+	kbd input.Keyboard,
+) {
 	for {
 		select {
 		case t := <-tq.tokens:
 			state.SetActiveCard(t)
 
+			err := writeScanResult(t)
+			if err != nil {
+				log.Error().Err(err).Msgf("error writing tmp scan result")
+			}
+
+			he := database.HistoryEntry{
+				Time: t.ScanTime,
+				UID:  t.UID,
+				Text: t.Text,
+			}
+
 			if state.IsLauncherDisabled() {
+				err = db.AddHistory(he)
+				if err != nil {
+					log.Error().Err(err).Msgf("error adding history")
+				}
 				continue
 			}
 
-			err := launchCard(cfg, state, kbd)
+			err = launchCard(cfg, state, kbd)
 			if err != nil {
-				log.Error().Msgf("error launching card: %s", err)
+				log.Error().Err(err).Msgf("error launching card")
+			}
+
+			he.Success = err == nil
+			err = db.AddHistory(he)
+			if err != nil {
+				log.Error().Err(err).Msgf("error adding history")
 			}
 		case <-time.After(1 * time.Second):
 			if state.ShouldStopService() {
@@ -146,6 +174,12 @@ func StartDaemon(cfg *config.UserConfig) (func() error, error) {
 	state := &State{}
 	tq := NewTokenQueue()
 
+	db, err := database.Open()
+	if err != nil {
+		log.Error().Err(err).Msgf("error opening database")
+		return nil, err
+	}
+
 	// TODO: this is platform specific
 	kbd, err := input.NewKeyboard()
 	if err != nil {
@@ -153,28 +187,28 @@ func StartDaemon(cfg *config.UserConfig) (func() error, error) {
 		return nil, err
 	}
 
-	uids, texts, err := launcher.LoadDatabase()
+	uids, texts, err := launcher.LoadMappings()
 	if err != nil {
-		log.Error().Msgf("error loading database: %s", err)
+		log.Error().Msgf("error loading mappings: %s", err)
 	} else {
 		state.SetDB(uids, texts)
 	}
 
-	closeDbWatcher, err := launcher.StartMappingsWatcher(
+	closeMappingsWatcher, err := launcher.StartMappingsWatcher(
 		state.GetDBLoadTime,
 		state.SetDB,
 	)
 	if err != nil {
-		log.Error().Msgf("error starting database watcher: %s", err)
+		log.Error().Msgf("error starting mappings watcher: %s", err)
 	}
 
 	if _, err := os.Stat(mister.DisableLaunchFile); err == nil {
 		state.DisableLauncher()
 	}
 
-	go runApiServer(cfg, state, tq, kbd)
+	go runApiServer(cfg, state, tq, db, kbd)
 	go readerPollLoop(cfg, state, tq, kbd)
-	go processLaunchQueue(cfg, state, tq, kbd)
+	go processLaunchQueue(cfg, state, tq, db, kbd)
 
 	socket, err := StartSocketServer(state)
 	if err != nil {
@@ -189,8 +223,8 @@ func StartDaemon(cfg *config.UserConfig) (func() error, error) {
 		}
 		tq.Close()
 		state.StopService()
-		if closeDbWatcher != nil {
-			return closeDbWatcher()
+		if closeMappingsWatcher != nil {
+			return closeMappingsWatcher()
 		}
 		return nil
 	}, nil

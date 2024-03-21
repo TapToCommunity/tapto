@@ -15,6 +15,7 @@ const (
 	PidFile           = TempFolder + "/tapto.pid"
 	MappingsFile      = "/media/fat/nfc.csv"
 	TokenReadFile     = "/tmp/TOKENREAD"
+	DbFile            = mrextConfig.ScriptsConfigFolder + "/tapto/tapto.db"
 )
 
 func UserConfigToMrext(cfg *config.UserConfig) *mrextConfig.UserConfig {

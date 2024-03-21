@@ -39,4 +39,5 @@ require (
 	github.com/joho/godotenv v1.5.1
 	github.com/rs/zerolog v1.31.0
 	github.com/wizzomafizzo/mrext v0.0.0-20240315225527-30b49ae77201
+	go.etcd.io/bbolt v1.3.9
 )
