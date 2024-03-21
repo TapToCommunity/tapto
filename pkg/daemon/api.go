@@ -2,14 +2,19 @@ package daemon
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/gorilla/mux"
 	"github.com/rs/zerolog/log"
+	"github.com/wizzomafizzo/mrext/pkg/games"
+	"github.com/wizzomafizzo/mrext/pkg/gamesdb"
 	"github.com/wizzomafizzo/mrext/pkg/input"
 	"github.com/wizzomafizzo/tapto/pkg/config"
 	"github.com/wizzomafizzo/tapto/pkg/database"
+	"github.com/wizzomafizzo/tapto/pkg/platforms/mister"
 )
 
 type LaunchRequestMetadata struct {
@@ -115,6 +120,8 @@ func handleHistory(
 			}
 		}
 
+		w.Header().Set("Content-Type", "application/json")
+
 		err = json.NewEncoder(w).Encode(resp)
 		if err != nil {
 			log.Error().Err(err).Msgf("error encoding history response")
@@ -131,12 +138,20 @@ type TokenResponse struct {
 	ScanTime time.Time `json:"scanTime"`
 }
 
+type IndexResponse struct {
+	Indexing    bool   `json:"indexing"`
+	TotalSteps  int    `json:"totalSteps"`
+	CurrentStep int    `json:"currentStep"`
+	CurrentDesc string `json:"currentDesc"`
+}
+
 type StatusResponse struct {
 	ReaderConnected bool          `json:"readerConnected"`
 	ReaderType      string        `json:"readerType"`
 	ActiveCard      TokenResponse `json:"activeCard"`
 	LastScanned     TokenResponse `json:"lastScanned"`
 	DisableLauncher bool          `json:"disableLauncher"`
+	GamesIndex      IndexResponse `json:"gamesIndex"`
 }
 
 func handleStatus(
@@ -164,7 +179,15 @@ func handleStatus(
 				ScanTime: last.ScanTime,
 			},
 			DisableLauncher: state.disableLauncher,
+			GamesIndex: IndexResponse{
+				Indexing:    IndexInstance.Indexing,
+				TotalSteps:  IndexInstance.TotalSteps,
+				CurrentStep: IndexInstance.CurrentStep,
+				CurrentDesc: IndexInstance.CurrentDesc,
+			},
 		}
+
+		w.Header().Set("Content-Type", "application/json")
 
 		err := json.NewEncoder(w).Encode(resp)
 		if err != nil {
@@ -172,6 +195,122 @@ func handleStatus(
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
+	}
+}
+
+const pageSize = 500
+
+type System struct {
+	Id       string `json:"id"`
+	Name     string `json:"name"`
+	Category string `json:"category"`
+}
+
+type SearchResultGame struct {
+	System System `json:"system"`
+	Name   string `json:"name"`
+	Path   string `json:"path"`
+}
+
+type SearchResults struct {
+	Data     []SearchResultGame `json:"data"`
+	Total    int                `json:"total"`
+	PageSize int                `json:"pageSize"`
+	Page     int                `json:"page"`
+}
+
+type Index struct {
+	mu          sync.Mutex
+	Indexing    bool
+	TotalSteps  int
+	CurrentStep int
+	CurrentDesc string
+}
+
+func GetIndexingStatus() string {
+	status := "indexStatus:"
+
+	if gamesdb.DbExists() {
+		status += "y,"
+	} else {
+		status += "n,"
+	}
+
+	if IndexInstance.Indexing {
+		status += "y,"
+	} else {
+		status += "n,"
+	}
+
+	status += fmt.Sprintf(
+		"%d,%d,%s",
+		IndexInstance.TotalSteps,
+		IndexInstance.CurrentStep,
+		IndexInstance.CurrentDesc,
+	)
+
+	return status
+}
+
+func (s *Index) GenerateIndex(cfg *config.UserConfig) {
+	if s.Indexing {
+		return
+	}
+
+	s.mu.Lock()
+	s.Indexing = true
+
+	log.Info().Msg("generating games index")
+	// websocket.Broadcast(logger, GetIndexingStatus())
+
+	go func() {
+		defer s.mu.Unlock()
+
+		_, err := gamesdb.NewNamesIndex(mister.UserConfigToMrext(cfg), games.AllSystems(), func(status gamesdb.IndexStatus) {
+			s.TotalSteps = status.Total
+			s.CurrentStep = status.Step
+			if status.Step == 1 {
+				s.CurrentDesc = "Finding games folders..."
+			} else if status.Step == status.Total {
+				s.CurrentDesc = "Writing database... (" + fmt.Sprint(status.Files) + " games)"
+			} else {
+				system, err := games.GetSystem(status.SystemId)
+				if err != nil {
+					s.CurrentDesc = "Indexing " + status.SystemId + "..."
+				} else {
+					s.CurrentDesc = "Indexing " + system.Name + "..."
+				}
+			}
+			log.Info().Msgf("indexing status: %s", s.CurrentDesc)
+			// websocket.Broadcast(logger, GetIndexingStatus())
+		})
+		if err != nil {
+			log.Error().Err(err).Msg("error generating games index")
+		}
+
+		s.Indexing = false
+		s.TotalSteps = 0
+		s.CurrentStep = 0
+		s.CurrentDesc = ""
+
+		log.Info().Msg("finished generating games index")
+		// websocket.Broadcast(logger, GetIndexingStatus())
+	}()
+}
+
+func NewIndex() *Index {
+	return &Index{}
+}
+
+var IndexInstance = NewIndex()
+
+func handleIndexGames(
+	cfg *config.UserConfig,
+) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		log.Info().Msg("received index games request")
+
+		IndexInstance.GenerateIndex(cfg)
 	}
 }
 
@@ -188,11 +327,11 @@ func runApiServer(
 	s.Handle("/launch", handleLaunch(cfg, state, tq, kbd)).Methods(http.MethodPost)
 	s.Handle("/launch/{rest:.*}", handleLaunchBasic(cfg, state, tq, kbd)).Methods(http.MethodGet)
 
-	// GET /games
-	// Search games
+	// GET /readers/0/read
+	// POST /readers/0/write
 
+	// GET /games
 	// GET /systems
-	// Search systems
 
 	// GET /mappings
 	// Return all current mappings, or filter based on query parameters
@@ -204,7 +343,8 @@ func runApiServer(
 
 	// GET /settings
 	// GET /settings/log
-	// POST /settings/index/games
+
+	s.Handle("/settings/index/games", handleIndexGames(cfg)).Methods(http.MethodPost)
 
 	// events SSE
 
