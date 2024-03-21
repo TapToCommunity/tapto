@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/wizzomafizzo/tapto/pkg/platforms/mister"
@@ -11,7 +12,8 @@ import (
 )
 
 const (
-	BucketHistory = "history"
+	BucketHistory  = "history"
+	BucketMappings = "mappings"
 )
 
 // Check if the db exists on disk.
@@ -34,7 +36,7 @@ func open(options *bolt.Options) (*bolt.DB, error) {
 	}
 
 	db.Update(func(txn *bolt.Tx) error {
-		for _, bucket := range []string{BucketHistory} {
+		for _, bucket := range []string{BucketHistory, BucketMappings} {
 			_, err := txn.CreateBucketIfNotExists([]byte(bucket))
 			if err != nil {
 				return err
@@ -73,7 +75,8 @@ type HistoryEntry struct {
 	Success bool      `json:"success"`
 }
 
-func NewHistoryKey(entry HistoryEntry) string {
+func HistoryKey(entry HistoryEntry) string {
+	// TODO: web has no uid, this could collide
 	return entry.Time.Format(time.RFC3339) + "-" + entry.UID
 }
 
@@ -86,7 +89,7 @@ func (d *Database) AddHistory(entry HistoryEntry) error {
 			return err
 		}
 
-		return b.Put([]byte(NewHistoryKey(entry)), data)
+		return b.Put([]byte(HistoryKey(entry)), data)
 	})
 }
 
@@ -119,4 +122,108 @@ func (d *Database) GetHistory() ([]HistoryEntry, error) {
 	})
 
 	return entries, err
+}
+
+const (
+	MappingTypeUID  = "uid"
+	MappingTypeText = "text"
+)
+
+func MappingsKey(mt, arg string) string {
+	return mt + ":" + arg
+}
+
+func normalUid(uid string) string {
+	uid = strings.TrimSpace(uid)
+	uid = strings.ToLower(uid)
+	uid = strings.ReplaceAll(uid, ":", "")
+	return uid
+}
+
+func (d *Database) AddUidMapping(orig, mapping string) error {
+	return d.bdb.Update(func(txn *bolt.Tx) error {
+		b := txn.Bucket([]byte(BucketMappings))
+		return b.Put([]byte(MappingsKey(
+			MappingTypeUID,
+			normalUid(orig),
+		)), []byte(normalUid(mapping)))
+	})
+}
+
+func (d *Database) AddTextMapping(orig, mapping string) error {
+	return d.bdb.Update(func(txn *bolt.Tx) error {
+		b := txn.Bucket([]byte(BucketMappings))
+		return b.Put([]byte(MappingsKey(
+			MappingTypeText,
+			orig,
+		)), []byte(mapping))
+	})
+}
+
+func (d *Database) GetUidMapping(orig string) (string, error) {
+	var mapping string
+	err := d.bdb.View(func(txn *bolt.Tx) error {
+		b := txn.Bucket([]byte(BucketMappings))
+		v := b.Get([]byte(MappingsKey(MappingTypeUID, normalUid(orig))))
+		if v == nil {
+			return nil
+		}
+
+		mapping = string(v)
+		return nil
+	})
+
+	return mapping, err
+}
+
+func (d *Database) GetTextMapping(orig string) (string, error) {
+	var mapping string
+	err := d.bdb.View(func(txn *bolt.Tx) error {
+		b := txn.Bucket([]byte(BucketMappings))
+		v := b.Get([]byte(MappingsKey(MappingTypeText, orig)))
+		if v == nil {
+			return nil
+		}
+
+		mapping = string(v)
+		return nil
+	})
+
+	return mapping, err
+}
+
+type Mappings struct {
+	Uids  map[string]string
+	Texts map[string]string
+}
+
+func (d *Database) GetMappings() (Mappings, error) {
+	var mappings Mappings
+	err := d.bdb.View(func(txn *bolt.Tx) error {
+		b := txn.Bucket([]byte(BucketMappings))
+
+		mappings.Uids = make(map[string]string)
+		mappings.Texts = make(map[string]string)
+
+		c := b.Cursor()
+		for k, v := c.First(); k != nil; k, v = c.Next() {
+			key := string(k)
+			val := string(v)
+
+			parts := strings.Split(key, ":")
+			if len(parts) != 2 {
+				return nil
+			}
+
+			if parts[0] == MappingTypeUID {
+				mappings.Uids[parts[1]] = val
+			} else if parts[0] == MappingTypeText {
+				mappings.Texts[parts[1]] = val
+			}
+		}
+
+		return nil
+	})
+
+	return mappings, err
 }

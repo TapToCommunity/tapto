@@ -84,21 +84,37 @@ func inExitGameBlocklist(cfg *config.UserConfig) bool {
 	return slices.Contains(blocklist, strings.ToLower(mister.GetActiveCoreName()))
 }
 
-func launchCard(cfg *config.UserConfig, state *State, kbd input.Keyboard) error {
+func launchCard(cfg *config.UserConfig, state *State, db *database.Database, kbd input.Keyboard) error {
 	card := state.GetActiveCard()
 	uidMap, textMap := state.GetDB()
 
 	text := card.Text
 	override := false
 
-	if v, ok := uidMap[card.UID]; ok {
-		log.Info().Msg("launching with uid match override")
+	if v, err := db.GetUidMapping(card.UID); err == nil {
+		if err != nil {
+			log.Error().Err(err).Msgf("error getting db uid mapping")
+		} else if v != "" {
+			log.Info().Msg("launching with db uid match override")
+			text = v
+			override = true
+		}
+	} else if v, ok := uidMap[card.UID]; ok {
+		log.Info().Msg("launching with csv uid match override")
 		text = v
 		override = true
 	}
 
-	if v, ok := textMap[card.Text]; ok {
-		log.Info().Msg("launching with text match override")
+	if v, err := db.GetTextMapping(card.Text); err == nil {
+		if err != nil {
+			log.Error().Err(err).Msgf("error getting db text mapping")
+		} else if v != "" {
+			log.Info().Msg("launching with db text match override")
+			text = v
+			override = true
+		}
+	} else if v, ok := textMap[card.Text]; ok {
+		log.Info().Msg("launching with csv text match override")
 		text = v
 		override = true
 	}
@@ -151,7 +167,7 @@ func processLaunchQueue(
 				continue
 			}
 
-			err = launchCard(cfg, state, kbd)
+			err = launchCard(cfg, state, db, kbd)
 			if err != nil {
 				log.Error().Err(err).Msgf("error launching card")
 			}
