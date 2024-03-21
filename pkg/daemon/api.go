@@ -3,7 +3,9 @@ package daemon
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
+	"os"
 	"sync"
 	"time"
 
@@ -561,6 +563,30 @@ func handleSettings(cfg *config.UserConfig) http.HandlerFunc {
 	}
 }
 
+func handleSettingsLog() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		log.Info().Msg("received settings log request")
+
+		file, err := os.Open(mister.LogFile)
+		if err != nil {
+			log.Error().Err(err).Msg("error opening log file")
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		defer file.Close()
+
+		w.Header().Set("Content-Disposition", "attachment; filename=tapto.log")
+		w.Header().Set("Content-Type", "text/plain")
+
+		_, err = io.Copy(w, file)
+		if err != nil {
+			log.Error().Err(err).Msg("error copying log file")
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
+}
+
 func runApiServer(
 	cfg *config.UserConfig,
 	state *State,
@@ -587,8 +613,8 @@ func runApiServer(
 	s.Handle("/settings", handleSettings(cfg)).Methods(http.MethodGet)
 
 	// PUT /settings
-	// GET /settings/log
 
+	s.Handle("/settings/log", handleSettingsLog()).Methods(http.MethodGet)
 	s.Handle("/settings/index/games", handleIndexGames(cfg)).Methods(http.MethodPost)
 
 	// events SSE
