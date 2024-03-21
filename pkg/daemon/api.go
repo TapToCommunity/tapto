@@ -21,7 +21,12 @@ type LaunchRequest struct {
 	Metadata *LaunchRequestMetadata `json:"metadata"`
 }
 
-func handleLaunch(cfg *config.UserConfig, state *State, kbd input.Keyboard) http.HandlerFunc {
+func handleLaunch(
+	cfg *config.UserConfig,
+	state *State,
+	tq *TokenQueue,
+	kbd input.Keyboard,
+) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		log.Info().Msg("received launch request")
 
@@ -34,22 +39,25 @@ func handleLaunch(cfg *config.UserConfig, state *State, kbd input.Keyboard) http
 		}
 
 		log.Info().Fields(req).Msgf("launching token")
-		state.SetActiveCard(Token{
+		// TODO: how do we report back errors?
+
+		t := Token{
 			UID:      req.UID,
 			Text:     req.Text,
 			ScanTime: time.Now(),
-		})
-
-		// TODO: is this necessary? does the poll loop handle it?
-		err = launchCard(cfg, state, kbd)
-		if err != nil {
-			log.Error().Msgf("error launching token: %s", err)
-			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}
+
+		state.SetActiveCard(t)
+		tq.Enqueue(t)
 	}
 }
 
-func handleLaunchBasic(cfg *config.UserConfig, state *State, kbd input.Keyboard) http.HandlerFunc {
+func handleLaunchBasic(
+	cfg *config.UserConfig,
+	state *State,
+	tq *TokenQueue,
+	kbd input.Keyboard,
+) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		log.Info().Msg("received basic launch request")
 
@@ -58,27 +66,28 @@ func handleLaunchBasic(cfg *config.UserConfig, state *State, kbd input.Keyboard)
 
 		log.Info().Msgf("launching basic token: %s", text)
 
-		state.SetActiveCard(Token{
+		t := Token{
 			UID:      "",
 			Text:     text,
 			ScanTime: time.Now(),
-		})
-
-		// TODO: is this necessary? does the poll loop handle it?
-		err := launchCard(cfg, state, kbd)
-		if err != nil {
-			log.Error().Msgf("error launching basic token: %s", err)
-			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}
+
+		state.SetActiveCard(t)
+		tq.Enqueue(t)
 	}
 }
 
-func runApiServer(cfg *config.UserConfig, state *State, kbd input.Keyboard) {
+func runApiServer(
+	cfg *config.UserConfig,
+	state *State,
+	tq *TokenQueue,
+	kbd input.Keyboard,
+) {
 	r := mux.NewRouter()
 	s := r.PathPrefix("/api/v1").Subrouter()
 
-	s.Handle("/launch", handleLaunch(cfg, state, kbd)).Methods(http.MethodPost)
-	s.Handle("/launch/{rest:.*}", handleLaunchBasic(cfg, state, kbd)).Methods(http.MethodGet)
+	s.Handle("/launch", handleLaunch(cfg, state, tq, kbd)).Methods(http.MethodPost)
+	s.Handle("/launch/{rest:.*}", handleLaunchBasic(cfg, state, tq, kbd)).Methods(http.MethodGet)
 
 	// GET /readers
 	// Return all attached NFC readers
@@ -102,6 +111,12 @@ func runApiServer(cfg *config.UserConfig, state *State, kbd input.Keyboard) {
 
 	// GET /history
 	// Return all scans
+
+	// GET /status
+
+	// GET /settings
+
+	// GET /settings/log
 
 	http.Handle("/", r)
 
