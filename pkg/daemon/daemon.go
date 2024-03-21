@@ -187,6 +187,8 @@ func StartDaemon(cfg *config.UserConfig) (func() error, error) {
 		return nil, err
 	}
 
+	tr, stopTr, err := mister.StartTracker(*mister.UserConfigToMrext(cfg))
+
 	uids, texts, err := launcher.LoadMappings()
 	if err != nil {
 		log.Error().Msgf("error loading mappings: %s", err)
@@ -206,7 +208,7 @@ func StartDaemon(cfg *config.UserConfig) (func() error, error) {
 		state.DisableLauncher()
 	}
 
-	go runApiServer(cfg, state, tq, db, kbd)
+	go runApiServer(cfg, state, tq, db, kbd, tr)
 	go readerPollLoop(cfg, state, tq, kbd)
 	go processLaunchQueue(cfg, state, tq, db, kbd)
 
@@ -221,8 +223,16 @@ func StartDaemon(cfg *config.UserConfig) (func() error, error) {
 		if err != nil {
 			log.Warn().Msgf("error closing socket: %s", err)
 		}
+
 		tq.Close()
+
 		state.StopService()
+
+		err = stopTr()
+		if err != nil {
+			log.Warn().Msgf("error stopping tracker: %s", err)
+		}
+
 		if closeMappingsWatcher != nil {
 			return closeMappingsWatcher()
 		}

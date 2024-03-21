@@ -147,16 +147,18 @@ type IndexResponse struct {
 }
 
 type StatusResponse struct {
-	ReaderConnected bool          `json:"readerConnected"`
-	ReaderType      string        `json:"readerType"`
-	ActiveCard      TokenResponse `json:"activeCard"`
-	LastScanned     TokenResponse `json:"lastScanned"`
-	DisableLauncher bool          `json:"disableLauncher"`
-	GamesIndex      IndexResponse `json:"gamesIndex"`
+	ReaderConnected bool           `json:"readerConnected"`
+	ReaderType      string         `json:"readerType"`
+	ActiveCard      TokenResponse  `json:"activeCard"`
+	LastScanned     TokenResponse  `json:"lastScanned"`
+	DisableLauncher bool           `json:"disableLauncher"`
+	GamesIndex      IndexResponse  `json:"gamesIndex"`
+	Playing         PlayingPayload `json:"playing"`
 }
 
 func handleStatus(
 	state *State,
+	tr *mister.Tracker,
 ) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		log.Info().Msg("received status request")
@@ -185,6 +187,12 @@ func handleStatus(
 				TotalSteps:  IndexInstance.TotalSteps,
 				CurrentStep: IndexInstance.CurrentStep,
 				CurrentDesc: IndexInstance.CurrentDesc,
+			},
+			Playing: PlayingPayload{
+				System:     tr.ActiveSystem,
+				SystemName: tr.ActiveSystemName,
+				Game:       tr.ActiveGame,
+				GameName:   tr.ActiveGameName,
 			},
 		}
 
@@ -435,12 +443,20 @@ func handleGames() http.HandlerFunc {
 	}
 }
 
+type PlayingPayload struct {
+	System     string `json:"system"`
+	SystemName string `json:"systemName"`
+	Game       string `json:"game"`
+	GameName   string `json:"gameName"`
+}
+
 func runApiServer(
 	cfg *config.UserConfig,
 	state *State,
 	tq *TokenQueue,
 	db *database.Database,
 	kbd input.Keyboard,
+	tr *mister.Tracker,
 ) {
 	r := mux.NewRouter()
 	s := r.PathPrefix("/api/v1").Subrouter()
@@ -460,7 +476,7 @@ func runApiServer(
 	// Create a new mapping
 
 	s.Handle("/history", handleHistory(db)).Methods(http.MethodGet)
-	s.Handle("/status", handleStatus(state)).Methods(http.MethodGet)
+	s.Handle("/status", handleStatus(state, tr)).Methods(http.MethodGet)
 
 	// GET /settings
 	// GET /settings/log
