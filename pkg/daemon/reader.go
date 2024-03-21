@@ -11,6 +11,7 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/wizzomafizzo/mrext/pkg/input"
 	"github.com/wizzomafizzo/tapto/pkg/config"
+	"github.com/wizzomafizzo/tapto/pkg/daemon/state"
 	"github.com/wizzomafizzo/tapto/pkg/platforms/mister"
 	"github.com/wizzomafizzo/tapto/pkg/tokens"
 	"github.com/wizzomafizzo/tapto/pkg/utils"
@@ -27,10 +28,10 @@ const (
 func pollDevice(
 	cfg *config.UserConfig,
 	pnd *nfc.Device,
-	activeCard Token,
+	activeCard state.Token,
 	ttp int,
 	pbp time.Duration,
-) (Token, bool, error) {
+) (state.Token, bool, error) {
 	removed := false
 
 	count, target, err := pnd.InitiatorPollTarget(tokens.SupportedCardTypes, ttp, pbp)
@@ -41,7 +42,7 @@ func pollDevice(
 	if count <= 0 {
 		if activeCard.UID != "" && time.Since(activeCard.ScanTime) > timeToForgetCard {
 			log.Info().Msg("card removed")
-			activeCard = Token{}
+			activeCard = state.Token{}
 			removed = true
 		}
 
@@ -88,7 +89,7 @@ func pollDevice(
 		log.Info().Msgf("decoded text NDEF: %s", tagText)
 	}
 
-	card := Token{
+	card := state.Token{
 		Type:     cardType,
 		UID:      cardUid,
 		Text:     tagText,
@@ -116,7 +117,7 @@ func detectConnectionString() string {
 	return ""
 }
 
-func OpenDeviceWithRetries(config config.TapToConfig, state *State) (nfc.Device, error) {
+func OpenDeviceWithRetries(config config.TapToConfig, st *state.State) (nfc.Device, error) {
 	var connectionString = config.ConnectionString
 	if connectionString == "" && config.ProbeDevice == true {
 		connectionString = detectConnectionString()
@@ -136,11 +137,11 @@ func OpenDeviceWithRetries(config config.TapToConfig, state *State) (nfc.Device,
 			log.Info().Msgf("device name: %s", deviceName)
 
 			if connProto == "pn532_uart" {
-				state.SetReaderConnected(ReaderTypePN532)
+				st.SetReaderConnected(state.ReaderTypePN532)
 			} else if strings.Contains(deviceName, "ACR122U") {
-				state.SetReaderConnected(ReaderTypeACR122U)
+				st.SetReaderConnected(state.ReaderTypeACR122U)
 			} else {
-				state.SetReaderConnected(ReaderTypeUnknown)
+				st.SetReaderConnected(state.ReaderTypeUnknown)
 			}
 
 			return pnd, err
@@ -157,8 +158,8 @@ func OpenDeviceWithRetries(config config.TapToConfig, state *State) (nfc.Device,
 
 func readerPollLoop(
 	cfg *config.UserConfig,
-	state *State,
-	tq *TokenQueue,
+	st *state.State,
+	tq *state.TokenQueue,
 	kbd input.Keyboard,
 ) {
 	var pnd nfc.Device
@@ -183,23 +184,23 @@ func readerPollLoop(
 	}
 
 	for {
-		if state.ShouldStopService() {
+		if st.ShouldStopService() {
 			break
 		}
 
 		time.Sleep(periodBetweenLoop)
 
-		if connected, _ := state.GetReaderStatus(); !connected {
+		if connected, _ := st.GetReaderStatus(); !connected {
 			// TODO: keep track of reconnect attempts?
 			log.Info().Msg("reader not connected, attempting connection....")
 
-			pnd, err = OpenDeviceWithRetries(cfg.TapTo, state)
+			pnd, err = OpenDeviceWithRetries(cfg.TapTo, st)
 			if err != nil {
 				continue
 			}
 
 			if err := pnd.InitiatorInit(); err != nil {
-				state.SetReaderDisconnected()
+				st.SetReaderDisconnected()
 				log.Error().Msgf("could not init initiator: %s", err)
 				continue
 			}
@@ -207,8 +208,8 @@ func readerPollLoop(
 			log.Info().Msgf("opened connection: %s %s", pnd, pnd.Connection())
 		}
 
-		activeCard := state.GetActiveCard()
-		writeRequest := state.GetWriteRequest()
+		activeCard := st.GetActiveCard()
+		writeRequest := st.GetWriteRequest()
 
 		if writeRequest != "" {
 			log.Info().Msgf("write request: %s", writeRequest)
@@ -233,7 +234,7 @@ func readerPollLoop(
 
 			if count == 0 {
 				log.Error().Msgf("could not detect a card")
-				state.SetWriteRequest("")
+				st.SetWriteRequest("")
 				continue
 			}
 
@@ -248,24 +249,24 @@ func readerPollLoop(
 				bytesWritten, err = tokens.WriteMifare(pnd, writeRequest, cardUid)
 				if err != nil {
 					log.Error().Msgf("error writing to mifare: %s", err)
-					state.SetWriteRequest("")
+					st.SetWriteRequest("")
 					continue
 				}
 			case tokens.TypeNTAG:
 				bytesWritten, err = tokens.WriteNtag(pnd, writeRequest)
 				if err != nil {
 					log.Error().Msgf("error writing to ntag: %s", err)
-					state.SetWriteRequest("")
+					st.SetWriteRequest("")
 					continue
 				}
 			default:
 				log.Error().Msgf("unsupported card type: %s", cardType)
-				state.SetWriteRequest("")
+				st.SetWriteRequest("")
 				continue
 			}
 
 			log.Info().Msgf("successfully wrote to card: %s", hex.EncodeToString(bytesWritten))
-			state.SetWriteRequest("")
+			st.SetWriteRequest("")
 			continue
 		}
 
@@ -273,7 +274,7 @@ func readerPollLoop(
 		newScanned, removed, err := pollDevice(cfg, &pnd, activeCard, ttp, pbp)
 
 		if errors.Is(err, nfc.Error(nfc.EIO)) {
-			state.SetReaderDisconnected()
+			st.SetReaderDisconnected()
 			log.Error().Msgf("error during poll: %s", err)
 			log.Error().Msg("fatal IO error, device was possibly unplugged")
 			playFail()
@@ -286,9 +287,9 @@ func readerPollLoop(
 			continue
 		}
 
-		state.SetActiveCard(newScanned)
+		st.SetActiveCard(newScanned)
 
-		if removed && cfg.TapTo.ExitGame && !inExitGameBlocklist(cfg) && !state.IsLauncherDisabled() {
+		if removed && cfg.TapTo.ExitGame && !inExitGameBlocklist(cfg) && !st.IsLauncherDisabled() {
 			mister.ExitGame()
 			continue
 		}
@@ -299,14 +300,14 @@ func readerPollLoop(
 
 		mister.PlaySuccess(cfg)
 
-		if state.IsLauncherDisabled() {
+		if st.IsLauncherDisabled() {
 			continue
 		}
 
 		tq.Enqueue(newScanned)
 	}
 
-	state.SetReaderDisconnected()
+	st.SetReaderDisconnected()
 	err = pnd.Close()
 	if err != nil {
 		log.Warn().Msgf("error closing device: %s", err)

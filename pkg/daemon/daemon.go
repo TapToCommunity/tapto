@@ -32,34 +32,14 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/wizzomafizzo/mrext/pkg/input"
 	"github.com/wizzomafizzo/tapto/pkg/config"
+	"github.com/wizzomafizzo/tapto/pkg/daemon/api"
+	"github.com/wizzomafizzo/tapto/pkg/daemon/state"
 	"github.com/wizzomafizzo/tapto/pkg/database"
 	"github.com/wizzomafizzo/tapto/pkg/launcher"
 	"github.com/wizzomafizzo/tapto/pkg/platforms/mister"
 )
 
-type TokenQueue struct {
-	tokens chan Token
-}
-
-func (q *TokenQueue) Enqueue(t Token) {
-	q.tokens <- t
-}
-
-func (q *TokenQueue) Dequeue() Token {
-	return <-q.tokens
-}
-
-func (q *TokenQueue) Close() {
-	close(q.tokens)
-}
-
-func NewTokenQueue() *TokenQueue {
-	return &TokenQueue{
-		tokens: make(chan Token),
-	}
-}
-
-func writeScanResult(card Token) error {
+func writeScanResult(card state.Token) error {
 	f, err := os.Create(mister.TokenReadFile)
 	if err != nil {
 		return fmt.Errorf("unable to create scan result file %s: %s", mister.TokenReadFile, err)
@@ -84,7 +64,7 @@ func inExitGameBlocklist(cfg *config.UserConfig) bool {
 	return slices.Contains(blocklist, strings.ToLower(mister.GetActiveCoreName()))
 }
 
-func launchCard(cfg *config.UserConfig, state *State, db *database.Database, kbd input.Keyboard) error {
+func launchCard(cfg *config.UserConfig, state *state.State, db *database.Database, kbd input.Keyboard) error {
 	card := state.GetActiveCard()
 	uidMap, textMap := state.GetDB()
 
@@ -138,15 +118,15 @@ func launchCard(cfg *config.UserConfig, state *State, db *database.Database, kbd
 
 func processLaunchQueue(
 	cfg *config.UserConfig,
-	state *State,
-	tq *TokenQueue,
+	st *state.State,
+	tq *state.TokenQueue,
 	db *database.Database,
 	kbd input.Keyboard,
 ) {
 	for {
 		select {
-		case t := <-tq.tokens:
-			state.SetActiveCard(t)
+		case t := <-tq.Tokens:
+			st.SetActiveCard(t)
 
 			err := writeScanResult(t)
 			if err != nil {
@@ -159,7 +139,7 @@ func processLaunchQueue(
 				Text: t.Text,
 			}
 
-			if state.IsLauncherDisabled() {
+			if st.IsLauncherDisabled() {
 				err = db.AddHistory(he)
 				if err != nil {
 					log.Error().Err(err).Msgf("error adding history")
@@ -167,7 +147,7 @@ func processLaunchQueue(
 				continue
 			}
 
-			err = launchCard(cfg, state, db, kbd)
+			err = launchCard(cfg, st, db, kbd)
 			if err != nil {
 				log.Error().Err(err).Msgf("error launching card")
 			}
@@ -178,7 +158,7 @@ func processLaunchQueue(
 				log.Error().Err(err).Msgf("error adding history")
 			}
 		case <-time.After(1 * time.Second):
-			if state.ShouldStopService() {
+			if st.ShouldStopService() {
 				tq.Close()
 				return
 			}
@@ -187,8 +167,8 @@ func processLaunchQueue(
 }
 
 func StartDaemon(cfg *config.UserConfig) (func() error, error) {
-	state := &State{}
-	tq := NewTokenQueue()
+	st := &state.State{}
+	tq := state.NewTokenQueue()
 
 	db, err := database.Open()
 	if err != nil {
@@ -209,26 +189,26 @@ func StartDaemon(cfg *config.UserConfig) (func() error, error) {
 	if err != nil {
 		log.Error().Msgf("error loading mappings: %s", err)
 	} else {
-		state.SetDB(uids, texts)
+		st.SetDB(uids, texts)
 	}
 
 	closeMappingsWatcher, err := launcher.StartMappingsWatcher(
-		state.GetDBLoadTime,
-		state.SetDB,
+		st.GetDBLoadTime,
+		st.SetDB,
 	)
 	if err != nil {
 		log.Error().Msgf("error starting mappings watcher: %s", err)
 	}
 
 	if _, err := os.Stat(mister.DisableLaunchFile); err == nil {
-		state.DisableLauncher()
+		st.DisableLauncher()
 	}
 
-	go runApiServer(cfg, state, tq, db, kbd, tr)
-	go readerPollLoop(cfg, state, tq, kbd)
-	go processLaunchQueue(cfg, state, tq, db, kbd)
+	go api.RunApiServer(cfg, st, tq, db, kbd, tr)
+	go readerPollLoop(cfg, st, tq, kbd)
+	go processLaunchQueue(cfg, st, tq, db, kbd)
 
-	socket, err := StartSocketServer(state)
+	socket, err := StartSocketServer(st)
 	if err != nil {
 		log.Error().Msgf("error starting socket server: %s", err)
 		return nil, err
@@ -242,7 +222,7 @@ func StartDaemon(cfg *config.UserConfig) (func() error, error) {
 
 		tq.Close()
 
-		state.StopService()
+		st.StopService()
 
 		err = stopTr()
 		if err != nil {
