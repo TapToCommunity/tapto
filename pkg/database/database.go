@@ -64,6 +64,8 @@ func (d *Database) Close() error {
 	return d.bdb.Close()
 }
 
+// TODO: reader source (physical reader vs web)
+// TODO: metadata
 type HistoryEntry struct {
 	Time    time.Time `json:"time"`
 	UID     string    `json:"uid"`

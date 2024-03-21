@@ -124,6 +124,57 @@ func handleHistory(
 	}
 }
 
+type TokenResponse struct {
+	Type     string    `json:"type"`
+	UID      string    `json:"uid"`
+	Text     string    `json:"text"`
+	ScanTime time.Time `json:"scanTime"`
+}
+
+type StatusResponse struct {
+	ReaderConnected bool          `json:"readerConnected"`
+	ReaderType      string        `json:"readerType"`
+	ActiveCard      TokenResponse `json:"activeCard"`
+	LastScanned     TokenResponse `json:"lastScanned"`
+	DisableLauncher bool          `json:"disableLauncher"`
+}
+
+func handleStatus(
+	state *State,
+) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		log.Info().Msg("received status request")
+
+		active := state.GetActiveCard()
+		last := state.GetLastScanned()
+
+		resp := StatusResponse{
+			ReaderConnected: state.readerConnected,
+			ReaderType:      state.readerType,
+			ActiveCard: TokenResponse{
+				Type:     active.Type,
+				UID:      active.UID,
+				Text:     active.Text,
+				ScanTime: active.ScanTime,
+			},
+			LastScanned: TokenResponse{
+				Type:     last.Type,
+				UID:      last.UID,
+				Text:     last.Text,
+				ScanTime: last.ScanTime,
+			},
+			DisableLauncher: state.disableLauncher,
+		}
+
+		err := json.NewEncoder(w).Encode(resp)
+		if err != nil {
+			log.Error().Err(err).Msgf("error encoding status response")
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
+}
+
 func runApiServer(
 	cfg *config.UserConfig,
 	state *State,
@@ -137,20 +188,11 @@ func runApiServer(
 	s.Handle("/launch", handleLaunch(cfg, state, tq, kbd)).Methods(http.MethodPost)
 	s.Handle("/launch/{rest:.*}", handleLaunchBasic(cfg, state, tq, kbd)).Methods(http.MethodGet)
 
-	// GET /readers
-	// Return all attached NFC readers
-	// GET /readers/{id}
-	// Return information about a specific reader
-	// GET /readers/{id}/read
-	// Blocks until a token is read, then returns the token data or times out
-	// POST /readers/{id}/write
-	// Attempt to write text to a token, blocks until the operation is complete or times out
-
 	// GET /games
 	// Search games
 
-	// POST /index/games
-	// Regenerate the games index
+	// GET /systems
+	// Search systems
 
 	// GET /mappings
 	// Return all current mappings, or filter based on query parameters
@@ -158,12 +200,13 @@ func runApiServer(
 	// Create a new mapping
 
 	s.Handle("/history", handleHistory(db)).Methods(http.MethodGet)
-
-	// GET /status
+	s.Handle("/status", handleStatus(state)).Methods(http.MethodGet)
 
 	// GET /settings
-
 	// GET /settings/log
+	// POST /settings/index/games
+
+	// events SSE
 
 	http.Handle("/", r)
 
