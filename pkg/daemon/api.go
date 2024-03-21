@@ -522,6 +522,45 @@ func handleAddMapping(db *database.Database) http.HandlerFunc {
 	}
 }
 
+type SettingsResponse struct {
+	ConnectionString  string   `json:"connectionString"`
+	AllowCommands     bool     `json:"allowCommands"`
+	DisableSounds     bool     `json:"disableSounds"`
+	ProbeDevice       bool     `json:"probeDevice"`
+	ExitGame          bool     `json:"exitGame"`
+	ExitGameBlocklist []string `json:"exitGameBlocklist"`
+	Debug             bool     `json:"debug"`
+}
+
+func handleSettings(cfg *config.UserConfig) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		log.Info().Msg("received settings request")
+
+		resp := SettingsResponse{
+			ConnectionString:  cfg.TapTo.ConnectionString,
+			AllowCommands:     cfg.TapTo.AllowCommands,
+			DisableSounds:     cfg.TapTo.DisableSounds,
+			ProbeDevice:       cfg.TapTo.ProbeDevice,
+			ExitGame:          cfg.TapTo.ExitGame,
+			ExitGameBlocklist: make([]string, 0),
+			Debug:             cfg.TapTo.Debug,
+		}
+
+		for _, v := range cfg.TapTo.ExitGameBlocklist {
+			resp.ExitGameBlocklist = append(resp.ExitGameBlocklist, v)
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+
+		err := json.NewEncoder(w).Encode(resp)
+		if err != nil {
+			log.Error().Err(err).Msg("error encoding settings response")
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
+}
+
 func runApiServer(
 	cfg *config.UserConfig,
 	state *State,
@@ -545,8 +584,9 @@ func runApiServer(
 	s.Handle("/mappings", handleAddMapping(db)).Methods(http.MethodPost)
 	s.Handle("/history", handleHistory(db)).Methods(http.MethodGet)
 	s.Handle("/status", handleStatus(state, tr)).Methods(http.MethodGet)
+	s.Handle("/settings", handleSettings(cfg)).Methods(http.MethodGet)
 
-	// GET /settings
+	// PUT /settings
 	// GET /settings/log
 
 	s.Handle("/settings/index/games", handleIndexGames(cfg)).Methods(http.MethodPost)
