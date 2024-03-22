@@ -49,6 +49,45 @@ func (sr *StatusResponse) Render(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
+func newStatus(st *state.State, tr *mister.Tracker) StatusResponse {
+	active := st.GetActiveCard()
+	last := st.GetLastScanned()
+	readerConnected, readerType := st.GetReaderStatus()
+	launcherDisabled := st.IsLauncherDisabled()
+
+	return StatusResponse{
+		Launching: !launcherDisabled,
+		Reader: ReaderStatusResponse{
+			ReaderConnected: readerConnected,
+			ReaderType:      readerType,
+		},
+		ActiveToken: TokenResponse{
+			Type:     active.Type,
+			UID:      active.UID,
+			Text:     active.Text,
+			ScanTime: active.ScanTime,
+		},
+		LastToken: TokenResponse{
+			Type:     last.Type,
+			UID:      last.UID,
+			Text:     last.Text,
+			ScanTime: last.ScanTime,
+		},
+		GamesIndex: IndexResponse{
+			Indexing:    IndexInstance.Indexing,
+			TotalSteps:  IndexInstance.TotalSteps,
+			CurrentStep: IndexInstance.CurrentStep,
+			CurrentDesc: IndexInstance.CurrentDesc,
+		},
+		Playing: PlayingPayload{
+			System:     tr.ActiveSystem,
+			SystemName: tr.ActiveSystemName,
+			Game:       tr.ActiveGame,
+			GameName:   tr.ActiveGameName,
+		},
+	}
+}
+
 func handleStatus(
 	st *state.State,
 	tr *mister.Tracker,
@@ -56,42 +95,7 @@ func handleStatus(
 	return func(w http.ResponseWriter, r *http.Request) {
 		log.Info().Msg("received status request")
 
-		active := st.GetActiveCard()
-		last := st.GetLastScanned()
-		readerConnected, readerType := st.GetReaderStatus()
-		launcherDisabled := st.IsLauncherDisabled()
-
-		resp := StatusResponse{
-			Launching: !launcherDisabled,
-			Reader: ReaderStatusResponse{
-				ReaderConnected: readerConnected,
-				ReaderType:      readerType,
-			},
-			ActiveToken: TokenResponse{
-				Type:     active.Type,
-				UID:      active.UID,
-				Text:     active.Text,
-				ScanTime: active.ScanTime,
-			},
-			LastToken: TokenResponse{
-				Type:     last.Type,
-				UID:      last.UID,
-				Text:     last.Text,
-				ScanTime: last.ScanTime,
-			},
-			GamesIndex: IndexResponse{
-				Indexing:    IndexInstance.Indexing,
-				TotalSteps:  IndexInstance.TotalSteps,
-				CurrentStep: IndexInstance.CurrentStep,
-				CurrentDesc: IndexInstance.CurrentDesc,
-			},
-			Playing: PlayingPayload{
-				System:     tr.ActiveSystem,
-				SystemName: tr.ActiveSystemName,
-				Game:       tr.ActiveGame,
-				GameName:   tr.ActiveGameName,
-			},
-		}
+		resp := newStatus(st, tr)
 
 		err := render.Render(w, r, &resp)
 		if err != nil {

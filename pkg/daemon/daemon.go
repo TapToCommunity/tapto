@@ -204,7 +204,7 @@ func StartDaemon(cfg *config.UserConfig) (func() error, error) {
 		st.DisableLauncher()
 	}
 
-	go api.RunApiServer(cfg, st, tq, db, kbd, tr)
+	go api.RunApiServer(cfg, st, tq, db, tr)
 	go readerPollLoop(cfg, st, tq, kbd)
 	go processLaunchQueue(cfg, st, tq, db, kbd)
 

@@ -68,6 +68,7 @@ type NameMapping struct {
 type Tracker struct {
 	Config           *config.UserConfig
 	mu               sync.Mutex
+	eventHook        *func(tr *Tracker, action int, target string)
 	ActiveCore       string
 	ActiveSystem     string
 	ActiveSystemName string
@@ -138,6 +139,12 @@ func NewTracker(cfg *config.UserConfig) (*Tracker, error) {
 		GameTimes:        map[string]GameTime{},
 		NameMap:          nameMap,
 	}, nil
+}
+
+func (tr *Tracker) SetEventHook(hook *func(tr *Tracker, action int, target string)) {
+	tr.mu.Lock()
+	defer tr.mu.Unlock()
+	tr.eventHook = hook
 }
 
 func (tr *Tracker) ReloadNameMap() {
@@ -227,6 +234,10 @@ func (tr *Tracker) addEvent(action int, target string) {
 	}
 
 	log.Info().Msgf("%s: %s (%ds)", actionLabel, target, totalTime)
+
+	if tr.eventHook != nil {
+		(*tr.eventHook)(tr, action, target)
+	}
 }
 
 func (tr *Tracker) stopCore() bool {

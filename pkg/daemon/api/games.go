@@ -17,6 +17,7 @@ const pageSize = 500
 
 type Index struct {
 	mu          sync.Mutex
+	eventHook   *func(st *Index)
 	Indexing    bool
 	TotalSteps  int
 	CurrentStep int
@@ -46,6 +47,12 @@ func GetIndexingStatus() string {
 	)
 
 	return status
+}
+
+func (s *Index) SetEventHook(hook *func(st *Index)) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.eventHook = hook
 }
 
 func (s *Index) GenerateIndex(cfg *config.UserConfig) {
