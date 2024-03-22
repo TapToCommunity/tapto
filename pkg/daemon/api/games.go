@@ -1,11 +1,11 @@
 package api
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"sync"
 
+	"github.com/go-chi/render"
 	"github.com/rs/zerolog/log"
 	"github.com/wizzomafizzo/mrext/pkg/games"
 	"github.com/wizzomafizzo/mrext/pkg/gamesdb"
@@ -14,19 +14,6 @@ import (
 )
 
 const pageSize = 500
-
-type SearchResultGame struct {
-	System System `json:"system"`
-	Name   string `json:"name"`
-	Path   string `json:"path"`
-}
-
-type SearchResults struct {
-	Data     []SearchResultGame `json:"data"`
-	Total    int                `json:"total"`
-	PageSize int                `json:"pageSize"`
-	Page     int                `json:"page"`
-}
 
 type Index struct {
 	mu          sync.Mutex
@@ -123,6 +110,23 @@ func handleIndexGames(
 	}
 }
 
+type SearchResultGame struct {
+	System System `json:"system"`
+	Name   string `json:"name"`
+	Path   string `json:"path"`
+}
+
+type SearchResults struct {
+	Data     []SearchResultGame `json:"data"`
+	Total    int                `json:"total"`
+	PageSize int                `json:"pageSize"`
+	Page     int                `json:"page"`
+}
+
+func (sr *SearchResults) Render(w http.ResponseWriter, r *http.Request) error {
+	return nil
+}
+
 func handleGames() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		log.Info().Msg("received games request")
@@ -179,9 +183,7 @@ func handleGames() http.HandlerFunc {
 			results = results[:pageSize]
 		}
 
-		w.Header().Set("Content-Type", "application/json")
-
-		err = json.NewEncoder(w).Encode(&SearchResults{
+		err = render.Render(w, r, &SearchResults{
 			Data:     results,
 			Total:    total,
 			PageSize: pageSize,

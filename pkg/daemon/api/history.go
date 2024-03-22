@@ -1,10 +1,10 @@
 package api
 
 import (
-	"encoding/json"
 	"net/http"
 	"time"
 
+	"github.com/go-chi/render"
 	"github.com/rs/zerolog/log"
 	"github.com/wizzomafizzo/tapto/pkg/database"
 )
@@ -18,6 +18,10 @@ type HistoryReponseEntry struct {
 
 type HistoryResponse struct {
 	Entries []HistoryReponseEntry `json:"entries"`
+}
+
+func (hr *HistoryResponse) Render(w http.ResponseWriter, r *http.Request) error {
+	return nil
 }
 
 func handleHistory(
@@ -46,9 +50,7 @@ func handleHistory(
 			}
 		}
 
-		w.Header().Set("Content-Type", "application/json")
-
-		err = json.NewEncoder(w).Encode(resp)
+		err = render.Render(w, r, &resp)
 		if err != nil {
 			log.Error().Err(err).Msgf("error encoding history response")
 			http.Error(w, err.Error(), http.StatusInternalServerError)

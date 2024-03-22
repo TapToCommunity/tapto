@@ -1,11 +1,11 @@
 package api
 
 import (
-	"encoding/json"
 	"io"
 	"net/http"
 	"os"
 
+	"github.com/go-chi/render"
 	"github.com/rs/zerolog/log"
 	"github.com/wizzomafizzo/tapto/pkg/config"
 	"github.com/wizzomafizzo/tapto/pkg/platforms/mister"
@@ -19,6 +19,10 @@ type SettingsResponse struct {
 	ExitGame          bool     `json:"exitGame"`
 	ExitGameBlocklist []string `json:"exitGameBlocklist"`
 	Debug             bool     `json:"debug"`
+}
+
+func (sr *SettingsResponse) Render(w http.ResponseWriter, r *http.Request) error {
+	return nil
 }
 
 func handleSettings(cfg *config.UserConfig) http.HandlerFunc {
@@ -37,9 +41,7 @@ func handleSettings(cfg *config.UserConfig) http.HandlerFunc {
 
 		resp.ExitGameBlocklist = append(resp.ExitGameBlocklist, cfg.TapTo.ExitGameBlocklist...)
 
-		w.Header().Set("Content-Type", "application/json")
-
-		err := json.NewEncoder(w).Encode(resp)
+		err := render.Render(w, r, &resp)
 		if err != nil {
 			log.Error().Err(err).Msg("error encoding settings response")
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -48,7 +50,7 @@ func handleSettings(cfg *config.UserConfig) http.HandlerFunc {
 	}
 }
 
-func handleSettingsLog() http.HandlerFunc {
+func handleSettingsDownloadLog() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		log.Info().Msg("received settings log request")
 

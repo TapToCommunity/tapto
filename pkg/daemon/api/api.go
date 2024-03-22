@@ -2,8 +2,11 @@ package api
 
 import (
 	"net/http"
+	"time"
 
-	"github.com/gorilla/mux"
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
+	"github.com/go-chi/render"
 	"github.com/rs/zerolog/log"
 	"github.com/wizzomafizzo/mrext/pkg/input"
 	"github.com/wizzomafizzo/tapto/pkg/config"
@@ -20,33 +23,39 @@ func RunApiServer(
 	kbd input.Keyboard,
 	tr *mister.Tracker,
 ) {
-	r := mux.NewRouter()
-	s := r.PathPrefix("/api/v1").Subrouter()
+	r := chi.NewRouter()
 
-	s.Handle("/launch", handleLaunch(st, tq)).Methods(http.MethodPost)
-	s.Handle("/launch/{rest:.*}", handleLaunchBasic(st, tq)).Methods(http.MethodGet)
+	r.Use(middleware.Recoverer)
 
-	// GET /readers/0/read
+	r.Route("/api/v1", func(r chi.Router) {
+		r.Use(render.SetContentType(render.ContentTypeJSON))
+		r.Use(middleware.Timeout(60 * time.Second))
 
-	s.Handle("/readers/0/write", handleReaderWrite(st)).Methods(http.MethodPost)
-	s.Handle("/games", handleGames()).Methods(http.MethodGet)
-	s.Handle("/systems", handleSystems()).Methods(http.MethodGet)
-	s.Handle("/mappings", handleMappings(db)).Methods(http.MethodGet)
-	s.Handle("/mappings", handleAddMapping(db)).Methods(http.MethodPost)
-	s.Handle("/history", handleHistory(db)).Methods(http.MethodGet)
-	s.Handle("/status", handleStatus(st, tr)).Methods(http.MethodGet)
-	s.Handle("/settings", handleSettings(cfg)).Methods(http.MethodGet)
+		r.Get("/status", handleStatus(st, tr))
 
-	// PUT /settings
+		r.Post("/launch", handleLaunch(st, tq))
+		r.Get("/launch/{rest:.*}", handleLaunchBasic(st, tq))
 
-	s.Handle("/settings/log", handleSettingsLog()).Methods(http.MethodGet)
-	s.Handle("/settings/index/games", handleIndexGames(cfg)).Methods(http.MethodPost)
+		// GET /readers/0/read
+		r.Post("/readers/0/write", handleReaderWrite(st))
+
+		r.Get("/games", handleGames())
+		r.Get("/systems", handleSystems())
+
+		r.Get("/mappings", handleMappings(db))
+		r.Post("/mappings", handleAddMapping(db))
+
+		r.Get("/history", handleHistory(db))
+
+		// PUT /settings
+		r.Get("/settings", handleSettings(cfg))
+		r.Get("/settings/log", handleSettingsDownloadLog())
+		r.Post("/settings/index/games", handleIndexGames(cfg))
+	})
 
 	// events SSE
 
-	http.Handle("/", r)
-
-	err := http.ListenAndServe(":7497", nil) // TODO: move port to config
+	err := http.ListenAndServe(":7497", r) // TODO: move port to config
 	if err != nil {
 		log.Error().Msgf("error starting http server: %s", err)
 	}

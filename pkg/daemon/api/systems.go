@@ -1,9 +1,9 @@
 package api
 
 import (
-	"encoding/json"
 	"net/http"
 
+	"github.com/go-chi/render"
 	"github.com/rs/zerolog/log"
 	"github.com/wizzomafizzo/mrext/cmd/remote/menu"
 	"github.com/wizzomafizzo/mrext/pkg/games"
@@ -18,6 +18,10 @@ type System struct {
 
 type SystemsResponse struct {
 	Systems []System `json:"systems"`
+}
+
+func (sr *SystemsResponse) Render(w http.ResponseWriter, _ *http.Request) error {
+	return nil
 }
 
 func handleSystems() http.HandlerFunc {
@@ -53,9 +57,7 @@ func handleSystems() http.HandlerFunc {
 			})
 		}
 
-		w.Header().Set("Content-Type", "application/json")
-
-		err = json.NewEncoder(w).Encode(resp)
+		err = render.Render(w, nil, &resp)
 		if err != nil {
 			log.Error().Err(err).Msgf("error encoding systems response")
 			http.Error(w, err.Error(), http.StatusInternalServerError)

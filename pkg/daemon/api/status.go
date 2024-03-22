@@ -1,10 +1,10 @@
 package api
 
 import (
-	"encoding/json"
 	"net/http"
 	"time"
 
+	"github.com/go-chi/render"
 	"github.com/rs/zerolog/log"
 	"github.com/wizzomafizzo/tapto/pkg/daemon/state"
 	"github.com/wizzomafizzo/tapto/pkg/platforms/mister"
@@ -43,6 +43,10 @@ type StatusResponse struct {
 	Launching   bool                 `json:"launching"`
 	GamesIndex  IndexResponse        `json:"gamesIndex"`
 	Playing     PlayingPayload       `json:"playing"`
+}
+
+func (sr *StatusResponse) Render(w http.ResponseWriter, r *http.Request) error {
+	return nil
 }
 
 func handleStatus(
@@ -89,9 +93,7 @@ func handleStatus(
 			},
 		}
 
-		w.Header().Set("Content-Type", "application/json")
-
-		err := json.NewEncoder(w).Encode(resp)
+		err := render.Render(w, r, &resp)
 		if err != nil {
 			log.Error().Err(err).Msgf("error encoding status response")
 			http.Error(w, err.Error(), http.StatusInternalServerError)

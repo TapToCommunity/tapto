@@ -1,11 +1,11 @@
 package api
 
 import (
-	"encoding/json"
 	"net/http"
 	"time"
 
-	"github.com/gorilla/mux"
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/render"
 	"github.com/rs/zerolog/log"
 	"github.com/wizzomafizzo/tapto/pkg/daemon/state"
 )
@@ -20,6 +20,10 @@ type LaunchRequest struct {
 	Metadata *LaunchRequestMetadata `json:"metadata"`
 }
 
+func (lr *LaunchRequest) Bind(r *http.Request) error {
+	return nil
+}
+
 func handleLaunch(
 	st *state.State,
 	tq *state.TokenQueue,
@@ -28,7 +32,7 @@ func handleLaunch(
 		log.Info().Msg("received launch request")
 
 		var req LaunchRequest
-		err := json.NewDecoder(r.Body).Decode(&req)
+		err := render.Bind(r, &req)
 		if err != nil {
 			log.Error().Msgf("error decoding request: %s", err)
 			http.Error(w, err.Error(), http.StatusBadRequest)
@@ -56,8 +60,7 @@ func handleLaunchBasic(
 	return func(w http.ResponseWriter, r *http.Request) {
 		log.Info().Msg("received basic launch request")
 
-		vars := mux.Vars(r)
-		text := vars["rest"]
+		text := chi.URLParam(r, "text")
 
 		log.Info().Msgf("launching basic token: %s", text)
 

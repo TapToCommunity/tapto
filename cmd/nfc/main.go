@@ -45,6 +45,7 @@ import (
 
 	"github.com/wizzomafizzo/tapto/pkg/config"
 	"github.com/wizzomafizzo/tapto/pkg/daemon"
+	"github.com/wizzomafizzo/tapto/pkg/daemon/state"
 
 	"github.com/clausecker/nfc/v2"
 	mrextMister "github.com/wizzomafizzo/mrext/pkg/mister"
@@ -138,7 +139,7 @@ func handleWriteCommand(textToWrite string, svc *mister.Service, cfg config.TapT
 	var pnd nfc.Device
 	var err error
 
-	pnd, err = daemon.OpenDeviceWithRetries(cfg, &daemon.State{})
+	pnd, err = daemon.OpenDeviceWithRetries(cfg, &state.State{})
 	if err != nil {
 		log.Error().Msgf("giving up, exiting: %s")
 		_, _ = fmt.Fprintln(os.Stderr, "Could not open device:", err)

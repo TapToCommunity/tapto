@@ -25,6 +25,7 @@ require (
 )
 
 require (
+	github.com/ajg/form v1.5.1 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/stretchr/testify v1.9.0 // indirect
@@ -34,8 +35,9 @@ require (
 
 require (
 	github.com/clausecker/nfc/v2 v2.1.4
+	github.com/go-chi/chi/v5 v5.0.12
+	github.com/go-chi/render v1.0.3
 	github.com/gocarina/gocsv v0.0.0-20230616125104-99d496ca653d
-	github.com/gorilla/mux v1.8.1
 	github.com/hsanjuan/go-ndef v0.0.1
 	github.com/joho/godotenv v1.5.1
 	github.com/rs/zerolog v1.31.0
