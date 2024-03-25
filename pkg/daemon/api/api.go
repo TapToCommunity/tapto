@@ -9,9 +9,9 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
 	"github.com/go-chi/render"
-	"github.com/r3labs/sse/v2"
 	"github.com/rs/zerolog/log"
 	"github.com/wizzomafizzo/tapto/pkg/config"
+	"github.com/wizzomafizzo/tapto/pkg/daemon/api/websocket"
 	"github.com/wizzomafizzo/tapto/pkg/daemon/state"
 	"github.com/wizzomafizzo/tapto/pkg/database"
 	"github.com/wizzomafizzo/tapto/pkg/platforms/mister"
@@ -22,9 +22,7 @@ const (
 	SubStreamEvents = "events"
 )
 
-func setupSubscribe(sub *sse.Server, st *state.State, tr *mister.Tracker) {
-	sub.CreateStream(SubStreamStatus)
-
+func setupWs(st *state.State, tr *mister.Tracker) {
 	send := func() {
 		status, err := json.Marshal(newStatus(st, tr))
 		if err != nil {
@@ -32,9 +30,7 @@ func setupSubscribe(sub *sse.Server, st *state.State, tr *mister.Tracker) {
 			return
 		}
 
-		sub.Publish(SubStreamStatus, &sse.Event{
-			Data: status,
-		})
+		websocket.Broadcast("STATUS " + string(status))
 	}
 
 	stHook := func(_ *state.State) {
@@ -63,10 +59,6 @@ func RunApiServer(
 	db *database.Database,
 	tr *mister.Tracker,
 ) {
-	sub := sse.New()
-	// sub.AutoReplay = false
-	sub.EventTTL = 1 * time.Second
-
 	r := chi.NewRouter()
 
 	r.Use(middleware.Recoverer)
@@ -105,8 +97,15 @@ func RunApiServer(
 		r.Post("/settings/index/games", handleIndexGames(cfg))
 	})
 
-	setupSubscribe(sub, st, tr)
-	r.HandleFunc("/api/v1/subscribe", sub.ServeHTTP)
+	setupWs(st, tr)
+	r.HandleFunc("/api/v1/ws", websocket.Handle(
+		func() []string {
+			return []string{}
+		},
+		func(msg string) string {
+			return ""
+		},
+	))
 
 	err := http.ListenAndServe(":7497", r) // TODO: move port to config
 	if err != nil {

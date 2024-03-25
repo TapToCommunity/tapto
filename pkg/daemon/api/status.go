@@ -25,11 +25,11 @@ type IndexResponse struct {
 }
 
 type ReaderStatusResponse struct {
-	ReaderConnected bool   `json:"readerConnected"`
-	ReaderType      string `json:"readerType"`
+	Connected bool   `json:"connected"`
+	Type      string `json:"type"`
 }
 
-type PlayingPayload struct {
+type PlayingResponse struct {
 	System     string `json:"system"`
 	SystemName string `json:"systemName"`
 	Game       string `json:"game"`
@@ -42,7 +42,7 @@ type StatusResponse struct {
 	LastToken   TokenResponse        `json:"lastToken"`
 	Launching   bool                 `json:"launching"`
 	GamesIndex  IndexResponse        `json:"gamesIndex"`
-	Playing     PlayingPayload       `json:"playing"`
+	Playing     PlayingResponse      `json:"playing"`
 }
 
 func (sr *StatusResponse) Render(w http.ResponseWriter, r *http.Request) error {
@@ -58,8 +58,8 @@ func newStatus(st *state.State, tr *mister.Tracker) StatusResponse {
 	return StatusResponse{
 		Launching: !launcherDisabled,
 		Reader: ReaderStatusResponse{
-			ReaderConnected: readerConnected,
-			ReaderType:      readerType,
+			Connected: readerConnected,
+			Type:      readerType,
 		},
 		ActiveToken: TokenResponse{
 			Type:     active.Type,
@@ -79,7 +79,7 @@ func newStatus(st *state.State, tr *mister.Tracker) StatusResponse {
 			CurrentStep: IndexInstance.CurrentStep,
 			CurrentDesc: IndexInstance.CurrentDesc,
 		},
-		Playing: PlayingPayload{
+		Playing: PlayingResponse{
 			System:     tr.ActiveSystem,
 			SystemName: tr.ActiveSystemName,
 			Game:       tr.ActiveGame,

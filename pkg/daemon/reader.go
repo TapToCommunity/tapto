@@ -99,8 +99,10 @@ func pollDevice(
 	return card, removed, nil
 }
 
-func detectConnectionString() string {
-	log.Info().Msg("probing for serial devices")
+func detectConnectionString(quiet bool) string {
+	if !quiet {
+		log.Info().Msg("probing for serial devices")
+	}
 	devices, _ := utils.GetLinuxSerialDeviceList()
 
 	for _, device := range devices {
@@ -117,13 +119,15 @@ func detectConnectionString() string {
 	return ""
 }
 
-func OpenDeviceWithRetries(config config.TapToConfig, st *state.State) (nfc.Device, error) {
+func OpenDeviceWithRetries(config config.TapToConfig, st *state.State, quiet bool) (nfc.Device, error) {
 	var connectionString = config.ConnectionString
 	if connectionString == "" && config.ProbeDevice == true {
-		connectionString = detectConnectionString()
+		connectionString = detectConnectionString(quiet)
 	}
 
-	log.Info().Msgf("connecting to device: %s", connectionString)
+	if !quiet {
+		log.Info().Msgf("connecting to device: %s", connectionString)
+	}
 
 	tries := 0
 	for {
@@ -148,7 +152,9 @@ func OpenDeviceWithRetries(config config.TapToConfig, st *state.State) (nfc.Devi
 		}
 
 		if tries >= connectMaxTries {
-			log.Error().Msgf("could not open device after %d tries: %s", connectMaxTries, err)
+			if !quiet {
+				log.Error().Msgf("could not open device after %d tries: %s", connectMaxTries, err)
+			}
 			return pnd, err
 		}
 
@@ -191,11 +197,16 @@ func readerPollLoop(
 		time.Sleep(periodBetweenLoop)
 
 		if connected, _ := st.GetReaderStatus(); !connected {
-			// TODO: keep track of reconnect attempts?
-			log.Info().Msg("reader not connected, attempting connection....")
+			quiet := time.Since(lastError) < 1*time.Second
 
-			pnd, err = OpenDeviceWithRetries(cfg.TapTo, st)
+			// TODO: keep track of reconnect attempts?
+			if !quiet {
+				log.Info().Msg("reader not connected, attempting connection....")
+			}
+
+			pnd, err = OpenDeviceWithRetries(cfg.TapTo, st, quiet)
 			if err != nil {
+				lastError = time.Now()
 				continue
 			}
 

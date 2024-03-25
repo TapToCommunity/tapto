@@ -31,7 +31,6 @@ require (
 	github.com/stretchr/testify v1.9.0 // indirect
 	golang.org/x/sync v0.6.0 // indirect
 	golang.org/x/term v0.18.0 // indirect
-	gopkg.in/cenkalti/backoff.v1 v1.1.0 // indirect
 )
 
 require (
@@ -40,9 +39,9 @@ require (
 	github.com/go-chi/cors v1.2.1
 	github.com/go-chi/render v1.0.3
 	github.com/gocarina/gocsv v0.0.0-20230616125104-99d496ca653d
+	github.com/gorilla/websocket v1.5.1
 	github.com/hsanjuan/go-ndef v0.0.1
 	github.com/joho/godotenv v1.5.1
-	github.com/r3labs/sse/v2 v2.10.0
 	github.com/rs/zerolog v1.31.0
 	github.com/wizzomafizzo/mrext v0.0.0-20240315225527-30b49ae77201
 	go.etcd.io/bbolt v1.3.9

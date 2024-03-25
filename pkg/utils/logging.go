@@ -7,6 +7,7 @@ import (
 
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
+	"github.com/wizzomafizzo/tapto/pkg/daemon/api/websocket"
 	"github.com/wizzomafizzo/tapto/pkg/platforms/mister"
 	"gopkg.in/natefinch/lumberjack.v2"
 )
@@ -22,7 +23,7 @@ func InitLogging() error {
 		Filename:   mister.LogFile,
 		MaxSize:    1,
 		MaxBackups: 1,
-	}))
+	}, &websocket.LogWriter{}))
 
 	return nil
 }
