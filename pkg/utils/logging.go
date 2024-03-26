@@ -7,10 +7,15 @@ import (
 
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
-	"github.com/wizzomafizzo/tapto/pkg/daemon/api/websocket"
 	"github.com/wizzomafizzo/tapto/pkg/platforms/mister"
 	"gopkg.in/natefinch/lumberjack.v2"
 )
+
+var BaseLogWriters = []io.Writer{&lumberjack.Logger{
+	Filename:   mister.LogFile,
+	MaxSize:    1,
+	MaxBackups: 1,
+}}
 
 func InitLogging() error {
 	err := os.MkdirAll(filepath.Dir(mister.LogFile), 0755)
@@ -19,11 +24,8 @@ func InitLogging() error {
 	}
 
 	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
-	log.Logger = log.Output(io.MultiWriter(&lumberjack.Logger{
-		Filename:   mister.LogFile,
-		MaxSize:    1,
-		MaxBackups: 1,
-	}, &websocket.LogWriter{}))
+
+	log.Logger = log.Output(io.MultiWriter(BaseLogWriters...))
 
 	return nil
 }

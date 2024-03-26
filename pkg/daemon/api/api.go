@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"io"
 	"net/http"
 	"time"
 
@@ -15,6 +16,7 @@ import (
 	"github.com/wizzomafizzo/tapto/pkg/daemon/state"
 	"github.com/wizzomafizzo/tapto/pkg/database"
 	"github.com/wizzomafizzo/tapto/pkg/platforms/mister"
+	"github.com/wizzomafizzo/tapto/pkg/utils"
 )
 
 const (
@@ -50,6 +52,12 @@ func setupWs(st *state.State, tr *mister.Tracker) {
 		send()
 	}
 	IndexInstance.SetEventHook(&idxHook)
+
+	// give the ws module a logger that doesn't include itself
+	websocket.SetLogger(log.Output(io.MultiWriter(utils.BaseLogWriters...)))
+	// change the global logger to include the ws writer
+	writers := append(utils.BaseLogWriters, &websocket.LogWriter{})
+	log.Logger = log.Output(io.MultiWriter(writers...))
 }
 
 func RunApiServer(

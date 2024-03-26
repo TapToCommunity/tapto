@@ -6,14 +6,13 @@ import (
 	"sync"
 
 	"github.com/gorilla/websocket"
-	"github.com/rs/zerolog/log"
+	"github.com/rs/zerolog"
 )
 
-type LogWriter struct {
-}
+type LogWriter struct{}
 
-func (w *LogWriter) Write(p []byte) (n int, err error) {
-	Broadcast("LOG " + string(p))
+func (lw *LogWriter) Write(p []byte) (n int, err error) {
+	Broadcast(fmt.Sprintf("LOG %s", string(p)))
 	return len(p), nil
 }
 
@@ -37,8 +36,9 @@ func send(c *websocket.Conn, msg string) error {
 }
 
 type connGroup struct {
-	mu    sync.Mutex
-	conns []*websocket.Conn
+	mu     sync.Mutex
+	logger zerolog.Logger
+	conns  []*websocket.Conn
 }
 
 func (cg *connGroup) Add(c *websocket.Conn) int {
@@ -79,12 +79,18 @@ func (cg *connGroup) Broadcast(msg string) {
 	for _, c := range cg.conns {
 		err := send(c, msg)
 		if err != nil {
-			log.Error().Err(err).Msg("failed to write to websocket")
+			cg.logger.Error().Err(err).Msg("failed to write to websocket")
 		}
 	}
 }
 
 var conns = &connGroup{}
+
+func SetLogger(l zerolog.Logger) {
+	conns.mu.Lock()
+	defer conns.mu.Unlock()
+	conns.logger = l
+}
 
 func Handle(
 	connectPayload func() []string,
@@ -93,7 +99,7 @@ func Handle(
 	return func(w http.ResponseWriter, r *http.Request) {
 		c, err := upgrader.Upgrade(w, r, nil)
 		if err != nil {
-			log.Error().Err(err).Msg("failed to upgrade websocket")
+			conns.logger.Error().Err(err).Msg("failed to upgrade websocket")
 			return
 		}
 
@@ -102,7 +108,7 @@ func Handle(
 		defer func(c *websocket.Conn) {
 			err := c.Close()
 			if err != nil {
-				log.Error().Err(err).Msg("failed to close websocket")
+				conns.logger.Error().Err(err).Msg("failed to close websocket")
 			}
 			conns.Remove(id)
 		}(c)
@@ -110,7 +116,7 @@ func Handle(
 		for _, msg := range connectPayload() {
 			err = send(c, msg)
 			if err != nil {
-				log.Error().Err(err).Msg("failed to write to websocket during connect")
+				conns.logger.Error().Err(err).Msg("failed to write to websocket during connect")
 				return
 			}
 		}
@@ -123,11 +129,11 @@ func Handle(
 				} else if websocket.IsCloseError(err, websocket.CloseNormalClosure) {
 					return
 				}
-				log.Error().Err(err).Msg("failed to read from websocket")
+				conns.logger.Error().Err(err).Msg("failed to read from websocket")
 				return
 			}
 
-			log.Info().Msgf("received message: %s", msg)
+			conns.logger.Info().Msgf("received message: %s", msg)
 			response := msgHandler(string(msg))
 
 			if response == "" {
@@ -136,7 +142,7 @@ func Handle(
 
 			err = send(c, response)
 			if err != nil {
-				log.Error().Err(err).Msg("failed to write to websocket")
+				conns.logger.Error().Err(err).Msg("failed to write to websocket")
 				return
 			}
 		}
