@@ -133,4 +133,5 @@ Can be bought directly [from Elechouse](https://www.elechouse.com/product/pn532-
 
 The PN532 module is extremely common in the hobby electronics space and very easy to find. You can search for "PN532 module" on sites such as Amazon, eBay and AliExpress, or check out your local hobby electronics shops and websites.
 
+- [AliExpress (China) - JIAQISHENG JQS Official Store](https://www.aliexpress.com/item/1005002755983375.html)
 - [AliExpress (China) - TENSTAR ROBOT Store](https://www.aliexpress.com/item/1005005973913526.html)
