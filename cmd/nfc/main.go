@@ -260,8 +260,6 @@ func main() {
 		zerolog.SetGlobalLevel(zerolog.InfoLevel)
 	}
 
-	mister.NfcMigration()
-
 	svc, err := mister.NewService(mister.ServiceArgs{
 		Name: appName,
 		Entry: func() (func() error, error) {
@@ -302,42 +300,24 @@ func main() {
 
 	svc.ServiceHandler(svcOpt)
 
-	interactive := true
 	stdscr, err := curses.Setup()
 	if err != nil {
 		log.Error().Msgf("starting curses: %s", err)
-		interactive = false
+		os.Exit(1)
 	}
 	defer gc.End()
 
-	if !interactive {
-		err = addToStartup()
-		if err != nil {
-			log.Error().Msgf("error adding startup: %s", err)
-			fmt.Println("Error adding to startup:", err)
-		}
-	} else {
-		err = tryAddStartup(stdscr)
-		if err != nil {
-			log.Error().Msgf("error adding startup: %s", err)
-		}
+	err = tryAddStartup(stdscr)
+	if err != nil {
+		log.Error().Msgf("error adding startup: %s", err)
+		os.Exit(1)
 	}
 
 	if !svc.Running() {
 		err := svc.Start()
 		if err != nil {
 			log.Error().Msgf("error starting service: %s", err)
-			if !interactive {
-				fmt.Println("Error starting service:", err)
-			}
-			os.Exit(1)
-		} else if !interactive {
-			fmt.Println("Service started successfully.")
-			os.Exit(0)
 		}
-	} else if !interactive {
-		fmt.Println("Service is running.")
-		os.Exit(0)
 	}
 
 	err = displayServiceInfo(stdscr, svc)

@@ -21,9 +21,7 @@ along with TapTo.  If not, see <http://www.gnu.org/licenses/>.
 package main
 
 import (
-	"encoding/json"
 	"net"
-	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -32,7 +30,6 @@ import (
 	"github.com/rthornton128/goncurses"
 	"github.com/wizzomafizzo/mrext/pkg/curses"
 	mrextMister "github.com/wizzomafizzo/mrext/pkg/mister"
-	"github.com/wizzomafizzo/mrext/pkg/utils"
 	"github.com/wizzomafizzo/tapto/pkg/platforms/mister"
 )
 
@@ -108,15 +105,9 @@ func tryAddStartup(stdscr *goncurses.Window) error {
 	return nil
 }
 
-type logEntry struct {
-	Level   string `json:"level"`
-	Time    int    `json:"time"`
-	Message string `json:"message"`
-}
-
 func displayServiceInfo(stdscr *goncurses.Window, service *mister.Service) error {
-	width := 57
-	height := 18
+	width := 40
+	height := 11
 
 	win, err := curses.NewWindow(stdscr, height, width, "", -1)
 	if err != nil {
@@ -180,37 +171,6 @@ func displayServiceInfo(stdscr *goncurses.Window, service *mister.Service) error
 			}
 		}
 
-		var logLines []logEntry
-		logFile, err := os.ReadFile(mister.LogFile)
-		if err != nil {
-			log.Error().Msgf("could not read log file: %s", err)
-		} else {
-			lines := strings.Split(string(logFile), "\n")
-			for i := len(lines) - 1; i >= 0; i-- {
-				line := lines[i]
-
-				if len(line) == 0 {
-					continue
-				}
-
-				entry := logEntry{}
-				err := json.Unmarshal([]byte(line), &entry)
-				if err != nil {
-					log.Error().Str("value", line).Msgf("could not unmarshal log entry: %s", err)
-					continue
-				}
-
-				if entry.Level != "debug" {
-					logLines = append(logLines, entry)
-				}
-
-				if len(logLines) >= 10 {
-					break
-				}
-			}
-			utils.Reverse(logLines)
-		}
-
 		clearLine(1)
 		printLeft(1, statusText)
 
@@ -245,77 +205,6 @@ func displayServiceInfo(stdscr *goncurses.Window, service *mister.Service) error
 		win.HLine(5, 1, goncurses.ACS_HLINE, width-2)
 		win.MoveAddChar(5, 0, goncurses.ACS_LTEE)
 		win.MoveAddChar(5, width-1, goncurses.ACS_RTEE)
-
-		errorOn := func(level string) {
-			if level != "info" {
-				win.ColorOn(1)
-			}
-		}
-
-		errorOff := func() {
-			win.ColorOff(1)
-		}
-
-		// maximum 10 log lines, from line 6 to 15 of the window
-		// print from bottom to top, if a line is over the width (53), split it
-		// to a second line. if it's still over the width (106), truncate the second
-		// line with a "..." on the end
-		// TODO: this doesn't quite capture every edge case and it would make a good
-		// 		 general purpose function in the curses package
-		winLine := 15
-		logLine := len(logLines) - 1
-		for i := 0; i < 10; i++ {
-			if logLine < 0 || winLine < 6 {
-				break
-			}
-
-			line := logLines[logLine].Message
-			level := logLines[logLine].Level
-
-			logLine--
-
-			if len(line) == 0 {
-				continue
-			}
-
-			if len(line) > 53 {
-				if winLine < 6 {
-					break
-				}
-
-				if winLine == 6 {
-					// just truncate the line
-					line = line[:53-3] + "..."
-					clearLine(winLine)
-					errorOn(level)
-					win.MovePrint(winLine, 2, line)
-					errorOff()
-					break
-				}
-
-				line1 := line[:53]
-				line2 := line[53:]
-				if len(line2) > 53 {
-					line2 = line2[:53-3] + "..."
-				}
-				clearLine(winLine)
-				errorOn(level)
-				win.MovePrint(winLine, 2, line2)
-				errorOff()
-				winLine--
-				clearLine(winLine)
-				errorOn(level)
-				win.MovePrint(winLine, 2, line1)
-				errorOff()
-				winLine--
-			} else {
-				clearLine(winLine)
-				errorOn(level)
-				win.MovePrint(winLine, 2, line)
-				errorOff()
-				winLine--
-			}
-		}
 
 		clearLine(height - 2)
 		curses.DrawActionButtons(win, []string{toggleText, "Exit"}, selected, 8)
