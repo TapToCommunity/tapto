@@ -64,7 +64,9 @@ func (s *Index) GenerateIndex(cfg *config.UserConfig) {
 	s.Indexing = true
 
 	log.Info().Msg("generating games index")
-	// websocket.Broadcast(logger, GetIndexingStatus())
+	if s.eventHook != nil {
+		(*s.eventHook)(s)
+	}
 
 	go func() {
 		defer s.mu.Unlock()
@@ -85,7 +87,9 @@ func (s *Index) GenerateIndex(cfg *config.UserConfig) {
 				}
 			}
 			log.Info().Msgf("indexing status: %s", s.CurrentDesc)
-			// websocket.Broadcast(logger, GetIndexingStatus())
+			if s.eventHook != nil {
+				(*s.eventHook)(s)
+			}
 		})
 		if err != nil {
 			log.Error().Err(err).Msg("error generating games index")
@@ -97,7 +101,9 @@ func (s *Index) GenerateIndex(cfg *config.UserConfig) {
 		s.CurrentDesc = ""
 
 		log.Info().Msg("finished generating games index")
-		// websocket.Broadcast(logger, GetIndexingStatus())
+		if s.eventHook != nil {
+			(*s.eventHook)(s)
+		}
 	}()
 }
 

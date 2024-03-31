@@ -25,18 +25,20 @@ func (sr *SystemsResponse) Render(w http.ResponseWriter, _ *http.Request) error 
 }
 
 func handleSystems() http.HandlerFunc {
-	return func(w http.ResponseWriter, _ *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
 		log.Info().Msg("received systems request")
-
-		resp := SystemsResponse{
-			Systems: make([]System, 0),
-		}
 
 		indexed, err := gamesdb.IndexedSystems()
 		if err != nil {
 			log.Error().Err(err).Msgf("error getting indexed systems")
 			indexed = []string{}
 		}
+
+		if len(indexed) == 0 {
+			log.Warn().Msg("no indexed systems found")
+		}
+
+		systems := make([]System, 0)
 
 		for _, system := range indexed {
 			id := system
@@ -50,14 +52,16 @@ func handleSystems() http.HandlerFunc {
 				name = sysDef.Name
 			}
 
-			resp.Systems = append(resp.Systems, System{
+			systems = append(systems, System{
 				Id:       id,
 				Name:     name,
 				Category: sysDef.Category,
 			})
 		}
 
-		err = render.Render(w, nil, &resp)
+		err = render.Render(w, r, &SystemsResponse{
+			Systems: systems,
+		})
 		if err != nil {
 			log.Error().Err(err).Msgf("error encoding systems response")
 			http.Error(w, err.Error(), http.StatusInternalServerError)

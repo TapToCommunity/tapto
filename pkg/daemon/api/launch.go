@@ -65,7 +65,7 @@ func handleLaunchBasic(
 		log.Info().Msgf("launching basic token: %s", text)
 
 		t := state.Token{
-			UID:      "",
+			UID:      "__web__",
 			Text:     text,
 			ScanTime: time.Now(),
 		}

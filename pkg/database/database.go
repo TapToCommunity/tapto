@@ -96,7 +96,7 @@ func (d *Database) AddHistory(entry HistoryEntry) error {
 func (d *Database) GetHistory() ([]HistoryEntry, error) {
 	var entries []HistoryEntry
 	i := 0
-	max := 100
+	max := 25
 
 	err := d.bdb.View(func(txn *bolt.Tx) error {
 		b := txn.Bucket([]byte(BucketHistory))
