@@ -24,6 +24,7 @@ package config
 import (
 	"os"
 	"path/filepath"
+	"sync"
 
 	"gopkg.in/ini.v1"
 )
@@ -47,13 +48,133 @@ type SystemsConfig struct {
 }
 
 type UserConfig struct {
+	mu      sync.RWMutex
 	AppPath string
 	IniPath string
 	TapTo   TapToConfig   `ini:"tapto,omitempty"`
 	Systems SystemsConfig `ini:"systems,omitempty"`
 }
 
-func LoadUserConfig(name string, defaultConfig *UserConfig) (*UserConfig, error) {
+func (c *UserConfig) GetConnectionString() string {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.TapTo.ConnectionString
+}
+
+func (c *UserConfig) SetConnectionString(connectionString string) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.TapTo.ConnectionString = connectionString
+}
+
+func (c *UserConfig) GetAllowCommands() bool {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.TapTo.AllowCommands
+}
+
+func (c *UserConfig) SetAllowCommands(allowCommands bool) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.TapTo.AllowCommands = allowCommands
+}
+
+func (c *UserConfig) GetDisableSounds() bool {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.TapTo.DisableSounds
+}
+
+func (c *UserConfig) SetDisableSounds(disableSounds bool) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.TapTo.DisableSounds = disableSounds
+}
+
+func (c *UserConfig) GetProbeDevice() bool {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.TapTo.ProbeDevice
+}
+
+func (c *UserConfig) SetProbeDevice(probeDevice bool) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.TapTo.ProbeDevice = probeDevice
+}
+
+func (c *UserConfig) GetExitGame() bool {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.TapTo.ExitGame
+}
+
+func (c *UserConfig) SetExitGame(exitGame bool) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.TapTo.ExitGame = exitGame
+}
+
+func (c *UserConfig) GetExitGameBlocklist() []string {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.TapTo.ExitGameBlocklist
+}
+
+func (c *UserConfig) SetExitGameBlocklist(exitGameBlocklist []string) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.TapTo.ExitGameBlocklist = exitGameBlocklist
+}
+
+func (c *UserConfig) GetDebug() bool {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.TapTo.Debug
+}
+
+func (c *UserConfig) SetDebug(debug bool) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.TapTo.Debug = debug
+}
+
+func (c *UserConfig) LoadConfig() error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	cfg, err := ini.ShadowLoad(c.IniPath)
+	if err != nil {
+		return err
+	}
+
+	err = cfg.StrictMapTo(c)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (c *UserConfig) SaveConfig() error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	cfg := ini.Empty()
+	err := cfg.ReflectFrom(c)
+	if err != nil {
+		return err
+	}
+
+	err = cfg.SaveTo(c.IniPath)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func NewUserConfig(name string, defaultConfig *UserConfig) (*UserConfig, error) {
 	iniPath := os.Getenv(UserConfigEnv)
 
 	exePath, err := os.Executable()
@@ -77,12 +198,7 @@ func LoadUserConfig(name string, defaultConfig *UserConfig) (*UserConfig, error)
 		return defaultConfig, nil
 	}
 
-	cfg, err := ini.ShadowLoad(iniPath)
-	if err != nil {
-		return defaultConfig, err
-	}
-
-	err = cfg.StrictMapTo(defaultConfig)
+	err = defaultConfig.LoadConfig()
 	if err != nil {
 		return defaultConfig, err
 	}

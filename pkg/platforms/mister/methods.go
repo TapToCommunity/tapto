@@ -44,7 +44,7 @@ func Setup() error {
 }
 
 func PlaySuccess(cfg *config.UserConfig) {
-	if cfg.TapTo.DisableSounds {
+	if cfg.GetDisableSounds() {
 		return
 	}
 
@@ -55,7 +55,7 @@ func PlaySuccess(cfg *config.UserConfig) {
 }
 
 func PlayFail(cfg *config.UserConfig) {
-	if cfg.TapTo.DisableSounds {
+	if cfg.GetDisableSounds() {
 		return
 	}
 

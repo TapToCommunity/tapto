@@ -58,7 +58,7 @@ func writeScanResult(card state.Token) error {
 
 func inExitGameBlocklist(cfg *config.UserConfig) bool {
 	var blocklist []string
-	for _, v := range cfg.TapTo.ExitGameBlocklist {
+	for _, v := range cfg.GetExitGameBlocklist() {
 		blocklist = append(blocklist, strings.ToLower(v))
 	}
 	return slices.Contains(blocklist, strings.ToLower(mister.GetActiveCoreName()))
@@ -107,7 +107,7 @@ func launchCard(cfg *config.UserConfig, state *state.State, db *database.Databas
 	cmds := strings.Split(text, "||")
 
 	for i, cmd := range cmds {
-		err := launcher.LaunchToken(cfg, cfg.TapTo.AllowCommands || override, kbd, cmd, len(cmds), i)
+		err := launcher.LaunchToken(cfg, cfg.GetAllowCommands() || override, kbd, cmd, len(cmds), i)
 		if err != nil {
 			return err
 		}

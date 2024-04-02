@@ -30,16 +30,16 @@ func handleSettings(cfg *config.UserConfig) http.HandlerFunc {
 		log.Info().Msg("received settings request")
 
 		resp := SettingsResponse{
-			ConnectionString:  cfg.TapTo.ConnectionString,
-			AllowCommands:     cfg.TapTo.AllowCommands,
-			DisableSounds:     cfg.TapTo.DisableSounds,
-			ProbeDevice:       cfg.TapTo.ProbeDevice,
-			ExitGame:          cfg.TapTo.ExitGame,
+			ConnectionString:  cfg.GetConnectionString(),
+			AllowCommands:     cfg.GetAllowCommands(),
+			DisableSounds:     cfg.GetDisableSounds(),
+			ProbeDevice:       cfg.GetProbeDevice(),
+			ExitGame:          cfg.GetExitGame(),
 			ExitGameBlocklist: make([]string, 0),
-			Debug:             cfg.TapTo.Debug,
+			Debug:             cfg.GetDebug(),
 		}
 
-		resp.ExitGameBlocklist = append(resp.ExitGameBlocklist, cfg.TapTo.ExitGameBlocklist...)
+		resp.ExitGameBlocklist = append(resp.ExitGameBlocklist, cfg.GetExitGameBlocklist()...)
 
 		err := render.Render(w, r, &resp)
 		if err != nil {

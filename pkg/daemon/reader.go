@@ -119,9 +119,9 @@ func detectConnectionString(quiet bool) string {
 	return ""
 }
 
-func OpenDeviceWithRetries(config config.TapToConfig, st *state.State, quiet bool) (nfc.Device, error) {
-	var connectionString = config.ConnectionString
-	if connectionString == "" && config.ProbeDevice == true {
+func OpenDeviceWithRetries(cfg *config.UserConfig, st *state.State, quiet bool) (nfc.Device, error) {
+	var connectionString = cfg.GetConnectionString()
+	if connectionString == "" && cfg.GetProbeDevice() == true {
 		connectionString = detectConnectionString(quiet)
 	}
 
@@ -171,7 +171,7 @@ func shouldExit(
 		return false
 	}
 
-	if cfg.TapTo.ExitGame && !inExitGameBlocklist(cfg) {
+	if cfg.GetExitGame() && !inExitGameBlocklist(cfg) {
 		return true
 	} else {
 		return false
@@ -197,7 +197,7 @@ func readerPollLoop(
 		}
 	}
 
-	if cfg.TapTo.ExitGame {
+	if cfg.GetExitGame() {
 		// FIXME: this method makes the activity indicator flicker, is there another way?
 		ttp = 1
 		// TODO: value requires investigation, originally set to 150 which worked for pn532
@@ -222,7 +222,7 @@ func readerPollLoop(
 				log.Info().Msg("reader not connected, attempting connection....")
 			}
 
-			pnd, err = OpenDeviceWithRetries(cfg.TapTo, st, quiet)
+			pnd, err = OpenDeviceWithRetries(cfg, st, quiet)
 			if err != nil {
 				lastError = time.Now()
 				continue

@@ -86,7 +86,7 @@ func addToStartup() error {
 	return nil
 }
 
-func handleWriteCommand(textToWrite string, svc *mister.Service, cfg config.TapToConfig) {
+func handleWriteCommand(textToWrite string, svc *mister.Service, cfg *config.UserConfig) {
 	// TODO: this is very tightly coupled to the mister service handling, it should
 	//       be made a part of the daemon process itself without killing it
 
@@ -232,7 +232,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	cfg, err := config.LoadUserConfig(appName, &config.UserConfig{
+	cfg, err := config.NewUserConfig(appName, &config.UserConfig{
 		TapTo: config.TapToConfig{
 			ProbeDevice: true,
 		},
@@ -246,15 +246,15 @@ func main() {
 	log.Info().Msgf("TapTo v%s", appVersion)
 	log.Info().Msgf("config path = %s", cfg.IniPath)
 	log.Info().Msgf("app path = %s", cfg.AppPath)
-	log.Info().Msgf("connection_string = %s", cfg.TapTo.ConnectionString)
-	log.Info().Msgf("allow_commands = %t", cfg.TapTo.AllowCommands)
-	log.Info().Msgf("disable_sounds = %t", cfg.TapTo.DisableSounds)
-	log.Info().Msgf("probe_device = %t", cfg.TapTo.ProbeDevice)
-	log.Info().Msgf("exit_game = %t", cfg.TapTo.ExitGame)
-	log.Info().Msgf("exit_game_blocklist = %s", cfg.TapTo.ExitGameBlocklist)
-	log.Info().Msgf("debug = %t", cfg.TapTo.Debug)
+	log.Info().Msgf("connection_string = %s", cfg.GetConnectionString())
+	log.Info().Msgf("allow_commands = %t", cfg.GetAllowCommands())
+	log.Info().Msgf("disable_sounds = %t", cfg.GetDisableSounds())
+	log.Info().Msgf("probe_device = %t", cfg.GetProbeDevice())
+	log.Info().Msgf("exit_game = %t", cfg.GetExitGame())
+	log.Info().Msgf("exit_game_blocklist = %s", cfg.GetExitGameBlocklist())
+	log.Info().Msgf("debug = %t", cfg.GetDebug())
 
-	if cfg.TapTo.Debug {
+	if cfg.GetDebug() {
 		zerolog.SetGlobalLevel(zerolog.DebugLevel)
 	} else {
 		zerolog.SetGlobalLevel(zerolog.InfoLevel)
@@ -273,7 +273,7 @@ func main() {
 	}
 
 	if *writeOpt != "" {
-		handleWriteCommand(*writeOpt, svc, cfg.TapTo)
+		handleWriteCommand(*writeOpt, svc, cfg)
 	}
 
 	if *launchOpt != "" {
