@@ -246,6 +246,7 @@ func (tr *Tracker) stopCore() bool {
 
 		if tr.ActiveCore == ArcadeSystem {
 			tr.ActiveGame = ""
+			tr.ActiveGamePath = ""
 			tr.ActiveGameName = ""
 			tr.addEvent(EventActionGameStop, ArcadeSystem)
 		}
@@ -324,6 +325,7 @@ func (tr *Tracker) stopGame() bool {
 	if tr.ActiveGame != "" {
 		target := tr.ActiveGame
 		tr.ActiveGame = ""
+		tr.ActiveGamePath = ""
 		tr.ActiveGameName = ""
 		tr.addEvent(EventActionGameStop, target)
 		return true

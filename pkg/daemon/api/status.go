@@ -6,6 +6,7 @@ import (
 
 	"github.com/go-chi/render"
 	"github.com/rs/zerolog/log"
+	"github.com/wizzomafizzo/tapto/pkg/config"
 	"github.com/wizzomafizzo/tapto/pkg/daemon/state"
 	"github.com/wizzomafizzo/tapto/pkg/platforms/mister"
 )
@@ -34,6 +35,7 @@ type PlayingResponse struct {
 	SystemName string `json:"systemName"`
 	Game       string `json:"game"`
 	GameName   string `json:"gameName"`
+	GamePath   string `json:"gamePath"`
 }
 
 type StatusResponse struct {
@@ -49,7 +51,7 @@ func (sr *StatusResponse) Render(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
-func newStatus(st *state.State, tr *mister.Tracker) StatusResponse {
+func newStatus(cfg *config.UserConfig, st *state.State, tr *mister.Tracker) StatusResponse {
 	active := st.GetActiveCard()
 	last := st.GetLastScanned()
 	readerConnected, readerType := st.GetReaderStatus()
@@ -84,18 +86,20 @@ func newStatus(st *state.State, tr *mister.Tracker) StatusResponse {
 			SystemName: tr.ActiveSystemName,
 			Game:       tr.ActiveGame,
 			GameName:   tr.ActiveGameName,
+			GamePath:   mister.NormalizePath(cfg, tr.ActiveGamePath),
 		},
 	}
 }
 
 func handleStatus(
+	cfg *config.UserConfig,
 	st *state.State,
 	tr *mister.Tracker,
 ) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		log.Info().Msg("received status request")
 
-		resp := newStatus(st, tr)
+		resp := newStatus(cfg, st, tr)
 
 		err := render.Render(w, r, &resp)
 		if err != nil {
