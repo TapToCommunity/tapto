@@ -49,7 +49,7 @@ It can be installed and updated automatically through Downloader by changing the
 
 ```
 [distribution_mister]
-db_url = https://raw.githubusercontent.com/spark2k06/Main_MiSTer/new-features/db.json.zip
+db_url = https://aitorgomez.net/static/mistermain/db.json.zip
 ```
 
 This will not affect any other system files besides the Main binary.
