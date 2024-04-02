@@ -151,9 +151,9 @@ func RunApiServer(
 
 		r.Get("/history", handleHistory(db))
 
-		// PUT /settings
 		r.Get("/settings", handleSettings(cfg))
 		r.Get("/settings/log/download", handleSettingsDownloadLog())
+		r.Put("/settings", handleSettingsUpdate(cfg))
 		r.Post("/settings/index/games", handleIndexGames(cfg))
 	})
 

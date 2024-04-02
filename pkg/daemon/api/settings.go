@@ -50,6 +50,70 @@ func handleSettings(cfg *config.UserConfig) http.HandlerFunc {
 	}
 }
 
+type UpdateSettingsRequest struct {
+	ConnectionString  *string   `json:"connectionString"`
+	DisableSounds     *bool     `json:"disableSounds"`
+	ProbeDevice       *bool     `json:"probeDevice"`
+	ExitGame          *bool     `json:"exitGame"`
+	ExitGameBlocklist *[]string `json:"exitGameBlocklist"`
+	Debug             *bool     `json:"debug"`
+}
+
+func (usr *UpdateSettingsRequest) Bind(r *http.Request) error {
+	return nil
+}
+
+func handleSettingsUpdate(cfg *config.UserConfig) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		log.Info().Msg("received settings update request")
+
+		var req UpdateSettingsRequest
+		err := render.Bind(r, &req)
+		if err != nil {
+			log.Error().Err(err).Msg("error decoding request")
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		if req.ConnectionString != nil {
+			log.Info().Str("connectionString", *req.ConnectionString).Msg("updating connection string")
+			cfg.SetConnectionString(*req.ConnectionString)
+		}
+
+		if req.DisableSounds != nil {
+			log.Info().Bool("disableSounds", *req.DisableSounds).Msg("updating disable sounds")
+			cfg.SetDisableSounds(*req.DisableSounds)
+		}
+
+		if req.ProbeDevice != nil {
+			log.Info().Bool("probeDevice", *req.ProbeDevice).Msg("updating probe device")
+			cfg.SetProbeDevice(*req.ProbeDevice)
+		}
+
+		if req.ExitGame != nil {
+			log.Info().Bool("exitGame", *req.ExitGame).Msg("updating exit game")
+			cfg.SetExitGame(*req.ExitGame)
+		}
+
+		if req.ExitGameBlocklist != nil {
+			log.Info().Strs("exitGameBlocklist", *req.ExitGameBlocklist).Msg("updating exit game blocklist")
+			cfg.SetExitGameBlocklist(*req.ExitGameBlocklist)
+		}
+
+		if req.Debug != nil {
+			log.Info().Bool("debug", *req.Debug).Msg("updating debug")
+			cfg.SetDebug(*req.Debug)
+		}
+
+		err = cfg.SaveConfig()
+		if err != nil {
+			log.Error().Err(err).Msg("error saving config")
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
+}
+
 func handleSettingsDownloadLog() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		log.Info().Msg("received settings log request")

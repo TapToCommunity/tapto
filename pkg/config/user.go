@@ -49,8 +49,8 @@ type SystemsConfig struct {
 
 type UserConfig struct {
 	mu      sync.RWMutex
-	AppPath string
-	IniPath string
+	AppPath string        `ini:"-"`
+	IniPath string        `ini:"-"`
 	TapTo   TapToConfig   `ini:"tapto,omitempty"`
 	Systems SystemsConfig `ini:"systems,omitempty"`
 }
