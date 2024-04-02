@@ -20,6 +20,7 @@ type Token struct {
 	UID      string
 	Text     string
 	ScanTime time.Time
+	FromApi  bool
 }
 
 type State struct {
@@ -47,7 +48,7 @@ func (s *State) SetActiveCard(card Token) {
 	s.mu.Lock()
 
 	if s.activeCard == card {
-		log.Debug().Msg("ignoring duplicate card")
+		// ignore duplicate scans
 		s.mu.Unlock()
 		return
 	}

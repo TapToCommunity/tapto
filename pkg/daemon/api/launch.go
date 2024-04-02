@@ -2,11 +2,13 @@ package api
 
 import (
 	"net/http"
+	"net/url"
 	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
 	"github.com/rs/zerolog/log"
+	"github.com/wizzomafizzo/mrext/pkg/mister"
 	"github.com/wizzomafizzo/tapto/pkg/daemon/state"
 )
 
@@ -46,6 +48,7 @@ func handleLaunch(
 			UID:      req.UID,
 			Text:     req.Text,
 			ScanTime: time.Now(),
+			FromApi: true,
 		}
 
 		st.SetActiveCard(t)
@@ -60,17 +63,37 @@ func handleLaunchBasic(
 	return func(w http.ResponseWriter, r *http.Request) {
 		log.Info().Msg("received basic launch request")
 
-		text := chi.URLParam(r, "text")
+		text := chi.URLParam(r, "*")
+		text, err := url.QueryUnescape(text)
+		if err != nil {
+			log.Error().Msgf("error decoding request: %s", err)
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
 
 		log.Info().Msgf("launching basic token: %s", text)
 
 		t := state.Token{
-			UID:      "__web__",
+			UID:      "__api__",
 			Text:     text,
 			ScanTime: time.Now(),
+			FromApi: true,
 		}
 
 		st.SetActiveCard(t)
 		tq.Enqueue(t)
+	}
+}
+
+func HandleStopGame() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		log.Info().Msg("received stop game request")
+		
+		err := mister.LaunchMenu()
+		if err != nil {
+			log.Error().Msgf("error launching menu: %s", err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
 	}
 }

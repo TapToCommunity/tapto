@@ -13,7 +13,7 @@ import (
 	"github.com/wizzomafizzo/tapto/pkg/platforms/mister"
 )
 
-const pageSize = 500
+const maxResults = 100
 
 type Index struct {
 	mu          sync.Mutex
@@ -130,17 +130,15 @@ type SearchResultGame struct {
 }
 
 type SearchResults struct {
-	Data     []SearchResultGame `json:"data"`
-	Total    int                `json:"total"`
-	PageSize int                `json:"pageSize"`
-	Page     int                `json:"page"`
+	Results []SearchResultGame `json:"results"`
+	Total   int                `json:"total"`
 }
 
 func (sr *SearchResults) Render(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
-func handleGames() http.HandlerFunc {
+func handleGames(cfg *config.UserConfig) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		log.Info().Msg("received games request")
 
@@ -186,21 +184,19 @@ func handleGames() http.HandlerFunc {
 					Category: system.Category,
 				},
 				Name: result.Name,
-				Path: result.Path,
+				Path: mister.NormalizePath(cfg, result.Path),
 			})
 		}
 
 		total := len(results)
 
-		if len(results) > pageSize {
-			results = results[:pageSize]
+		if len(results) > maxResults {
+			results = results[:maxResults]
 		}
 
 		err = render.Render(w, r, &SearchResults{
-			Data:     results,
-			Total:    total,
-			PageSize: pageSize,
-			Page:     1,
+			Results: results,
+			Total:   total,
 		})
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)

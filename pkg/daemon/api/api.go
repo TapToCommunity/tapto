@@ -26,9 +26,9 @@ const (
 	SubStreamEvents = "events"
 )
 
-func setupWs(st *state.State, tr *mister.Tracker) {
+func setupWs(cfg *config.UserConfig, st *state.State, tr *mister.Tracker) {
 	send := func() {
-		status, err := json.Marshal(newStatus(st, tr))
+		status, err := json.Marshal(newStatus(cfg, st, tr))
 		if err != nil {
 			log.Error().Err(err).Msg("error encoding status")
 			return
@@ -134,15 +134,16 @@ func RunApiServer(
 		r.Use(render.SetContentType(render.ContentTypeJSON))
 		r.Use(middleware.Timeout(60 * time.Second))
 
-		r.Get("/status", handleStatus(st, tr))
+		r.Get("/status", handleStatus(cfg, st, tr))
 
 		r.Post("/launch", handleLaunch(st, tq))
-		r.Get("/launch/{rest:.*}", handleLaunchBasic(st, tq))
+		r.Get("/launch/*", handleLaunchBasic(st, tq))
+		r.Delete("/launch", HandleStopGame())
 
 		// GET /readers/0/read
 		r.Post("/readers/0/write", handleReaderWrite(st))
 
-		r.Get("/games", handleGames())
+		r.Get("/games", handleGames(cfg))
 		r.Get("/systems", handleSystems())
 
 		r.Get("/mappings", handleMappings(db))
@@ -156,10 +157,10 @@ func RunApiServer(
 		r.Post("/settings/index/games", handleIndexGames(cfg))
 	})
 
-	setupWs(st, tr)
+	setupWs(cfg, st, tr)
 	r.HandleFunc("/api/v1/ws", websocket.Handle(
 		func() []string {
-			status, err := json.Marshal(newStatus(st, tr))
+			status, err := json.Marshal(newStatus(cfg, st, tr))
 			if err != nil {
 				log.Error().Err(err).Msg("error encoding status")
 			}

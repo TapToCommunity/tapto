@@ -162,6 +162,22 @@ func OpenDeviceWithRetries(config config.TapToConfig, st *state.State, quiet boo
 	}
 }
 
+func shouldExit(
+	removed bool,
+	cfg *config.UserConfig,
+	st *state.State,
+) bool {
+	if !removed || st.GetLastScanned().FromApi || st.IsLauncherDisabled() {
+		return false
+	}
+
+	if cfg.TapTo.ExitGame && !inExitGameBlocklist(cfg) {
+		return true
+	} else {
+		return false
+	}
+}
+
 func readerPollLoop(
 	cfg *config.UserConfig,
 	st *state.State,
@@ -188,6 +204,8 @@ func readerPollLoop(
 		//       but not for acr122u (read once then never again). 200 seems to work ok
 		pbp = 200 * time.Millisecond
 	}
+
+	log.Debug().Msgf("polling for %d times with %s delay", ttp, pbp)
 
 	for {
 		if st.ShouldStopService() {
@@ -281,7 +299,6 @@ func readerPollLoop(
 			continue
 		}
 
-		log.Debug().Msgf("polling for %d times with %s delay", ttp, pbp)
 		newScanned, removed, err := pollDevice(cfg, &pnd, activeCard, ttp, pbp)
 
 		if errors.Is(err, nfc.Error(nfc.EIO)) {
@@ -300,7 +317,7 @@ func readerPollLoop(
 
 		st.SetActiveCard(newScanned)
 
-		if removed && cfg.TapTo.ExitGame && !inExitGameBlocklist(cfg) && !st.IsLauncherDisabled() {
+		if shouldExit(removed, cfg, st) {
 			mister.ExitGame()
 			continue
 		}
