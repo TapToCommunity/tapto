@@ -1014,7 +1014,7 @@ _EOF_
 # Usage: _fselect "${fullPath}"
 # returns the file that is selected including the full path, if full path is used.
 _fselect() {
-  local termh windowh relativeComponents selected fullPath newDir
+  local termh windowh relativeComponents selected fullPath newDir defaultLabel
   fullPath="${1}"
   if [[ -f "${fullPath}" ]] && [[ -h "${fullPath}" ]]; then
       read -rd '' message <<_EOF_
@@ -1027,9 +1027,16 @@ Do you want to use the symlink, or the path to the actual file?
 $(readlink -f "${fullPath}")
 The path is $(echo -n "$(readlink -f "${fullPath}")" | wc --bytes) bytes
 _EOF_
-    _yesno "${message}" \
-    --yes-label "Use Link" --no-label "Use File" && \
-    { readlink -f "${fullPath}"; return; }
+    # Make the default answer be the shortest string
+    [[ "$(echo -n "${fullPath}" | wc --bytes)" -lt "$(echo -n "$(readlink -f "${fullPath}")" | wc --bytes)" ]] && defaultLabel="--defaultno"
+
+    if _yesno "${message}" --yes-label "Use Real Path" --no-label "Use Link Path" ${defaultLabel}; then
+      readlink -f "${fullPath}"
+      return
+    else
+      echo "${fullPath}"
+      return
+    fi
   elif [[ -f "${fullPath}" ]]; then
     echo "${fullPath}"
     return
