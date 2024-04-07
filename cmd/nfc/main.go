@@ -45,6 +45,7 @@ import (
 
 	"github.com/wizzomafizzo/tapto/pkg/config"
 	"github.com/wizzomafizzo/tapto/pkg/daemon"
+	"github.com/wizzomafizzo/tapto/pkg/daemon/state"
 
 	"github.com/clausecker/nfc/v2"
 	mrextMister "github.com/wizzomafizzo/mrext/pkg/mister"
@@ -59,7 +60,7 @@ import (
 
 const (
 	appName    = "tapto"
-	appVersion = "1.2"
+	appVersion = "2.0"
 )
 
 func addToStartup() error {
@@ -85,7 +86,7 @@ func addToStartup() error {
 	return nil
 }
 
-func handleWriteCommand(textToWrite string, svc *mister.Service, cfg config.TapToConfig) {
+func handleWriteCommand(textToWrite string, svc *mister.Service, cfg *config.UserConfig) {
 	// TODO: this is very tightly coupled to the mister service handling, it should
 	//       be made a part of the daemon process itself without killing it
 
@@ -138,7 +139,7 @@ func handleWriteCommand(textToWrite string, svc *mister.Service, cfg config.TapT
 	var pnd nfc.Device
 	var err error
 
-	pnd, err = daemon.OpenDeviceWithRetries(cfg, &daemon.State{})
+	pnd, err = daemon.OpenDeviceWithRetries(cfg, &state.State{}, false)
 	if err != nil {
 		log.Error().Msgf("giving up, exiting: %s")
 		_, _ = fmt.Fprintln(os.Stderr, "Could not open device:", err)
@@ -231,7 +232,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	cfg, err := config.LoadUserConfig(appName, &config.UserConfig{
+	cfg, err := config.NewUserConfig(appName, &config.UserConfig{
 		TapTo: config.TapToConfig{
 			ProbeDevice: true,
 		},
@@ -245,21 +246,19 @@ func main() {
 	log.Info().Msgf("TapTo v%s", appVersion)
 	log.Info().Msgf("config path = %s", cfg.IniPath)
 	log.Info().Msgf("app path = %s", cfg.AppPath)
-	log.Info().Msgf("connection_string = %s", cfg.TapTo.ConnectionString)
-	log.Info().Msgf("allow_commands = %t", cfg.TapTo.AllowCommands)
-	log.Info().Msgf("disable_sounds = %t", cfg.TapTo.DisableSounds)
-	log.Info().Msgf("probe_device = %t", cfg.TapTo.ProbeDevice)
-	log.Info().Msgf("exit_game = %t", cfg.TapTo.ExitGame)
-	log.Info().Msgf("exit_game_blocklist = %s", cfg.TapTo.ExitGameBlocklist)
-	log.Info().Msgf("debug = %t", cfg.TapTo.Debug)
+	log.Info().Msgf("connection_string = %s", cfg.GetConnectionString())
+	log.Info().Msgf("allow_commands = %t", cfg.GetAllowCommands())
+	log.Info().Msgf("disable_sounds = %t", cfg.GetDisableSounds())
+	log.Info().Msgf("probe_device = %t", cfg.GetProbeDevice())
+	log.Info().Msgf("exit_game = %t", cfg.GetExitGame())
+	log.Info().Msgf("exit_game_blocklist = %s", cfg.GetExitGameBlocklist())
+	log.Info().Msgf("debug = %t", cfg.GetDebug())
 
-	if cfg.TapTo.Debug {
+	if cfg.GetDebug() {
 		zerolog.SetGlobalLevel(zerolog.DebugLevel)
 	} else {
 		zerolog.SetGlobalLevel(zerolog.InfoLevel)
 	}
-
-	mister.NfcMigration()
 
 	svc, err := mister.NewService(mister.ServiceArgs{
 		Name: appName,
@@ -274,7 +273,7 @@ func main() {
 	}
 
 	if *writeOpt != "" {
-		handleWriteCommand(*writeOpt, svc, cfg.TapTo)
+		handleWriteCommand(*writeOpt, svc, cfg)
 	}
 
 	if *launchOpt != "" {
@@ -301,42 +300,24 @@ func main() {
 
 	svc.ServiceHandler(svcOpt)
 
-	interactive := true
 	stdscr, err := curses.Setup()
 	if err != nil {
 		log.Error().Msgf("starting curses: %s", err)
-		interactive = false
+		os.Exit(1)
 	}
 	defer gc.End()
 
-	if !interactive {
-		err = addToStartup()
-		if err != nil {
-			log.Error().Msgf("error adding startup: %s", err)
-			fmt.Println("Error adding to startup:", err)
-		}
-	} else {
-		err = tryAddStartup(stdscr)
-		if err != nil {
-			log.Error().Msgf("error adding startup: %s", err)
-		}
+	err = tryAddStartup(stdscr)
+	if err != nil {
+		log.Error().Msgf("error adding startup: %s", err)
+		os.Exit(1)
 	}
 
 	if !svc.Running() {
 		err := svc.Start()
 		if err != nil {
 			log.Error().Msgf("error starting service: %s", err)
-			if !interactive {
-				fmt.Println("Error starting service:", err)
-			}
-			os.Exit(1)
-		} else if !interactive {
-			fmt.Println("Service started successfully.")
-			os.Exit(0)
 		}
-	} else if !interactive {
-		fmt.Println("Service is running.")
-		os.Exit(0)
 	}
 
 	err = displayServiceInfo(stdscr, svc)

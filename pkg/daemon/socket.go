@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/rs/zerolog/log"
+	"github.com/wizzomafizzo/tapto/pkg/daemon/state"
 	"github.com/wizzomafizzo/tapto/pkg/platforms/mister"
 )
 
@@ -13,7 +14,7 @@ import (
 //       windows and can be entirely replaced with an http server which will
 //       also allow for remote access
 
-func StartSocketServer(state *State) (net.Listener, error) {
+func StartSocketServer(st *state.State) (net.Listener, error) {
 	socket, err := net.Listen("unix", mister.SocketFile)
 	if err != nil {
 		log.Error().Msgf("error creating socket: %s", err)
@@ -22,7 +23,7 @@ func StartSocketServer(state *State) (net.Listener, error) {
 
 	go func() {
 		for {
-			if state.ShouldStopService() {
+			if st.ShouldStopService() {
 				break
 			}
 
@@ -56,26 +57,26 @@ func StartSocketServer(state *State) (net.Listener, error) {
 
 				switch strings.TrimSpace(string(buf[:n])) {
 				case "status":
-					lastScanned := state.GetLastScanned()
+					lastScanned := st.GetLastScanned()
 					if lastScanned.UID != "" {
 						payload = fmt.Sprintf(
 							"%d,%s,%t,%s",
 							lastScanned.ScanTime.Unix(),
 							lastScanned.UID,
-							!state.IsLauncherDisabled(),
+							!st.IsLauncherDisabled(),
 							lastScanned.Text,
 						)
 					} else {
-						payload = fmt.Sprintf("0,,%t,", !state.IsLauncherDisabled())
+						payload = fmt.Sprintf("0,,%t,", !st.IsLauncherDisabled())
 					}
 				case "disable":
-					state.DisableLauncher()
+					st.DisableLauncher()
 					log.Info().Msg("launcher disabled")
 				case "enable":
-					state.EnableLauncher()
+					st.EnableLauncher()
 					log.Info().Msg("launcher enabled")
 				case "connection":
-					connected, rt := state.GetReaderStatus()
+					connected, rt := st.GetReaderStatus()
 					payload = fmt.Sprintf("%t,%s", connected, rt)
 				default:
 					log.Warn().Msgf("unknown command: %s", strings.TrimRight(string(buf[:n]), "\n"))

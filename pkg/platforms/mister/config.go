@@ -15,6 +15,7 @@ const (
 	PidFile           = TempFolder + "/tapto.pid"
 	MappingsFile      = "/media/fat/nfc.csv"
 	TokenReadFile     = "/tmp/TOKENREAD"
+	DbFile            = mrextConfig.ScriptsConfigFolder + "/tapto/tapto.db"
 )
 
 func UserConfigToMrext(cfg *config.UserConfig) *mrextConfig.UserConfig {
@@ -22,10 +23,10 @@ func UserConfigToMrext(cfg *config.UserConfig) *mrextConfig.UserConfig {
 		AppPath: cfg.AppPath,
 		IniPath: cfg.IniPath,
 		Nfc: mrextConfig.NfcConfig{
-			ConnectionString: cfg.TapTo.ConnectionString,
-			AllowCommands:    cfg.TapTo.AllowCommands,
-			DisableSounds:    cfg.TapTo.DisableSounds,
-			ProbeDevice:      cfg.TapTo.ProbeDevice,
+			ConnectionString: cfg.GetConnectionString(),
+			AllowCommands:    cfg.GetAllowCommands(),
+			DisableSounds:    cfg.GetDisableSounds(),
+			ProbeDevice:      cfg.GetProbeDevice(),
 		},
 		Systems: mrextConfig.SystemsConfig{
 			GamesFolder: cfg.Systems.GamesFolder,

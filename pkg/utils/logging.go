@@ -11,6 +11,12 @@ import (
 	"gopkg.in/natefinch/lumberjack.v2"
 )
 
+var BaseLogWriters = []io.Writer{&lumberjack.Logger{
+	Filename:   mister.LogFile,
+	MaxSize:    1,
+	MaxBackups: 1,
+}}
+
 func InitLogging() error {
 	err := os.MkdirAll(filepath.Dir(mister.LogFile), 0755)
 	if err != nil {
@@ -18,11 +24,8 @@ func InitLogging() error {
 	}
 
 	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
-	log.Logger = log.Output(io.MultiWriter(&lumberjack.Logger{
-		Filename:   mister.LogFile,
-		MaxSize:    1,
-		MaxBackups: 1,
-	}))
+
+	log.Logger = log.Output(io.MultiWriter(BaseLogWriters...))
 
 	return nil
 }

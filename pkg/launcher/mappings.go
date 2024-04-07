@@ -40,7 +40,7 @@ type NfcMappingEntry struct {
 	Text      string `csv:"text"`
 }
 
-func LoadDatabase() (map[string]string, map[string]string, error) {
+func LoadMappings() (map[string]string, map[string]string, error) {
 	uids := make(map[string]string)
 	texts := make(map[string]string)
 
@@ -126,7 +126,7 @@ func StartMappingsWatcher(
 					}
 					time.Sleep(delay)
 					log.Info().Msg("database changed, reloading")
-					uids, texts, err := LoadDatabase()
+					uids, texts, err := LoadMappings()
 					if err != nil {
 						log.Error().Msgf("error loading database: %s", err)
 					} else {
@@ -142,7 +142,7 @@ func StartMappingsWatcher(
 							log.Error().Msgf("error watching database: %s", err)
 						}
 						log.Info().Msg("database changed, reloading")
-						uids, texts, err := LoadDatabase()
+						uids, texts, err := LoadMappings()
 						if err != nil {
 							log.Error().Msgf("error loading database: %s", err)
 						} else {
