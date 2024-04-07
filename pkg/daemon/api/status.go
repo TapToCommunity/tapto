@@ -19,10 +19,12 @@ type TokenResponse struct {
 }
 
 type IndexResponse struct {
+	Exists      bool   `json:"exists"`
 	Indexing    bool   `json:"indexing"`
 	TotalSteps  int    `json:"totalSteps"`
 	CurrentStep int    `json:"currentStep"`
 	CurrentDesc string `json:"currentDesc"`
+	TotalFiles  int    `json:"totalFiles"`
 }
 
 type ReaderStatusResponse struct {
@@ -76,10 +78,12 @@ func newStatus(cfg *config.UserConfig, st *state.State, tr *mister.Tracker) Stat
 			ScanTime: last.ScanTime,
 		},
 		GamesIndex: IndexResponse{
+			Exists:      IndexInstance.Exists(),
 			Indexing:    IndexInstance.Indexing,
 			TotalSteps:  IndexInstance.TotalSteps,
 			CurrentStep: IndexInstance.CurrentStep,
 			CurrentDesc: IndexInstance.CurrentDesc,
+			TotalFiles:  IndexInstance.TotalFiles,
 		},
 		Playing: PlayingResponse{
 			System:     tr.ActiveSystem,

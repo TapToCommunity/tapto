@@ -1,7 +1,6 @@
 package api
 
 import (
-	"fmt"
 	"net/http"
 	"sync"
 
@@ -22,31 +21,11 @@ type Index struct {
 	TotalSteps  int
 	CurrentStep int
 	CurrentDesc string
+	TotalFiles  int
 }
 
-func GetIndexingStatus() string {
-	status := "indexStatus:"
-
-	if gamesdb.DbExists() {
-		status += "y,"
-	} else {
-		status += "n,"
-	}
-
-	if IndexInstance.Indexing {
-		status += "y,"
-	} else {
-		status += "n,"
-	}
-
-	status += fmt.Sprintf(
-		"%d,%d,%s",
-		IndexInstance.TotalSteps,
-		IndexInstance.CurrentStep,
-		IndexInstance.CurrentDesc,
-	)
-
-	return status
+func (s *Index) Exists() bool {
+	return gamesdb.DbExists()
 }
 
 func (s *Index) SetEventHook(hook *func(st *Index)) {
@@ -62,6 +41,7 @@ func (s *Index) GenerateIndex(cfg *config.UserConfig) {
 
 	s.mu.Lock()
 	s.Indexing = true
+	s.TotalFiles = 0
 
 	log.Info().Msg("generating games index")
 	if s.eventHook != nil {
@@ -74,16 +54,17 @@ func (s *Index) GenerateIndex(cfg *config.UserConfig) {
 		_, err := gamesdb.NewNamesIndex(mister.UserConfigToMrext(cfg), games.AllSystems(), func(status gamesdb.IndexStatus) {
 			s.TotalSteps = status.Total
 			s.CurrentStep = status.Step
+			s.TotalFiles = status.Files
 			if status.Step == 1 {
-				s.CurrentDesc = "Finding games folders..."
+				s.CurrentDesc = "Finding games folders"
 			} else if status.Step == status.Total {
-				s.CurrentDesc = "Writing database... (" + fmt.Sprint(status.Files) + " games)"
+				s.CurrentDesc = "Writing database"
 			} else {
 				system, err := games.GetSystem(status.SystemId)
 				if err != nil {
-					s.CurrentDesc = "Indexing " + status.SystemId + "..."
+					s.CurrentDesc = status.SystemId
 				} else {
-					s.CurrentDesc = "Indexing " + system.Name + "..."
+					s.CurrentDesc = system.Name
 				}
 			}
 			log.Info().Msgf("indexing status: %s", s.CurrentDesc)
