@@ -6,7 +6,7 @@ require github.com/magefile/mage v1.15.0
 
 require github.com/rthornton128/goncurses v0.0.0-20220628231859-fd57939296e5
 
-require golang.org/x/exp v0.0.0-20240318143956-a85f2c67cd81
+require golang.org/x/exp v0.0.0-20240325151524-a685a6edb6d8
 
 require gopkg.in/ini.v1 v1.67.0
 
@@ -43,6 +43,6 @@ require (
 	github.com/hsanjuan/go-ndef v0.0.1
 	github.com/joho/godotenv v1.5.1
 	github.com/rs/zerolog v1.31.0
-	github.com/wizzomafizzo/mrext v0.0.0-20240315225527-30b49ae77201
+	github.com/wizzomafizzo/mrext v0.0.0-20240404130445-f6d1818d9208
 	go.etcd.io/bbolt v1.3.9
 )
