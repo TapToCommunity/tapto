@@ -528,13 +528,20 @@ _EOF_
   [[ -n "${nfcSCAN}" ]] && _yesno "${message}" \
     --colors --ok-label "OK" --yes-label "OK" \
     --no-label "Re-Map" --cancel-label "Re-Map" \
-    --extra-button --extra-label "Clone Tag"
+    --extra-button --extra-label "Clone Tag" \
+    --help-button --help-label "Copy to Map"
   case "${?}" in
     1)
+      # No button with "Re-Map" label
       _writeTextToMap --uid "${nfcUID}" "$(_commandPalette)"
       ;;
     3)
+      # Extra button with "Clone Tag" label
       _writeTag "${nfcTXT}"
+      ;;
+    4)
+      # Help button with "Copy to Map" label
+      _map "${nfcUID}" "" "${nfcTXT}"
       ;;
   esac
 }
