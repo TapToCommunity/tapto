@@ -503,7 +503,7 @@ _Read() {
 
   nfcSCAN="$(_readTag)"
   exitcode="${?}"; [[ "${exitcode}" -ge 1 ]] && return "${exitcode}"
-  nfcTXT="$(cut -d ',' -f 4 <<< "${nfcSCAN}" )"
+  nfcTXT="$(cut -d ',' -f 4- <<< "${nfcSCAN}" )"
   nfcUID="$(cut -d ',' -f 2 <<< "${nfcSCAN}" )"
   read -rd '' message <<_EOF_
 ${bold}Tag UID:${unbold} ${nfcUID}
