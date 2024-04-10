@@ -7,7 +7,7 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/wizzomafizzo/mrext/cmd/remote/menu"
 	"github.com/wizzomafizzo/mrext/pkg/games"
-	"github.com/wizzomafizzo/mrext/pkg/gamesdb"
+	"github.com/wizzomafizzo/tapto/pkg/database/gamesdb"
 )
 
 type System struct {

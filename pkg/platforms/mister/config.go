@@ -16,6 +16,7 @@ const (
 	MappingsFile      = "/media/fat/nfc.csv"
 	TokenReadFile     = "/tmp/TOKENREAD"
 	DbFile            = mrextConfig.ScriptsConfigFolder + "/tapto/tapto.db"
+	GamesDbFile       = mrextConfig.ScriptsConfigFolder + "/tapto/games.db"
 )
 
 func UserConfigToMrext(cfg *config.UserConfig) *mrextConfig.UserConfig {
