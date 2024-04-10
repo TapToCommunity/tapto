@@ -39,6 +39,7 @@ type TapToConfig struct {
 	ProbeDevice       bool     `ini:"probe_device,omitempty"`
 	ExitGame          bool     `ini:"exit_game,omitempty"`
 	ExitGameBlocklist []string `ini:"exit_game_blocklist,omitempty"`
+	ExitGameDelay     int8     `ini:"exit_game_delay"`
 	Debug             bool     `ini:"debug,omitempty"`
 }
 
@@ -119,6 +120,12 @@ func (c *UserConfig) GetExitGameBlocklist() []string {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	return c.TapTo.ExitGameBlocklist
+}
+
+func (c *UserConfig) GetExitGameDelay() int8 {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.TapTo.ExitGameDelay
 }
 
 func (c *UserConfig) SetExitGameBlocklist(exitGameBlocklist []string) {

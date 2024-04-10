@@ -159,6 +159,21 @@ With this configuration, removing a token will not exit the game when using the 
 
 The core name is the same as the name that shows on the left sidebar of the OSD when in a core.
 
+### Exit Game Delay
+
+| Key                   | Default Value |
+|-----------------------|---------------|
+| `exit_game_delay`     |       0       |
+
+A number, in seconds, that TapTo will wait between the removal of the card and reloading the menu core. Requires `exit_game` set to yes. This parameter is useful if you want to swap games without reloading the menu core.
+If a new card is tapped before the menu core is loaded, the command on the card will be executed immediately and the menu core loading will be cancelled.
+
+```ini
+[tapto]
+exit_game=yes
+exit_game_delay=6
+```
+
 ## Mappings Database
 
 TapTo supports an `nfc.csv` file in the top of the SD card. This file can be used to override the text read from a tag and map it to a different text value. This is useful for mapping Amiibos which are read-only, testing text values before actually writing them, and is necessary for using the `command` custom command by default.

@@ -15,6 +15,8 @@ import (
 	"github.com/wizzomafizzo/tapto/pkg/platforms/mister"
 	"github.com/wizzomafizzo/tapto/pkg/tokens"
 	"github.com/wizzomafizzo/tapto/pkg/utils"
+	mrextConfig "github.com/wizzomafizzo/mrext/pkg/config"
+
 )
 
 const (
@@ -163,15 +165,27 @@ func OpenDeviceWithRetries(cfg *config.UserConfig, st *state.State, quiet bool) 
 }
 
 func shouldExit(
-	removed bool,
+	candidateForRemove bool,
 	cfg *config.UserConfig,
 	st *state.State,
 ) bool {
-	if !removed || st.GetLastScanned().FromApi || st.IsLauncherDisabled() {
+	// do not exit from menu, there is nowhere to go anyway
+	if (mister.GetActiveCoreName() == mrextConfig.MenuCore) {
+		return false;
+	}
+
+	// candidateForRemove is true from the moment in which we remove a card
+	if !candidateForRemove || st.GetLastScanned().FromApi || st.IsLauncherDisabled() {
 		return false
 	}
 
-	if cfg.GetExitGame() && !inExitGameBlocklist(cfg) {
+	var hasTimePassed bool = false
+	var removalTime = st.GetCardRemovalTime()
+	if !removalTime.IsZero() {
+		hasTimePassed = int8(time.Since(removalTime).Seconds()) >= cfg.GetExitGameDelay()
+	}
+
+	if hasTimePassed && cfg.GetExitGame() && !inExitGameBlocklist(cfg) {
 		return true
 	} else {
 		return false
@@ -189,8 +203,8 @@ func readerPollLoop(
 
 	ttp := TimesToPoll
 	pbp := PeriodBetweenPolls
-
 	var lastError time.Time
+	var candidateForRemove bool
 	playFail := func() {
 		if time.Since(lastError) > 1*time.Second {
 			mister.PlayFail(cfg)
@@ -301,6 +315,16 @@ func readerPollLoop(
 
 		newScanned, removed, err := pollDevice(cfg, &pnd, activeCard, ttp, pbp)
 
+		if removed {
+			st.SetCardRemovalTime(time.Now())
+			candidateForRemove = true
+			// we return a reference to activeCard we didn't change card
+		} else if (newScanned !== activeCard) {
+			// card is changed
+			st.SetCardRemovalTime(0)
+			candidateForRemove = false
+		}
+
 		if errors.Is(err, nfc.Error(nfc.EIO)) {
 			st.SetReaderDisconnected()
 			log.Error().Msgf("error during poll: %s", err)
@@ -317,7 +341,7 @@ func readerPollLoop(
 
 		st.SetActiveCard(newScanned)
 
-		if shouldExit(removed, cfg, st) {
+		if shouldExit(candidateForRemove, cfg, st) {
 			mister.ExitGame()
 			continue
 		}
