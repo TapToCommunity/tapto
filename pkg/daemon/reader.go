@@ -338,18 +338,21 @@ func readerPollLoop(
 			continue
 		}
 
-		st.SetActiveCard(newScanned)
-
 		if shouldExit(candidateForRemove, cfg, st) {
 			candidateForRemove = false
 			st.SetCardRemovalTime(time.Time{})
 			mister.ExitGame()
+			// if we are exiting, update the active card with the empty one
+			st.SetActiveCard(newScanned)
 			continue
 		}
 
 		if newScanned.UID == "" || activeCard.UID == newScanned.UID {
 			continue
 		}
+
+		// no need to update the activeCard with an empty one
+		st.SetActiveCard(newScanned)
 
 		mister.PlaySuccess(cfg)
 
