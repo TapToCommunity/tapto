@@ -21,7 +21,7 @@
 
 title="TapTo"
 scriptdir="$(dirname "$(readlink -f "${0}")")"
-version="0.4"
+version="0.5"
 fullFileBrowser="false"
 basedir="/media"
 sdroot="${basedir}/fat"
@@ -503,7 +503,7 @@ _Read() {
 
   nfcSCAN="$(_readTag)"
   exitcode="${?}"; [[ "${exitcode}" -ge 1 ]] && return "${exitcode}"
-  nfcTXT="$(cut -d ',' -f 4 <<< "${nfcSCAN}" )"
+  nfcTXT="$(cut -d ',' -f 4- <<< "${nfcSCAN}" )"
   nfcUID="$(cut -d ',' -f 2 <<< "${nfcSCAN}" )"
   read -rd '' message <<_EOF_
 ${bold}Tag UID:${unbold} ${nfcUID}
@@ -528,13 +528,20 @@ _EOF_
   [[ -n "${nfcSCAN}" ]] && _yesno "${message}" \
     --colors --ok-label "OK" --yes-label "OK" \
     --no-label "Re-Map" --cancel-label "Re-Map" \
-    --extra-button --extra-label "Clone Tag"
+    --extra-button --extra-label "Clone Tag" \
+    --help-button --help-label "Copy to Map"
   case "${?}" in
     1)
+      # No button with "Re-Map" label
       _writeTextToMap --uid "${nfcUID}" "$(_commandPalette)"
       ;;
     3)
+      # Extra button with "Clone Tag" label
       _writeTag "${nfcTXT}"
+      ;;
+    4)
+      # Help button with "Copy to Map" label
+      _map "${nfcUID}" "" "${nfcTXT}"
       ;;
   esac
 }
@@ -1214,6 +1221,12 @@ _Mappings() {
   mapfile -t -O 1 -s 1 oldMap < "${map}"
 
   mapfile -t arrayIndex < <( _numberedArray "${oldMap[@]}" )
+  # We don't want to display additional leading and trailing quotes, as quotes have meaning
+  for ((i=0; i<${#arrayIndex[@]}; i++)); do
+    arrayIndex[i]=${arrayIndex[i]#\"}
+    arrayIndex[i]=${arrayIndex[i]%\"}
+  done
+
 
   # Display something useful if the file is empty
   [[ "${#arrayIndex[@]}" -eq 0 ]] && arrayIndex=( "File Empty" "" )
@@ -1221,7 +1234,7 @@ _Mappings() {
   line="$(msg="${mapHeader}" _menu \
     --extra-button --extra-label "New" \
     --cancel-label "Back" \
-    -- "${arrayIndex[@]//\"/}" )"
+    -- "${arrayIndex[@]}" )"
   exitcode="${?}"
 
   # Cancel button (Back) or Esc hit
@@ -1236,14 +1249,17 @@ _Mappings() {
     case "${?}" in
       0)
         # Yes button (Read tag)
-        new_match_uid="$(_readTag)"
+        new_match_uid="$(set -o pipefail; _readTag | cut -d ',' -f 2)"
         exitcode="${?}"; [[ "${exitcode}" -ge 1 ]] && return "${exitcode}"
-        new_match_uid="$(cut -d ',' -f 2 <<< "${new_match_uid}")"
+        # Enclose field in quotes if it's needed to escape a comma
+        [[ "${new_match_uid}" == \"*\" ]] || [[ "${new_match_uid}" == *,* ]] && new_match_uid="\"${new_match_uid}\""
         ;;
       3)
         # Extra button (Match text)
-        new_match_text="$( _inputbox "Replace match text" "${match_text}")"
+        new_match_text="$(_inputbox "Replace match text" "${match_text}")"
         exitcode="${?}"; [[ "${exitcode}" -ge 1 ]] && return "${exitcode}"
+        # Enclose field in quotes if it's needed to escape a comma
+        [[ "${new_match_text}" == \"*\" ]] || [[ "${new_match_text}" == *,* ]] && new_match_text="\"${new_match_text}\""
         ;;
       1|255)
         # No button (Cancel)
@@ -1251,12 +1267,14 @@ _Mappings() {
         return
         ;;
     esac
+    [[ -z "${new_text}" ]] && new_text="$(_commandPalette)"
     while true; do
-      [[ -z "${new_text}" ]] && new_text="$(_commandPalette)"
-      [[ -z "${new_text}" ]] || new_text="${new_text}||$(_commandPalette)"
       _yesno "Do you want to chain more commands?" --defaultno || break
+      new_text="${new_text}||$(_commandPalette)"
     done
     exitcode="${?}"; [[ "${exitcode}" -ge 1 ]] && return "${exitcode}"
+    # Enclose field in quotes if it's needed to escape a comma
+    [[ "${new_text}" == \"*\" ]] || [[ "${new_text}" == *,* ]] && new_text="\"${new_text}\""
     _map "${new_match_uid}" "${new_match_text}" "${new_text}"
     _Mappings
     return
@@ -1264,9 +1282,9 @@ _Mappings() {
 
   [[ ${line} == "File Empty" ]] && return
   lineNumber=$((line + 1))
-  match_uid="$(cut -d ',' -f 1 <<< "${oldMap[$line]}")"
-  match_text="$(cut -d ',' -f 2 <<< "${oldMap[$line]}")"
-  text="$(cut -d ',' -f 3 <<< "${oldMap[$line]}")"
+  match_uid="$(_parseCSV 1 "${oldMap[$line]}")"
+  match_text="$(_parseCSV 2 "${oldMap[$line]}")"
+  text="$(_parseCSV 3 "${oldMap[$line]}")"
 
   menuOptions=(
     "UID"     "${match_uid}"
@@ -1285,14 +1303,17 @@ _Mappings() {
   UID)
     # Replace match_uid
     replacement_match_uid="$(_readTag | cut -d ',' -f 2)"
+    # Enclose field in quotes if it's needed to escape a comma
+    [[ "${replacement_match_uid}" == \"*\" ]] || [[ "${replacement_match_uid}" == *,* ]] && replacement_match_uid="\"${replacement_match_uid}\""
     [[ -z "${replacement_match_uid}" ]] && return
     replacement_match_text="${match_text}"
     replacement_text="${text}"
-
     ;;
   Match)
     # Replace match_text
     replacement_match_text="$( _inputbox "Replace match text" "${match_text}")"
+    # Enclose field in quotes if it's needed to escape a comma
+    [[ "${replacement_match_text}" == \"*\" ]] || [[ "${replacement_match_text}" == *,* ]] && replacement_match_text="\"${replacement_match_text}\""
     exitcode="${?}"; [[ "${exitcode}" -ge 1 ]] && return "${exitcode}"
     replacement_match_uid="${match_uid}"
     replacement_text="${text}"
@@ -1300,6 +1321,8 @@ _Mappings() {
   Text)
     # Replace text
     replacement_text="$(_commandPalette)"
+    # Enclose field in quotes if it's needed to escape a comma
+    [[ "${replacement_text}" == \"*\" ]] || [[ "${replacement_text}" == *,* ]] && replacement_text="\"${replacement_text}\""
     [[ -z "${replacement_text}" ]] && { _msgbox "Nothing selected for writing" ; return ; }
     replacement_match_uid="${match_uid}"
     replacement_match_text="${match_text}"
@@ -1326,6 +1349,50 @@ _EOF_
   _yesno "${message}" || return
   sed -i "${lineNumber}c\\${replacement_match_uid},${replacement_match_text},${replacement_text}" "${map}"
 
+}
+
+# Returns field from a comma separated string
+# Usage: _parseCSV FIELDNUMBER CSVSTRING
+# Returns:
+# FIELD
+_parseCSV() {
+  local line field field_number in_quotes char field
+  line="${2}"
+  field num_fields="0"
+  field_number="${1}"
+  in_quotes="0"
+
+  for (( i=0; i<${#line}; i++ )); do
+    char="${line:$i:1}"
+
+    # Check if character is a comma and not within quotes
+    if [[ "${char}" == "," && $in_quotes -eq 0 ]]; then
+      ((num_fields++))
+      # Check if this is the field we're looking for
+      if [[ ${num_fields} -eq ${field_number} ]]; then
+        echo "${field}"
+        return
+      fi
+      field=""
+    else
+      # Append character to current field
+      field+="${char}"
+      # Check for quotes
+      if [[ "${char}" == "\"" ]]; then
+        if [[ ${in_quotes} -eq 0 ]]; then
+          in_quotes=1
+        else
+          in_quotes=0
+        fi
+      fi
+    fi
+  done
+
+  # Output the last field if it's the one we're looking for
+  ((num_fields++))
+  if [[ ${num_fields} -eq ${field_number} ]]; then
+    echo "${field}"
+  fi
 }
 
 # Returns array in a numbered fashion
