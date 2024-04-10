@@ -204,6 +204,7 @@ func readerPollLoop(
 	pbp := PeriodBetweenPolls
 	var lastError time.Time
 	var candidateForRemove bool
+	var currentlyLoadedCard state.Token
 	playFail := func() {
 		if time.Since(lastError) > 1*time.Second {
 			mister.PlayFail(cfg)
@@ -250,6 +251,8 @@ func readerPollLoop(
 			log.Info().Msgf("opened connection: %s %s", pnd, pnd.Connection())
 		}
 
+		// activeCard is the card that sat on the scanner at the previous poll loop.
+		// is not the card representing the current loaded core
 		activeCard := st.GetActiveCard()
 		writeRequest := st.GetWriteRequest()
 
@@ -314,12 +317,13 @@ func readerPollLoop(
 
 		newScanned, removed, err := pollDevice(cfg, &pnd, activeCard, ttp, pbp)
 
-		if removed {
+		// if we removed but we weren't removing already, start the remove countdown
+		if removed && candidateForRemove == false {
 			st.SetCardRemovalTime(time.Now())
 			candidateForRemove = true
 			// if we were removing but we put back the card we had before
 			// then we are ok blocking the exit process
-		} else if candidateForRemove && (newScanned.UID == activeCard.UID) {
+		} else if candidateForRemove && (newScanned.UID == currentlyLoadedCard.UID) {
 			log.Info().Msgf("Card was removed but inserted back")
 			st.SetCardRemovalTime(time.Time{})
 			candidateForRemove = false
@@ -339,19 +343,21 @@ func readerPollLoop(
 			continue
 		}
 
+		st.SetActiveCard(newScanned)
+
 		if shouldExit(candidateForRemove, cfg, st) {
 			candidateForRemove = false
 			st.SetCardRemovalTime(time.Time{})
 			mister.ExitGame()
-			// if we are exiting, update the active card with the empty one
-			st.SetActiveCard(newScanned)
+			currentlyLoadedCard = state.Token{}
 			continue
 		}
 
 		// if there is no card (newScanned.UID == "")
-		// if the card is the same as the one we have launched ( activeCard.UID == newScanned.UID)
+		// if the card is the same as the one we have scanned before ( activeCard.UID == newScanned.UID)
 		// if the card has no text a real card but empty (newScanned.Text == "")
-		if newScanned.UID == "" || activeCard.UID == newScanned.UID || newScanned.Text == "" {
+		// if the card is the same that has been loaded last time (newScanned.UID == currentlyLoadedCard.UID)
+		if newScanned.UID == "" || activeCard.UID == newScanned.UID || newScanned.Text == "" || newScanned.UID == currentlyLoadedCard.UID {
 			continue
 		}
 
@@ -365,7 +371,7 @@ func readerPollLoop(
 		// we are about to change card, so we also stop the exit process
 		st.SetCardRemovalTime(time.Time{})
 		candidateForRemove = false
-		st.SetActiveCard(newScanned)
+		currentlyLoadedCard = newScanned
 		tq.Enqueue(newScanned)
 	}
 
