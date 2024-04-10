@@ -317,9 +317,10 @@ func readerPollLoop(
 		if removed {
 			st.SetCardRemovalTime(time.Now())
 			candidateForRemove = true
-			// we return a reference to activeCard we didn't change card
-		} else if newScanned != activeCard {
-			// card is changed
+			// if we were removing but we put back the card we had before
+			// then we are ok blocking the exit process
+		} else if candidateForRemove && (newScanned.UID == activeCard.UID) {
+			log.Info().Msgf("Card was removed but inserted back")
 			st.SetCardRemovalTime(time.Time{})
 			candidateForRemove = false
 		}
@@ -347,19 +348,24 @@ func readerPollLoop(
 			continue
 		}
 
-		if newScanned.UID == "" || activeCard.UID == newScanned.UID {
+		// if there is no card (newScanned.UID == "")
+		// if the card is the same as the one we have launched ( activeCard.UID == newScanned.UID)
+		// if the card has no text a real card but empty (newScanned.Text == "")
+		if newScanned.UID == "" || activeCard.UID == newScanned.UID || newScanned.Text == "" {
 			continue
 		}
 
-		// no need to update the activeCard with an empty one
-		st.SetActiveCard(newScanned)
-
+		// should we play success if launcher is disabled?
 		mister.PlaySuccess(cfg)
 
 		if st.IsLauncherDisabled() {
 			continue
 		}
 
+		// we are about to change card, so we also stop the exit process
+		st.SetCardRemovalTime(time.Time{})
+		candidateForRemove = false
+		st.SetActiveCard(newScanned)
 		tq.Enqueue(newScanned)
 	}
 
