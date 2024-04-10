@@ -26,6 +26,7 @@ import (
 	"path/filepath"
 	"sync"
 
+	"github.com/rs/zerolog"
 	"gopkg.in/ini.v1"
 )
 
@@ -137,6 +138,11 @@ func (c *UserConfig) SetDebug(debug bool) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.TapTo.Debug = debug
+	if debug {
+		zerolog.SetGlobalLevel(zerolog.DebugLevel)
+	} else {
+		zerolog.SetGlobalLevel(zerolog.InfoLevel)
+	}
 }
 
 func (c *UserConfig) LoadConfig() error {
