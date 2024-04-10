@@ -9,14 +9,13 @@ import (
 
 	"github.com/clausecker/nfc/v2"
 	"github.com/rs/zerolog/log"
+	mrextConfig "github.com/wizzomafizzo/mrext/pkg/config"
 	"github.com/wizzomafizzo/mrext/pkg/input"
 	"github.com/wizzomafizzo/tapto/pkg/config"
 	"github.com/wizzomafizzo/tapto/pkg/daemon/state"
 	"github.com/wizzomafizzo/tapto/pkg/platforms/mister"
 	"github.com/wizzomafizzo/tapto/pkg/tokens"
 	"github.com/wizzomafizzo/tapto/pkg/utils"
-	mrextConfig "github.com/wizzomafizzo/mrext/pkg/config"
-
 )
 
 const (
@@ -170,8 +169,8 @@ func shouldExit(
 	st *state.State,
 ) bool {
 	// do not exit from menu, there is nowhere to go anyway
-	if (mister.GetActiveCoreName() == mrextConfig.MenuCore) {
-		return false;
+	if mister.GetActiveCoreName() == mrextConfig.MenuCore {
+		return false
 	}
 
 	// candidateForRemove is true from the moment in which we remove a card
@@ -319,9 +318,9 @@ func readerPollLoop(
 			st.SetCardRemovalTime(time.Now())
 			candidateForRemove = true
 			// we return a reference to activeCard we didn't change card
-		} else if (newScanned !== activeCard) {
+		} else if newScanned != activeCard {
 			// card is changed
-			st.SetCardRemovalTime(0)
+			st.SetCardRemovalTime(time.Time{})
 			candidateForRemove = false
 		}
 
@@ -342,6 +341,8 @@ func readerPollLoop(
 		st.SetActiveCard(newScanned)
 
 		if shouldExit(candidateForRemove, cfg, st) {
+			candidateForRemove = false
+			st.SetCardRemovalTime(time.Time{})
 			mister.ExitGame()
 			continue
 		}
