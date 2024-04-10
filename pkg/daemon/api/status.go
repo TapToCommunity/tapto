@@ -88,7 +88,7 @@ func newStatus(cfg *config.UserConfig, st *state.State, tr *mister.Tracker) Stat
 		Playing: PlayingResponse{
 			System:     tr.ActiveSystem,
 			SystemName: tr.ActiveSystemName,
-			Game:       tr.ActiveGame,
+			Game:       tr.ActiveGameId,
 			GameName:   tr.ActiveGameName,
 			GamePath:   mister.NormalizePath(cfg, tr.ActiveGamePath),
 		},
