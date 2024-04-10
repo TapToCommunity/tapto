@@ -24,8 +24,10 @@ import (
 	"crypto/md5"
 	"fmt"
 	"io"
+	"net/http"
 	"os"
 	"sort"
+	"time"
 )
 
 func GetMd5Hash(path string) (string, error) {
@@ -104,4 +106,15 @@ func AlphaMapKeys[V any](m map[string]V) []string {
 	keys := MapKeys(m)
 	sort.Strings(keys)
 	return keys
+}
+
+func WaitForInternet(maxTries int) bool {
+	for i := 0; i < maxTries; i++ {
+		_, err := http.Get("https://api.github.com")
+		if err == nil {
+			return true
+		}
+		time.Sleep(1 * time.Second)
+	}
+	return false
 }
