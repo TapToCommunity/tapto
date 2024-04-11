@@ -11,6 +11,7 @@ import (
 	bolt "go.etcd.io/bbolt"
 	"golang.org/x/sync/errgroup"
 
+	"github.com/rs/zerolog/log"
 	"github.com/wizzomafizzo/mrext/pkg/games"
 	"github.com/wizzomafizzo/tapto/pkg/config"
 	"github.com/wizzomafizzo/tapto/pkg/platforms/mister"
@@ -107,6 +108,23 @@ type fileInfo struct {
 	Path     string
 }
 
+// Delete all names in index for the given system.
+func deleteSystemNames(db *bolt.DB, systemId string) error {
+	return db.Batch(func(tx *bolt.Tx) error {
+		bns := tx.Bucket([]byte(BucketNames))
+
+		c := bns.Cursor()
+		for k, _ := c.Seek([]byte(systemId + ":")); k != nil && strings.HasPrefix(string(k), systemId+":"); k, _ = c.Next() {
+			err := bns.Delete(k)
+			if err != nil {
+				return err
+			}
+		}
+
+		return nil
+	})
+}
+
 // Update the names index with the given files.
 func updateNames(db *bolt.DB, files []fileInfo) error {
 	return db.Batch(func(tx *bolt.Tx) error {
@@ -157,6 +175,20 @@ func NewNamesIndex(
 		return status.Files, fmt.Errorf("error opening gamesdb: %s", err)
 	}
 	defer db.Close()
+
+	indexed, err := readIndexedSystems(db)
+	if err != nil {
+		log.Info().Msg("no indexed systems found")
+	}
+
+	for _, v := range indexed {
+		err := deleteSystemNames(db, v)
+		if err != nil {
+			return status.Files, fmt.Errorf("error deleting system names: %s", err)
+		} else {
+			log.Debug().Msgf("deleted names for system: %s", v)
+		}
+	}
 
 	update(status)
 	systemPaths := make(map[string][]string, 0)
