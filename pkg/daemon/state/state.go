@@ -36,6 +36,7 @@ type State struct {
 	dbLoadTime      time.Time
 	uidMap          map[string]string
 	textMap         map[string]string
+	cardRemovalTime time.Time
 }
 
 func (s *State) SetUpdateHook(hook *func(st *State)) {
@@ -65,6 +66,12 @@ func (s *State) SetActiveCard(card Token) {
 	}
 }
 
+func (s *State) SetCardRemovalTime(removalTime time.Time) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.cardRemovalTime = removalTime
+}
+
 func (s *State) GetActiveCard() Token {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -75,6 +82,12 @@ func (s *State) GetLastScanned() Token {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return s.lastScanned
+}
+
+func (s *State) GetCardRemovalTime() time.Time {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.cardRemovalTime
 }
 
 func (s *State) StopService() {

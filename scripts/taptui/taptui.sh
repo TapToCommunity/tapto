@@ -783,22 +783,28 @@ _EOF_
 _Settings() {
   local menuOptions selected
   menuOptions=(
-    "Service"     "Start/stop the TapTo service"
-    "Commands"    "Toggles the ability to run Linux commands from NFC tags"
-    "Sounds"      "Toggles sounds played when a tag is scanned"
-    "Connection"  "Hardware configuration for certain NFC readers"
-    "Probe"       "Auto detection of a serial based reader device"
+    "Service"         "Start/stop the TapTo service"
+    "Commands"        "Toggles the ability to run Linux commands from NFC tags"
+    "Sounds"          "Toggles sounds played when a tag is scanned"
+    "Connection"      "Hardware configuration for certain NFC readers"
+    "Probe"           "Auto detection of a serial based reader device"
+    "Exit Game"       "Exit Game When Token Is Removed"
+    "Exit Blocklist"  "Exit Game Core Blocklist"
+    "Exit Delay"      "Exit Game Delay"
   )
 
   while true; do
     selected="$(_menu --cancel-label "Back" -- "${menuOptions[@]}")"
     exitcode="${?}"; [[ "${exitcode}" -ge 1 ]] && return "${exitcode}"
     case "${selected}" in
-      Service) _serviceSetting ;;
-      Commands) _commandSetting ;;
-      Sounds) _soundSetting ;;
-      Connection) _connectionSetting ;;
-      Probe) _probeSetting ;;
+      "Service")        _serviceSetting ;;
+      "Commands")       _commandSetting ;;
+      "Sounds")         _soundSetting ;;
+      "Connection")     _connectionSetting ;;
+      "Probe")          _probeSetting ;;
+      "Exit Game")      _exitGameSetting ;;
+      "Exit Blocklist") _exitGameBlocklistSetting ;;
+      "Exit Delay")     _exitGameDelaySetting ;;
     esac
   done
 }
