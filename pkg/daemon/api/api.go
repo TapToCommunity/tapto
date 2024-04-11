@@ -43,7 +43,7 @@ func setupWs(cfg *config.UserConfig, st *state.State, tr *mister.Tracker) {
 	}
 	st.SetUpdateHook(&stHook)
 
-	trHook := func(_ *mister.Tracker, _ int, _ string) {
+	trHook := func() {
 		log.Debug().Msg("tracker update hook")
 		send()
 	}

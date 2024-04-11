@@ -6,7 +6,6 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/fsnotify/fsnotify"
 	"github.com/rs/zerolog/log"
@@ -19,44 +18,7 @@ import (
 	"github.com/wizzomafizzo/mrext/pkg/mister"
 )
 
-const (
-	EventActionCoreStart = iota
-	EventActionCoreStop
-	EventActionGameStart
-	EventActionGameStop
-)
-
 const ArcadeSystem = "Arcade"
-
-type EventAction struct {
-	Timestamp  time.Time
-	Action     int
-	Target     string
-	TargetPath string
-	TotalTime  int // for recovery from power loss
-	ActiveCore struct {
-		Core       string
-		System     string
-		SystemName string
-	}
-	ActiveGame struct {
-		Path string
-		Name string
-	}
-}
-
-type CoreTime struct {
-	Name string
-	Time int
-}
-
-type GameTime struct {
-	Id     string
-	Path   string
-	Name   string
-	Folder string
-	Time   int
-}
 
 type NameMapping struct {
 	CoreName   string
@@ -68,16 +30,13 @@ type NameMapping struct {
 type Tracker struct {
 	Config           *config.UserConfig
 	mu               sync.Mutex
-	eventHook        *func(tr *Tracker, action int, target string)
+	eventHook        *func()
 	ActiveCore       string
 	ActiveSystem     string
 	ActiveSystemName string
-	ActiveGame       string
+	ActiveGameId     string
 	ActiveGameName   string
 	ActiveGamePath   string
-	Events           []EventAction
-	CoreTimes        map[string]CoreTime
-	GameTimes        map[string]GameTime
 	NameMap          []NameMapping
 }
 
@@ -131,20 +90,23 @@ func NewTracker(cfg *config.UserConfig) (*Tracker, error) {
 		ActiveCore:       "",
 		ActiveSystem:     "",
 		ActiveSystemName: "",
-		ActiveGame:       "",
+		ActiveGameId:     "",
 		ActiveGameName:   "",
 		ActiveGamePath:   "",
-		Events:           []EventAction{},
-		CoreTimes:        map[string]CoreTime{},
-		GameTimes:        map[string]GameTime{},
 		NameMap:          nameMap,
 	}, nil
 }
 
-func (tr *Tracker) SetEventHook(hook *func(tr *Tracker, action int, target string)) {
+func (tr *Tracker) SetEventHook(hook *func()) {
 	tr.mu.Lock()
 	defer tr.mu.Unlock()
 	tr.eventHook = hook
+}
+
+func (tr *Tracker) runEventHook() {
+	if tr.eventHook != nil {
+		(*tr.eventHook)()
+	}
 }
 
 func (tr *Tracker) ReloadNameMap() {
@@ -156,7 +118,10 @@ func (tr *Tracker) ReloadNameMap() {
 	tr.NameMap = nameMap
 }
 
-func (tr *Tracker) LookupName(name string, game string) NameMapping {
+func (tr *Tracker) LookupCoreName(name string, game string) NameMapping {
+	log.Debug().Msgf("looking up name: %s", name)
+	log.Debug().Msgf("game: %s", game)
+
 	for _, mapping := range tr.NameMap {
 		if len(mapping.CoreName) != len(name) {
 			continue
@@ -164,91 +129,35 @@ func (tr *Tracker) LookupName(name string, game string) NameMapping {
 
 		if !strings.EqualFold(mapping.CoreName, name) {
 			continue
+		} else if mapping.ArcadeName != "" {
+			log.Debug().Msgf("arcade name: %s", mapping.ArcadeName)
+			return mapping
 		}
 
 		sys, err := games.BestSystemMatch(tr.Config, game)
 		if err != nil {
+			log.Debug().Msgf("error finding system for game %s, %s: %s", name, game, err)
 			continue
 		}
 
 		if sys.Id != mapping.System {
+			log.Debug().Msgf("system mismatch: %s != %s", sys.Id, mapping.System)
 			continue
 		}
 
+		log.Info().Msgf("found mapping: %s -> %s", name, mapping.Name)
 		return mapping
 	}
 
 	return NameMapping{}
 }
 
-func (tr *Tracker) addEvent(action int, target string) {
-	totalTime := 0
-
-	if action == EventActionCoreStart || action == EventActionCoreStop {
-		if ct, ok := tr.CoreTimes[target]; ok {
-			totalTime = ct.Time
-		}
-	} else if action == EventActionGameStart || action == EventActionGameStop {
-		if gt, ok := tr.GameTimes[target]; ok {
-			totalTime = gt.Time
-		}
-	}
-
-	ev := EventAction{
-		Timestamp: time.Now(),
-		Action:    action,
-		Target:    target,
-		TotalTime: totalTime,
-	}
-
-	core, ok := tr.CoreTimes[tr.ActiveCore]
-	if ok {
-		ev.ActiveCore.Core = core.Name
-		ev.ActiveCore.System = tr.ActiveSystem
-		ev.ActiveCore.SystemName = tr.ActiveSystemName
-	}
-
-	game, ok := tr.GameTimes[tr.ActiveGame]
-	if ok {
-		ev.ActiveGame.Path = game.Path
-		ev.ActiveGame.Name = game.Name
-	}
-
-	targetTime, ok := tr.GameTimes[target]
-	if ok {
-		ev.TargetPath = targetTime.Path
-	}
-
-	tr.Events = append(tr.Events, ev)
-
-	actionLabel := ""
-	switch action {
-	case EventActionCoreStart:
-		actionLabel = "core started"
-	case EventActionCoreStop:
-		actionLabel = "core stopped"
-	case EventActionGameStart:
-		actionLabel = "game started"
-	case EventActionGameStop:
-		actionLabel = "game stopped"
-	}
-
-	log.Info().Msgf("%s: %s (%ds)", actionLabel, target, totalTime)
-
-	if tr.eventHook != nil {
-		(*tr.eventHook)(tr, action, target)
-	}
-}
-
 func (tr *Tracker) stopCore() bool {
 	if tr.ActiveCore != "" {
-		tr.addEvent(EventActionCoreStop, tr.ActiveCore)
-
 		if tr.ActiveCore == ArcadeSystem {
-			tr.ActiveGame = ""
+			tr.ActiveGameId = ""
 			tr.ActiveGamePath = ""
 			tr.ActiveGameName = ""
-			tr.addEvent(EventActionGameStop, ArcadeSystem)
 		}
 
 		tr.ActiveCore = ""
@@ -271,7 +180,6 @@ func (tr *Tracker) LoadCore() {
 
 	if err != nil {
 		log.Error().Msgf("error reading core name: %s", err)
-		tr.stopCore()
 		return
 	}
 
@@ -289,45 +197,35 @@ func (tr *Tracker) LoadCore() {
 		tr.ActiveCore = coreName
 
 		if coreName == "" {
+			tr.stopGame()
+			tr.runEventHook()
 			return
 		}
 
-		result := tr.LookupName(coreName, tr.ActiveGamePath)
+		result := tr.LookupCoreName(coreName, tr.ActiveGamePath)
 		if result != (NameMapping{}) {
 			tr.ActiveSystem = result.System
 			tr.ActiveSystemName = result.Name
 
-			if result.System == ArcadeSystem {
-				tr.ActiveGame = coreName
+			if result.ArcadeName != "" {
+				tr.ActiveGameId = coreName
 				tr.ActiveGameName = result.ArcadeName
-				tr.addEvent(EventActionGameStart, coreName)
-			} else if result.System == "" {
-				tr.ActiveSystem = coreName
-				tr.ActiveSystemName = coreName
+				tr.ActiveGamePath = "" // TODO: any way to find this?
 			}
 		} else {
 			tr.ActiveSystem = ""
 			tr.ActiveSystemName = ""
 		}
 
-		if _, ok := tr.CoreTimes[coreName]; !ok {
-			tr.CoreTimes[coreName] = CoreTime{
-				Name: coreName,
-				Time: 0,
-			}
-		}
-
-		tr.addEvent(EventActionCoreStart, coreName)
+		tr.runEventHook()
 	}
 }
 
 func (tr *Tracker) stopGame() bool {
-	if tr.ActiveGame != "" {
-		target := tr.ActiveGame
-		tr.ActiveGame = ""
+	if tr.ActiveGameId != "" {
+		tr.ActiveGameId = ""
 		tr.ActiveGamePath = ""
 		tr.ActiveGameName = ""
-		tr.addEvent(EventActionGameStop, target)
 		return true
 	} else {
 		return false
@@ -368,45 +266,16 @@ func (tr *Tracker) loadGame() {
 		log.Error().Msgf("error finding system for game: %s", err)
 	}
 
-	var folder string
-	if err != nil && len(system.Folder) > 0 {
-		folder = system.Folder[0]
-	}
-
 	id := fmt.Sprintf("%s/%s", system.Id, filename)
 
-	if id != tr.ActiveGame {
+	if id != tr.ActiveGameId {
 		tr.stopGame()
 
-		tr.ActiveGame = id
+		tr.ActiveGameId = id
 		tr.ActiveGameName = name
 		tr.ActiveGamePath = path
 
-		result := tr.LookupName(tr.ActiveCore, path)
-		if result != (NameMapping{}) {
-			tr.ActiveSystem = result.System
-			tr.ActiveSystemName = result.Name
-
-			if result.System == ArcadeSystem {
-				tr.ActiveGame = tr.ActiveCore
-				tr.ActiveGameName = result.ArcadeName
-			}
-		} else {
-			tr.ActiveSystem = ""
-			tr.ActiveSystemName = ""
-		}
-
-		if _, ok := tr.GameTimes[id]; !ok {
-			tr.GameTimes[id] = GameTime{
-				Id:     id,
-				Path:   path,
-				Name:   name,
-				Folder: folder,
-				Time:   0,
-			}
-		}
-
-		tr.addEvent(EventActionGameStart, id)
+		tr.runEventHook()
 	}
 }
 
@@ -415,39 +284,6 @@ func (tr *Tracker) StopAll() {
 	defer tr.mu.Unlock()
 	tr.stopCore()
 	tr.stopGame()
-}
-
-// Increment time of active core and game.
-func (tr *Tracker) tick() {
-	tr.mu.Lock()
-	defer tr.mu.Unlock()
-
-	if tr.ActiveCore != "" {
-		if ct, ok := tr.CoreTimes[tr.ActiveCore]; ok {
-			ct.Time++
-			tr.CoreTimes[tr.ActiveCore] = ct
-		}
-	}
-
-	if tr.ActiveGame != "" {
-		if gt, ok := tr.GameTimes[tr.ActiveGame]; ok {
-			gt.Time++
-			tr.GameTimes[tr.ActiveGame] = gt
-		}
-	}
-}
-
-// StartTicker starts the thread for updating core/game play times.
-func (tr *Tracker) StartTicker() {
-	log.Info().Msgf("starting tracker ticker")
-	ticker := time.NewTicker(time.Second)
-	go func() {
-		count := 0
-		for range ticker.C {
-			tr.tick()
-			count++
-		}
-	}()
 }
 
 // Read a core's recent file and attempt to write the newest entry's
@@ -585,8 +421,6 @@ func StartTracker(cfg config.UserConfig) (*Tracker, func() error, error) {
 		log.Error().Msgf("error starting file watch: %s", err)
 		return nil, nil, err
 	}
-
-	tr.StartTicker()
 
 	return tr, func() error {
 		err := watcher.Close()

@@ -7,8 +7,8 @@ import (
 	"github.com/go-chi/render"
 	"github.com/rs/zerolog/log"
 	"github.com/wizzomafizzo/mrext/pkg/games"
-	"github.com/wizzomafizzo/mrext/pkg/gamesdb"
 	"github.com/wizzomafizzo/tapto/pkg/config"
+	"github.com/wizzomafizzo/tapto/pkg/database/gamesdb"
 	"github.com/wizzomafizzo/tapto/pkg/platforms/mister"
 )
 
@@ -51,7 +51,7 @@ func (s *Index) GenerateIndex(cfg *config.UserConfig) {
 	go func() {
 		defer s.mu.Unlock()
 
-		_, err := gamesdb.NewNamesIndex(mister.UserConfigToMrext(cfg), games.AllSystems(), func(status gamesdb.IndexStatus) {
+		_, err := gamesdb.NewNamesIndex(cfg, games.AllSystems(), func(status gamesdb.IndexStatus) {
 			s.TotalSteps = status.Total
 			s.CurrentStep = status.Step
 			s.TotalFiles = status.Files

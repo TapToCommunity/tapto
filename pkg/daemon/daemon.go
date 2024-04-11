@@ -71,6 +71,12 @@ func launchCard(cfg *config.UserConfig, state *state.State, db *database.Databas
 	text := card.Text
 	override := false
 
+	if v, ok := uidMap[card.UID]; ok {
+		log.Info().Msg("launching with csv uid match override")
+		text = v
+		override = true
+	}
+
 	if v, err := db.GetUidMapping(card.UID); err == nil {
 		if err != nil {
 			log.Error().Err(err).Msgf("error getting db uid mapping")
@@ -79,21 +85,9 @@ func launchCard(cfg *config.UserConfig, state *state.State, db *database.Databas
 			text = v
 			override = true
 		}
-	} else if v, ok := uidMap[card.UID]; ok {
-		log.Info().Msg("launching with csv uid match override")
-		text = v
-		override = true
 	}
 
-	if v, err := db.GetTextMapping(card.Text); err == nil {
-		if err != nil {
-			log.Error().Err(err).Msgf("error getting db text mapping")
-		} else if v != "" {
-			log.Info().Msg("launching with db text match override")
-			text = v
-			override = true
-		}
-	} else if v, ok := textMap[card.Text]; ok {
+	if v, ok := textMap[card.Text]; ok {
 		log.Info().Msg("launching with csv text match override")
 		text = v
 		override = true
@@ -183,7 +177,15 @@ func StartDaemon(cfg *config.UserConfig) (func() error, error) {
 		return nil, err
 	}
 
+	// TODO: this is platform specific
 	tr, stopTr, err := mister.StartTracker(*mister.UserConfigToMrext(cfg))
+
+	// TODO: this is platform specific
+	err = mister.Setup(tr)
+	if err != nil {
+		log.Error().Msgf("error setting up mister platform: %s", err)
+		return nil, err
+	}
 
 	uids, texts, err := launcher.LoadMappings()
 	if err != nil {

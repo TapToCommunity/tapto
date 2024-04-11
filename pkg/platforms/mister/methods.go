@@ -9,6 +9,7 @@ import (
 	mrextConfig "github.com/wizzomafizzo/mrext/pkg/config"
 	"github.com/wizzomafizzo/mrext/pkg/games"
 	mrextMister "github.com/wizzomafizzo/mrext/pkg/mister"
+	"github.com/wizzomafizzo/mrext/pkg/utils"
 	"github.com/wizzomafizzo/tapto/pkg/assets"
 	"github.com/wizzomafizzo/tapto/pkg/config"
 )
@@ -17,7 +18,7 @@ import (
 //       time to keep messing with this. oto/beep would not work for me
 //       and are annoying to compile statically
 
-func Setup() error {
+func Setup(tr *Tracker) error {
 	// copy success sound to temp
 	sf, err := os.Create(SuccessSoundFile)
 	if err != nil {
@@ -39,6 +40,34 @@ func Setup() error {
 		log.Error().Msgf("error writing fail sound file: %s", err)
 	}
 	_ = ff.Close()
+
+	// attempt arcadedb update
+	go func() {
+		haveInternet := utils.WaitForInternet(30)
+		if !haveInternet {
+			log.Info().Msg("no internet connection, skipping network tasks")
+			return
+		}
+
+		arcadeDbUpdated, err := UpdateArcadeDb()
+		if err != nil {
+			log.Error().Msgf("failed to download arcade database: %s", err)
+		}
+
+		if arcadeDbUpdated {
+			log.Info().Msg("arcade database updated")
+			tr.ReloadNameMap()
+		} else {
+			log.Info().Msg("arcade database is up to date")
+		}
+
+		m, err := ReadArcadeDb()
+		if err != nil {
+			log.Error().Msgf("failed to read arcade database: %s", err)
+		} else {
+			log.Info().Msgf("arcade database has %d entries", len(m))
+		}
+	}()
 
 	return nil
 }
