@@ -21,9 +21,9 @@ import (
 const (
 	timeToForgetCard   = 500 * time.Millisecond
 	connectMaxTries    = 10
-	TimesToPoll        = 20
-	PeriodBetweenPolls = 300 * time.Millisecond
-	periodBetweenLoop  = 300 * time.Millisecond
+	TimesToPoll        = 1
+	PeriodBetweenPolls = 250 * time.Millisecond
+	periodBetweenLoop  = 250 * time.Millisecond
 )
 
 func pollDevice(
@@ -209,14 +209,6 @@ func readerPollLoop(
 		if time.Since(lastError) > 1*time.Second {
 			mister.PlayFail(cfg)
 		}
-	}
-
-	if cfg.GetExitGame() {
-		// FIXME: this method makes the activity indicator flicker, is there another way?
-		ttp = 1
-		// TODO: value requires investigation, originally set to 150 which worked for pn532
-		//       but not for acr122u (read once then never again). 200 seems to work ok
-		pbp = 200 * time.Millisecond
 	}
 
 	log.Debug().Msgf("polling for %d times with %s delay", ttp, pbp)
