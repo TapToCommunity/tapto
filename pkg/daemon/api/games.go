@@ -12,7 +12,7 @@ import (
 	"github.com/wizzomafizzo/tapto/pkg/platforms/mister"
 )
 
-const maxResults = 100
+const maxResults = 250
 
 type Index struct {
 	mu          sync.Mutex
@@ -146,6 +146,7 @@ func handleGames(cfg *config.UserConfig) http.HandlerFunc {
 			}
 			search, err = gamesdb.SearchNamesWords([]games.System{*system}, query)
 		}
+
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			log.Error().Err(err).Msg("error searching games")
