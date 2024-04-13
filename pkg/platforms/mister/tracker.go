@@ -262,6 +262,12 @@ func (tr *Tracker) loadGame() {
 	system, err := games.BestSystemMatch(tr.Config, path)
 	if err != nil {
 		log.Error().Msgf("error finding system for game: %s", err)
+
+		// temporary(?) workaround to ignore bug where presets loaded from
+		// OSD are written to the recents file as a loaded game
+		if strings.HasSuffix(strings.ToLower(filename), ".ini") {
+			return
+		}
 	}
 
 	id := fmt.Sprintf("%s/%s", system.Id, filename)
