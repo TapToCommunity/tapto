@@ -42,7 +42,7 @@ require (
 	github.com/hsanjuan/go-ndef v0.0.1
 	github.com/joho/godotenv v1.5.1
 	github.com/rs/zerolog v1.31.0
-	github.com/wizzomafizzo/mrext v0.0.0-20240412021227-ac362d93c5f3
+	github.com/wizzomafizzo/mrext v0.0.0-20240413092624-7a1a9463038c
 	go.etcd.io/bbolt v1.3.9
 	golang.org/x/sync v0.7.0
 )
