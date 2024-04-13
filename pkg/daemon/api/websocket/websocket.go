@@ -76,10 +76,12 @@ func (cg *connGroup) Broadcast(msg string) {
 	cg.Clean()
 	cg.mu.Lock()
 	defer cg.mu.Unlock()
-	for _, c := range cg.conns {
+	for i, c := range cg.conns {
 		err := send(c, msg)
 		if err != nil {
 			cg.logger.Error().Err(err).Msg("failed to write to websocket")
+			c.Close()
+			cg.conns[i] = nil
 		}
 	}
 }
