@@ -253,7 +253,7 @@ func readerPollLoop(
 
 			var count int
 			var target nfc.Target
-			tries := 6 // ~30 seconds
+			tries := 4 * 30 // ~30 seconds
 
 			for tries > 0 {
 				count, target, err = pnd.InitiatorPollTarget(tokens.SupportedCardTypes, ttp, pbp)
@@ -347,9 +347,8 @@ func readerPollLoop(
 
 		// if there is no card (newScanned.UID == "")
 		// if the card is the same as the one we have scanned before ( activeCard.UID == newScanned.UID)
-		// if the card has no text a real card but empty (newScanned.Text == "")
 		// if the card is the same that has been loaded last time (newScanned.UID == currentlyLoadedCard.UID)
-		if newScanned.UID == "" || activeCard.UID == newScanned.UID || newScanned.Text == "" || newScanned.UID == currentlyLoadedCard.UID {
+		if newScanned.UID == "" || activeCard.UID == newScanned.UID || newScanned.UID == currentlyLoadedCard.UID {
 			continue
 		}
 
