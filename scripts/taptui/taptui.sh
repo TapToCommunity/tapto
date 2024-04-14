@@ -1035,6 +1035,47 @@ _exitGameSetting() {
   esac
 }
 
+_exitGameBlocklistSetting() {
+  local menuOptions selected customString
+  menuOptions=(
+    "Disable"   "All cores will exit when a card is removed"  "off"
+    "Enable"    "Enter a custom list of core names"  "off"
+  )
+
+  [[ -f "${settings}" ]] || echo "[tapto]" > "${settings}" || { _error "Can't create settings file" ; return 1 ; }
+
+  if grep -q "^exit_game_blocklist=\".*\"" "${settings}"; then
+    menuOptions[5]="on"
+  else 
+    menuOptions[2]="on"
+  fi
+
+  if grep -q "^exit_game_blocklist=\".*\"" "${settings}"; then
+    customString="$(grep "^exit_game_blocklist=" "${settings}" | cut -d '=' -f 2)"
+    menuOptions[4]="Enter a custom list of core names, current value: ${customString}"
+  fi
+
+  selected="$(_radiolist -- "${menuOptions[@]}" )"
+  case "${selected}" in
+    Disable)
+      if grep -q "^exit_game_blocklist=" "${settings}"; then
+        sed -i "s/^exit_game_blocklist=.*/exit_game_blocklist=\"\"/" "${settings}"
+      else
+        echo "exit_game_blocklist=\"\"" >> "${settings}"
+      fi
+      ;;
+    Enable)
+
+      customString="$(_inputbox "Enter core list, comma separated (SNES, GENESIS)" "${customString}")"
+      if grep -q "^exit_game_blocklist=" "${settings}"; then
+        sed -i "s/^exit_game_blocklist=.*/exit_game_blocklist=\"${customString}\"/" "${settings}"
+      else
+        echo "exit_game_blocklist=\"${customString}\"" >> "${settings}"
+      fi
+      ;;
+  esac
+}
+
 _exitGameDelaySetting() {
   local menuOptions selected customString delayInSeconds exitcode
   menuOptions=(
@@ -1076,47 +1117,6 @@ _exitGameDelaySetting() {
         sed -i "s/^exit_game_delay=.*/exit_game_delay=${delayInSeconds}/" "${settings}"
       else
         echo "exit_game_delay=${delayInSeconds}" >> "${settings}"
-      fi
-      ;;
-  esac
-}
-
-_exitGameBlockListSetting() {
-  local menuOptions selected customString
-  menuOptions=(
-    "Disable"   "All cores will exit when a card is removed"  "off"
-    "Enable"    "Enter a custom list of core names"  "off"
-  )
-
-  [[ -f "${settings}" ]] || echo "[tapto]" > "${settings}" || { _error "Can't create settings file" ; return 1 ; }
-
-  if grep -q "^exit_game_blocklist=\".*\"" "${settings}"; then
-    menuOptions[5]="on"
-  else 
-    menuOptions[2]="on"
-  fi
-
-  if grep -q "^exit_game_blocklist=\".*\"" "${settings}"; then
-    customString="$(grep "^exit_game_blocklist=" "${settings}" | cut -d '=' -f 2)"
-    menuOptions[4]="Enter a custom list of core names, current value: ${customString}"
-  fi
-
-  selected="$(_radiolist -- "${menuOptions[@]}" )"
-  case "${selected}" in
-    Disable)
-      if grep -q "^exit_game_blocklist=" "${settings}"; then
-        sed -i "s/^exit_game_blocklist=.*/exit_game_blocklist=\"\"/" "${settings}"
-      else
-        echo "exit_game_blocklist=\"\"" >> "${settings}"
-      fi
-      ;;
-    Enable)
-
-      customString="$(_inputbox "Enter core list, comma separated (SNES, GENESIS)" "${customString}")"
-      if grep -q "^exit_game_blocklist=" "${settings}"; then
-        sed -i "s/^exit_game_blocklist=.*/exit_game_blocklist=\"${customString}\"/" "${settings}"
-      else
-        echo "exit_game_blocklist=\"${customString}\"" >> "${settings}"
       fi
       ;;
   esac
