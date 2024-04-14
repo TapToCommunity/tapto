@@ -1044,13 +1044,15 @@ _exitGameBlocklistSetting() {
 
   [[ -f "${settings}" ]] || echo "[tapto]" > "${settings}" || { _error "Can't create settings file" ; return 1 ; }
 
-  if grep -q "^exit_game_blocklist=\".+\"" "${settings}"; then
-    menuOptions[5]="on"
-  else 
+  if ! grep -q "^exit_game_blocklist=" "${settings}"; then
     menuOptions[2]="on"
+  elif grep -q "^exit_game_blocklist=\"\"" "${settings}"; then
+    menuOptions[2]="on"
+  else
+    menuOptions[5]="on"
   fi
 
-  if grep -q "^exit_game_blocklist=\".+\"" "${settings}"; then
+  if grep -q "^exit_game_blocklist=\"..*\"" "${settings}"; then
     customString="$(grep "^exit_game_blocklist=" "${settings}" | cut -d '"' -f 2)"
     menuOptions[4]="Enter a custom list of core names, current value: ${customString}"
   fi
