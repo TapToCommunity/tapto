@@ -21,7 +21,7 @@
 
 title="TapTo"
 scriptdir="$(dirname "$(readlink -f "${0}")")"
-version="0.5"
+version="0.6"
 fullFileBrowser="false"
 basedir="/media"
 sdroot="${basedir}/fat"
@@ -1103,9 +1103,10 @@ Whats New? Get involved? Need help?
 
 ${nfcjokes[$((RANDOM % ${#nfcjokes[@]}))]}
 
-Gaz       ${underline}github.com/symm${noUnderline}
-Wizzo     ${underline}github.com/wizzomafizzo${noUnderline}
-Ziggurat  ${underline}github.com/sigboe${noUnderline}
+Gaz            ${underline}github.com/symm${noUnderline}
+Wizzo          ${underline}github.com/wizzomafizzo${noUnderline}
+Ziggurat       ${underline}github.com/sigboe${noUnderline}
+Andrea Bogazzi ${underline}github.com/asturur${noUnderline}
 
 License: GPL v3.0
   ${underline}github.com/wizzomafizzo/tapto/blob/main/LICENSE${noUnderline}
