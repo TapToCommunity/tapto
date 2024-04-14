@@ -1054,13 +1054,13 @@ _exitGameDelaySetting() {
 
   [[ -f "${settings}" ]] || echo "[tapto]" > "${settings}" || { _error "Can't create settings file" ; return 1 ; }
 
-  if ! grep -q "^exit_game_delay=.*" "${settings}"; then
-    menuOptions[2]="on"
-  elif grep -q "^exit_game_delay=0" "${settings}"; then
-    menuOptions[2]="on"
-  elif grep -q "^exit_game_delay=\"[1-9][0-9]*\"" "${settings}"; then
+  if grep -q "^exit_game_delay=[1-9][0-9]*" "${settings}"; then
     menuOptions[5]="on"
-  elif grep -q "^exit_game_delay=\".*\"" "${settings}"; then
+  else 
+    menuOptions[2]="on"
+  fi
+
+  if grep -q "^exit_game_delay=\".*\"" "${settings}"; then
     customString="$(grep "^exit_game_delay=" "${settings}" | cut -d '=' -f 2)"
     menuOptions[4]="Change the delay in seconds, current value: ${customString}"
   fi
