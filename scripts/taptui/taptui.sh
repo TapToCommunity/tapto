@@ -998,6 +998,94 @@ _probeSetting() {
   esac
 }
 
+_exitGameSetting() {
+    local menuOptions selected
+  menuOptions=(
+    "Enable"   "Return to menu core when the card is removed"   "off"
+    "Disable"  "Do not return to menu core when the card is removed"  "off"
+  )
+
+  [[ -f "${settings}" ]] || echo "[tapto]" > "${settings}" || { _error "Can't create settings file" ; return 1 ; }
+
+  # Check if probe_device is set to "no" in the settings
+  if grep -q "^exit_game=no" "${settings}"; then
+    # If exit_game is "no", set the corresponding radio button to "on"
+    menuOptions[5]="on" # Disable option is selected
+  else
+    # If exit_game is not "no", set the corresponding radio button to "on"
+    menuOptions[2]="on" # Enable option is selected
+  fi
+
+  selected="$(_radiolist -- "${menuOptions[@]}" )"
+  case "${selected}" in
+    Enable)
+      if grep -q "^exit_game=" "${settings}"; then
+        sed -i "s/^exit_game=.*/exit_game=yes/" "${settings}"
+      else
+        echo "exit_game=yes" >> "${settings}"
+      fi
+      ;;
+    Disable)
+      if grep -q "^exit_game=" "${settings}"; then
+        sed -i "s/^exit_game=.*/exit_game=no/" "${settings}"
+      else
+        echo "exit_game=no" >> "${settings}"
+      fi
+      ;;
+  esac
+}
+
+# _exitGameDelaySetting() {
+#       while true; do
+#         coin="$(_inputbox "Enter number" "1")"
+#         exitcode="${?}"; [[ "${exitcode}" -ge 1 ]] && { "${FUNCNAME[0]}" ; return ; }
+#         [[ "${coin}" == +([0-9]) ]] && break
+#         _error "${coin} is not a positive number"
+#       done
+#       command="${command}:${coin}"
+# }
+
+_exitGameDelaySetting() {
+  local menuOptions selected customString
+  menuOptions=(
+    "Disable"   "Set the delay to 0"               "off"
+    "Enable"    "Enter a custom delay in seconds"  "off"
+  )
+
+  [[ -f "${settings}" ]] || echo "[tapto]" > "${settings}" || { _error "Can't create settings file" ; return 1 ; }
+
+  if ! grep -q "^exit_game_delay=.*" "${settings}"; then
+    menuOptions[2]="on"
+  elif grep -q "^exit_game_delay=0" "${settings}"; then
+    menuOptions[2]="on"
+  elif grep -q "^exit_game_delay=\"[1-9][0-9]*\"" "${settings}"; then
+    menuOptions[5]="on"
+  elif grep -q "^exit_game_delay=\".*\"" "${settings}"; then
+    customString="$(grep "^exit_game_delay=" "${settings}" | cut -d '=' -f 2)"
+    menuOptions[4]="Change the delay in seconds, current value: ${customString}"
+  fi
+
+  selected="$(_radiolist -- "${menuOptions[@]}" )"
+  case "${selected}" in
+    Disable)
+      if grep -q "^exit_game_delay=" "${settings}"; then
+        sed -i "s/^exit_game_delay=.*/exit_game_delay=0/" "${settings}"
+      else
+        echo 'exit_game_delay=0' >> "${settings}"
+      fi
+      ;;
+    Enable)
+      customString="$(_inputbox "Enter delay in seconds" "${customString}")"
+      #TODO sanitize input
+      if grep -q "^exit_game_delay=" "${settings}"; then
+        sed -i "s/^exit_game_delay=.*/exit_game_delay=${customString}/" "${settings}"
+      else
+        echo "connection_string=${customString}" >> "${settings}"
+      fi
+      ;;
+  esac
+}
+
 _About() {
   local about
   read -rd '' about <<_EOF_
