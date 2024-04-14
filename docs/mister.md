@@ -11,6 +11,7 @@
     - [Probe for Serial Devices (probe\_device)](#probe-for-serial-devices-probe_device)
     - [Exit Game When Token Is Removed (exit\_game)](#exit-game-when-token-is-removed-exit_game)
     - [Exit Game Core Blocklist (exit\_game\_blocklist)](#exit-game-core-blocklist-exit_game_blocklist)
+    - [Exit Game Delay (exit\_game\_delay)](#exit-game-delay-exit_game_delay)
   - [Mappings Database](#mappings-database)
 
 ## Installation
@@ -159,7 +160,7 @@ With this configuration, removing a token will not exit the game when using the 
 
 The core name is the same as the name that shows on the left sidebar of the OSD when in a core.
 
-### Exit Game Delay
+### Exit Game Delay (exit_game_delay)
 
 | Key                   | Default Value |
 |-----------------------|---------------|
