@@ -1046,7 +1046,7 @@ _exitGameSetting() {
 # }
 
 _exitGameDelaySetting() {
-  local menuOptions selected customString
+  local menuOptions selected customString delayInSeconds exitcode
   menuOptions=(
     "Disable"   "Set the delay to 0"               "off"
     "Enable"    "Enter a custom delay in seconds"  "off"
@@ -1060,7 +1060,7 @@ _exitGameDelaySetting() {
     menuOptions[2]="on"
   fi
 
-  if grep -q "^exit_game_delay=\".*\"" "${settings}"; then
+  if grep -q "^exit_game_delay=.*" "${settings}"; then
     customString="$(grep "^exit_game_delay=" "${settings}" | cut -d '=' -f 2)"
     menuOptions[4]="Change the delay in seconds, current value: ${customString}"
   fi
@@ -1075,12 +1075,17 @@ _exitGameDelaySetting() {
       fi
       ;;
     Enable)
-      customString="$(_inputbox "Enter delay in seconds" "${customString}")"
-      #TODO sanitize input
+
+      while true; do
+        delayInSeconds="$(_inputbox "Enter delay in seconds" "${customString}")"
+        exitcode="${?}"; [[ "${exitcode}" -ge 1 ]] && { "${FUNCNAME[0]}" ; return ; }
+        [[ "${delayInSeconds}" == +([0-9]*) ]] && break
+        _error "${delayInSeconds} is not a positive number"
+      done
       if grep -q "^exit_game_delay=" "${settings}"; then
-        sed -i "s/^exit_game_delay=.*/exit_game_delay=${customString}/" "${settings}"
+        sed -i "s/^exit_game_delay=.*/exit_game_delay=${delayInSeconds}/" "${settings}"
       else
-        echo "connection_string=${customString}" >> "${settings}"
+        echo "connection_string=${delayInSeconds}" >> "${settings}"
       fi
       ;;
   esac
