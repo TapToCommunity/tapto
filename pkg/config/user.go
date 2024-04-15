@@ -34,14 +34,14 @@ const UserConfigEnv = "TAPTO_CONFIG"
 const UserAppPathEnv = "TAPTO_APP_PATH"
 
 type TapToConfig struct {
-	ConnectionString  string   `ini:"connection_string,omitempty"`
-	AllowCommands     bool     `ini:"allow_commands,omitempty"`
-	DisableSounds     bool     `ini:"disable_sounds,omitempty"`
-	ProbeDevice       bool     `ini:"probe_device,omitempty"`
-	ExitGame          bool     `ini:"exit_game,omitempty"`
-	ExitGameBlocklist []string `ini:"exit_game_blocklist,omitempty"`
+	ConnectionString  string   `ini:"connection_string"`
+	AllowCommands     bool     `ini:"allow_commands"`
+	DisableSounds     bool     `ini:"disable_sounds"`
+	ProbeDevice       bool     `ini:"probe_device"`
+	ExitGame          bool     `ini:"exit_game"`
+	ExitGameBlocklist []string `ini:"exit_game_blocklist"`
 	ExitGameDelay     int8     `ini:"exit_game_delay"`
-	Debug             bool     `ini:"debug,omitempty"`
+	Debug             bool     `ini:"debug"`
 }
 
 type SystemsConfig struct {
@@ -53,7 +53,7 @@ type UserConfig struct {
 	mu      sync.RWMutex
 	AppPath string        `ini:"-"`
 	IniPath string        `ini:"-"`
-	TapTo   TapToConfig   `ini:"tapto,omitempty"`
+	TapTo   TapToConfig   `ini:"tapto"`
 	Systems SystemsConfig `ini:"systems,omitempty"`
 }
 

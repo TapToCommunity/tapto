@@ -118,9 +118,9 @@ func (tr *Tracker) ReloadNameMap() {
 	tr.NameMap = nameMap
 }
 
-func (tr *Tracker) LookupCoreName(name string, game string) NameMapping {
+func (tr *Tracker) LookupCoreName(name string, path string) NameMapping {
 	log.Debug().Msgf("looking up name: %s", name)
-	log.Debug().Msgf("game: %s", game)
+	log.Debug().Msgf("file path: %s", path)
 
 	for _, mapping := range tr.NameMap {
 		if len(mapping.CoreName) != len(name) {
@@ -134,14 +134,14 @@ func (tr *Tracker) LookupCoreName(name string, game string) NameMapping {
 			return mapping
 		}
 
-		sys, err := games.BestSystemMatch(tr.Config, game)
+		sys, err := games.BestSystemMatch(tr.Config, path)
 		if err != nil {
-			log.Debug().Msgf("error finding system for game %s, %s: %s", name, game, err)
+			log.Debug().Msgf("error finding system for game %s, %s: %s", name, path, err)
 			continue
 		}
 
-		if sys.Id != mapping.System {
-			log.Debug().Msgf("system mismatch: %s != %s", sys.Id, mapping.System)
+		if sys.Id == "" {
+			log.Debug().Msgf("no system found for game: %s, %s", name, path)
 			continue
 		}
 
@@ -158,11 +158,11 @@ func (tr *Tracker) stopCore() bool {
 			tr.ActiveGameId = ""
 			tr.ActiveGamePath = ""
 			tr.ActiveGameName = ""
+			tr.ActiveSystem = ""
+			tr.ActiveSystemName = ""
 		}
 
 		tr.ActiveCore = ""
-		tr.ActiveSystem = ""
-		tr.ActiveSystemName = ""
 
 		return true
 	} else {
@@ -204,17 +204,13 @@ func (tr *Tracker) LoadCore() {
 
 		result := tr.LookupCoreName(coreName, tr.ActiveGamePath)
 		if result != (NameMapping{}) {
-			tr.ActiveSystem = result.System
-			tr.ActiveSystemName = result.Name
-
 			if result.ArcadeName != "" {
 				tr.ActiveGameId = coreName
 				tr.ActiveGameName = result.ArcadeName
 				tr.ActiveGamePath = "" // TODO: any way to find this?
+				tr.ActiveSystem = ArcadeSystem
+				tr.ActiveSystemName = ArcadeSystem
 			}
-		} else {
-			tr.ActiveSystem = ""
-			tr.ActiveSystemName = ""
 		}
 
 		tr.runEventHook()
@@ -226,6 +222,8 @@ func (tr *Tracker) stopGame() bool {
 		tr.ActiveGameId = ""
 		tr.ActiveGamePath = ""
 		tr.ActiveGameName = ""
+		tr.ActiveSystem = ""
+		tr.ActiveSystemName = ""
 		return true
 	} else {
 		return false
@@ -264,6 +262,12 @@ func (tr *Tracker) loadGame() {
 	system, err := games.BestSystemMatch(tr.Config, path)
 	if err != nil {
 		log.Error().Msgf("error finding system for game: %s", err)
+
+		// temporary(?) workaround to ignore bug where presets loaded from
+		// OSD are written to the recents file as a loaded game
+		if strings.HasSuffix(strings.ToLower(filename), ".ini") {
+			return
+		}
 	}
 
 	id := fmt.Sprintf("%s/%s", system.Id, filename)
@@ -274,6 +278,9 @@ func (tr *Tracker) loadGame() {
 		tr.ActiveGameId = id
 		tr.ActiveGameName = name
 		tr.ActiveGamePath = path
+
+		tr.ActiveSystem = system.Id
+		tr.ActiveSystemName = system.Name
 
 		tr.runEventHook()
 	}

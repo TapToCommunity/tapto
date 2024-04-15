@@ -64,33 +64,38 @@ func inExitGameBlocklist(cfg *config.UserConfig) bool {
 	return slices.Contains(blocklist, strings.ToLower(mister.GetActiveCoreName()))
 }
 
-func launchCard(cfg *config.UserConfig, state *state.State, db *database.Database, kbd input.Keyboard) error {
-	card := state.GetActiveCard()
+func launchToken(
+	cfg *config.UserConfig,
+	token state.Token,
+	state *state.State,
+	db *database.Database,
+	kbd input.Keyboard,
+) error {
 	uidMap, textMap := state.GetDB()
 
-	text := card.Text
-	override := false
+	text := token.Text
+	mapped := false
 
-	if v, ok := uidMap[card.UID]; ok {
+	if v, ok := uidMap[token.UID]; ok {
 		log.Info().Msg("launching with csv uid match override")
 		text = v
-		override = true
+		mapped = true
 	}
 
-	if v, err := db.GetUidMapping(card.UID); err == nil {
+	if v, err := db.GetUidMapping(token.UID); err == nil {
 		if err != nil {
 			log.Error().Err(err).Msgf("error getting db uid mapping")
 		} else if v != "" {
 			log.Info().Msg("launching with db uid match override")
 			text = v
-			override = true
+			mapped = true
 		}
 	}
 
-	if v, ok := textMap[card.Text]; ok {
+	if v, ok := textMap[token.Text]; ok {
 		log.Info().Msg("launching with csv text match override")
 		text = v
-		override = true
+		mapped = true
 	}
 
 	if text == "" {
@@ -101,7 +106,7 @@ func launchCard(cfg *config.UserConfig, state *state.State, db *database.Databas
 	cmds := strings.Split(text, "||")
 
 	for i, cmd := range cmds {
-		err := launcher.LaunchToken(cfg, cfg.GetAllowCommands() || override, kbd, cmd, len(cmds), i)
+		err := launcher.LaunchToken(cfg, cfg.GetAllowCommands() || mapped, kbd, cmd, len(cmds), i)
 		if err != nil {
 			return err
 		}
@@ -120,6 +125,8 @@ func processLaunchQueue(
 	for {
 		select {
 		case t := <-tq.Tokens:
+			log.Info().Msgf("processing token: %v", t)
+
 			st.SetActiveCard(t)
 
 			err := writeScanResult(t)
@@ -141,9 +148,9 @@ func processLaunchQueue(
 				continue
 			}
 
-			err = launchCard(cfg, st, db, kbd)
+			err = launchToken(cfg, t, st, db, kbd)
 			if err != nil {
-				log.Error().Err(err).Msgf("error launching card")
+				log.Error().Err(err).Msgf("error launching token")
 			}
 
 			he.Success = err == nil

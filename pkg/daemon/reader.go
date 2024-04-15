@@ -21,9 +21,9 @@ import (
 const (
 	timeToForgetCard   = 500 * time.Millisecond
 	connectMaxTries    = 10
-	TimesToPoll        = 20
-	PeriodBetweenPolls = 300 * time.Millisecond
-	periodBetweenLoop  = 300 * time.Millisecond
+	TimesToPoll        = 1
+	PeriodBetweenPolls = 250 * time.Millisecond
+	periodBetweenLoop  = 250 * time.Millisecond
 )
 
 func pollDevice(
@@ -211,14 +211,6 @@ func readerPollLoop(
 		}
 	}
 
-	if cfg.GetExitGame() {
-		// FIXME: this method makes the activity indicator flicker, is there another way?
-		ttp = 1
-		// TODO: value requires investigation, originally set to 150 which worked for pn532
-		//       but not for acr122u (read once then never again). 200 seems to work ok
-		pbp = 200 * time.Millisecond
-	}
-
 	log.Debug().Msgf("polling for %d times with %s delay", ttp, pbp)
 
 	for {
@@ -261,7 +253,7 @@ func readerPollLoop(
 
 			var count int
 			var target nfc.Target
-			tries := 6 // ~30 seconds
+			tries := 4 * 30 // ~30 seconds
 
 			for tries > 0 {
 				count, target, err = pnd.InitiatorPollTarget(tokens.SupportedCardTypes, ttp, pbp)
@@ -355,9 +347,8 @@ func readerPollLoop(
 
 		// if there is no card (newScanned.UID == "")
 		// if the card is the same as the one we have scanned before ( activeCard.UID == newScanned.UID)
-		// if the card has no text a real card but empty (newScanned.Text == "")
 		// if the card is the same that has been loaded last time (newScanned.UID == currentlyLoadedCard.UID)
-		if newScanned.UID == "" || activeCard.UID == newScanned.UID || newScanned.Text == "" || newScanned.UID == currentlyLoadedCard.UID {
+		if newScanned.UID == "" || activeCard.UID == newScanned.UID || newScanned.UID == currentlyLoadedCard.UID {
 			continue
 		}
 
