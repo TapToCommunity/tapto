@@ -174,6 +174,10 @@ func (c *UserConfig) SaveConfig() error {
 	defer c.mu.Unlock()
 
 	cfg := ini.Empty()
+
+	ini.PrettyEqual = false
+	ini.PrettyFormat = false
+
 	err := cfg.ReflectFrom(c)
 	if err != nil {
 		return err
