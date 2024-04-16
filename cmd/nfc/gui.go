@@ -21,16 +21,14 @@ along with TapTo.  If not, see <http://www.gnu.org/licenses/>.
 package main
 
 import (
-	"net"
-	"strconv"
 	"strings"
-	"time"
 
 	"github.com/rs/zerolog/log"
 	"github.com/rthornton128/goncurses"
 	"github.com/wizzomafizzo/mrext/pkg/curses"
 	mrextMister "github.com/wizzomafizzo/mrext/pkg/mister"
 	"github.com/wizzomafizzo/tapto/pkg/platforms/mister"
+	"github.com/wizzomafizzo/tapto/pkg/utils"
 )
 
 func tryAddStartup(stdscr *goncurses.Window) error {
@@ -107,7 +105,7 @@ func tryAddStartup(stdscr *goncurses.Window) error {
 
 func displayServiceInfo(stdscr *goncurses.Window, service *mister.Service) error {
 	width := 40
-	height := 11
+	height := 6
 
 	win, err := curses.NewWindow(stdscr, height, width, "", -1)
 	if err != nil {
@@ -126,88 +124,47 @@ func displayServiceInfo(stdscr *goncurses.Window, service *mister.Service) error
 		win.MovePrint(y, 2, text)
 	}
 
+	printCenter := func(y int, text string) {
+		win.MovePrint(y, (width-len(text))/2, text)
+	}
+
 	clearLine := func(y int) {
 		win.MovePrint(y, 2, strings.Repeat(" ", width-4))
 	}
 
 	var ch goncurses.Key
-	selected := 1
+	selected := 0
 
 	for {
 		var statusText string
-		var toggleText string
+		//var toggleText string
 		running := service.Running()
 		if running {
-			statusText = "Service:   RUNNING"
-			toggleText = "Stop"
+			statusText = "Service:        RUNNING"
+			//toggleText = "Stop Service"
 		} else {
-			statusText = "Service:   NOT RUNNING"
-			toggleText = "Start"
+			statusText = "Service:        NOT RUNNING"
+			//toggleText = "Start Service"
 		}
 
-		scanTime := "never"
-		tagUid := ""
-		tagText := ""
-		conn, err := net.Dial("unix", mister.SocketFile)
-		if err != nil {
-			log.Debug().Msgf("could not connect to nfc service: %s", err)
-		} else {
-			_, err := conn.Write([]byte("status"))
-			if err != nil {
-				log.Debug().Msgf("could not write to nfc service: %s", err)
-			} else {
-				buf := make([]byte, 4096)
-				_, err := conn.Read(buf)
-				if err != nil {
-					log.Debug().Msgf("could not read from nfc service: %s", err)
-				} else {
-					parts := strings.SplitN(string(buf), ",", 5)
-					if parts[0] != "0" {
-						scanTime = parts[0]
-					}
-					tagUid = parts[1]
-					tagText = parts[3]
-				}
-			}
-		}
+		printCenter(0, "TapTo v1.3")
 
 		clearLine(1)
 		printLeft(1, statusText)
 
-		if scanTime != "never" {
-			t, err := strconv.ParseInt(scanTime, 10, 64)
-			if err != nil {
-				log.Debug().Msgf("could not parse scan time: %s", err)
-			} else {
-				scanTime = time.Unix(t, 0).Format("2006-01-02 15:04:05")
-			}
+		ip, err := utils.GetLocalIp()
+		var ipDisplay string
+		if err != nil {
+			ipDisplay = "Unknown"
+		} else {
+			ipDisplay = ip.String()
 		}
+
 		clearLine(2)
-		printLeft(2, "Last scan: "+scanTime)
-
-		if tagUid != "" {
-			tagUid = strings.ToUpper(tagUid)
-			parts := make([]string, 0)
-			for i := 0; i < len(tagUid); i += 2 {
-				parts = append(parts, tagUid[i:i+2])
-			}
-			tagUid = strings.Join(parts, ":")
-		}
-		clearLine(3)
-		printLeft(3, "Tag UID:   "+tagUid)
-
-		if len(tagText) > 42 {
-			tagText = tagText[:42-3] + "..."
-		}
-		clearLine(4)
-		printLeft(4, "Tag text:  "+tagText)
-
-		win.HLine(5, 1, goncurses.ACS_HLINE, width-2)
-		win.MoveAddChar(5, 0, goncurses.ACS_LTEE)
-		win.MoveAddChar(5, width-1, goncurses.ACS_RTEE)
+		printLeft(2, "Device address: "+ipDisplay)
 
 		clearLine(height - 2)
-		curses.DrawActionButtons(win, []string{toggleText, "Exit"}, selected, 8)
+		curses.DrawActionButtons(win, []string{"Exit"}, selected, 0)
 
 		win.NoutRefresh()
 		err = goncurses.Update()
@@ -218,32 +175,23 @@ func displayServiceInfo(stdscr *goncurses.Window, service *mister.Service) error
 		ch = win.GetChar()
 
 		if ch == goncurses.KEY_LEFT {
-			if selected == 0 {
-				selected = 1
-			} else {
-				selected--
-			}
+			selected = 0
 		} else if ch == goncurses.KEY_RIGHT {
-			if selected == 1 {
-				selected = 0
-			} else {
-				selected++
-			}
+			selected = 0
 		} else if ch == goncurses.KEY_ENTER || ch == 10 || ch == 13 {
 			if selected == 0 {
-				if service.Running() {
-					err := service.Stop()
-					if err != nil {
-						log.Error().Msgf("could not stop service: %s", err)
-					}
-				} else {
-					err := service.Start()
-					if err != nil {
-						log.Error().Msgf("could not start service: %s", err)
-					}
-				}
-				time.Sleep(1 * time.Second)
-			} else if selected == 1 {
+				// if service.Running() {
+				// 	err := service.Stop()
+				// 	if err != nil {
+				// 		log.Error().Msgf("could not stop service: %s", err)
+				// 	}
+				// } else {
+				// 	err := service.Start()
+				// 	if err != nil {
+				// 		log.Error().Msgf("could not start service: %s", err)
+				// 	}
+				// }
+				// time.Sleep(1 * time.Second)
 				break
 			}
 		} else if ch == goncurses.KEY_ESC {
