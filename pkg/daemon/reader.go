@@ -84,10 +84,14 @@ func pollDevice(
 
 	log.Debug().Msgf("record bytes: %s", hex.EncodeToString(record))
 	tagText := tokens.ParseRecordText(record)
-	if tagText == "" {
-		log.Warn().Msg("no text NDEF found")
+	if len(record) == 8 {
+		tagText = "**amiibo:" + hex.EncodeToString(record)
 	} else {
-		log.Info().Msgf("decoded text NDEF: %s", tagText)
+		if tagText == "" {
+			log.Warn().Msg("no text NDEF found")
+		} else {
+			log.Info().Msgf("decoded text NDEF: %s", tagText)
+		}
 	}
 
 	card := state.Token{

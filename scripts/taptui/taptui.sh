@@ -29,6 +29,7 @@ searchCommand="${scriptdir}/search.sh"
 nfcCommand="${scriptdir}/tapto.sh"
 settings="${scriptdir}/tapto.ini"
 map="${sdroot}/nfc.csv"
+amiiboApi="https://www.amiiboapi.com/api"
 #For debugging purpouse
 [[ -d "${sdroot}" ]] || map="${scriptdir}/nfc.csv"
 [[ -d "${sdroot}" ]] && PATH="${sdroot}/linux:${sdroot}/Scripts:${PATH}"
@@ -499,7 +500,7 @@ main() {
 }
 
 _Read() {
-  local nfcSCAN nfcUID nfcTXT mappedMatch message
+  local nfcSCAN nfcUID nfcTXT mappedMatch message amiibo amiiboName amiiboGameSeries amiiboCharacter amiiboVariation amiiboType amiiboSeries
 
   nfcSCAN="$(_readTag)"
   exitcode="${?}"; [[ "${exitcode}" -ge 1 ]] && return "${exitcode}"
@@ -510,6 +511,28 @@ ${bold}Tag UID:${unbold} ${nfcUID}
 ${bold}Tag contents:${unbold}
 ${nfcTXT}
 _EOF_
+  if [[ "${nfcTXT}" == '**amiibo:'* ]]; then
+    amiibo="${nfcTXT#**amiibo:}"
+    amiiboVariation="${amiibo:4:2}"
+    amiibo="$(_amiibo | jq -r --arg head_val "${amiibo:0:-8}" --arg tail_val "${amiibo:8}" '.amiibo[] | select(.head == $head_val and .tail == $tail_val)')"
+    amiiboName="$(jq -r '.name' <<< "${amiibo}")"
+    [[ "${?}" -ge 1 ]] && amiiboName="${nfcTXT}"
+    amiiboGameSeries="$(jq -r '.gameSeries' <<< "${amiibo}")"
+    amiiboCharacter="$(jq -r '.character' <<< "${amiibo}")"
+    amiiboType="$(jq -r '.type' <<< "${amiibo}")"
+    amiiboSeries="$(jq -r '.amiiboSeries' <<< "${amiibo}")"
+    unset message
+    read -rd '' message <<_EOF_
+${bold}Tag UID:${unbold} ${nfcUID}
+${bold}Amiibo:${unbold}
+  ${bold}Name:${unbold}           ${amiiboName}
+  ${bold}Game Series:${unbold}    ${amiiboGameSeries}
+  ${bold}Character:${unbold}      ${amiiboCharacter}
+  ${bold}Variation:${unbold}      ${amiiboVariation}
+  ${bold}Type:${unbold}           ${amiiboType}
+  ${bold}Amiibo Series:${unbold}  ${amiiboSeries}
+_EOF_
+  fi
   [[ -f "${map}" ]] && mappedMatch="$(grep -i "^${nfcUID}" "${map}")"
   [[ -n "${mappedMatch}" ]] && read -rd '' message <<_EOF_
 ${message}
@@ -526,7 +549,8 @@ ${bold}Mapped match by match_text:${unbold}
 ${matchedEntry}
 _EOF_
   [[ -n "${nfcSCAN}" ]] && _yesno "${message}" \
-    --colors --ok-label "OK" --yes-label "OK" \
+    --colors --no-collapse \
+    --ok-label "OK" --yes-label "OK" \
     --no-label "Re-Map" --cancel-label "Re-Map" \
     --extra-button --extra-label "Clone Tag" \
     --help-button --help-label "Copy to Map"
@@ -1645,6 +1669,47 @@ _isInArray() {
   done
 
   return 1
+}
+
+_amiibo() {
+  local apiCache today apiFreshness apiLastUpdate cacheStale
+
+  apiCache="${sdroot}/Scripts/amiibo.json"
+  today="$(date +"%Y-%m-%d")"
+  cacheStale="false"
+
+  if [[ ! -f "${apiCache}" ]]; then
+    cacheStale="true"
+
+  elif ping -c 1 8.8.8.8 > /dev/null 2>&1 && curl -s -o /dev/null "${amiiboApi}" > /dev/null; then
+    apiFreshness="$(date -r "${apiCache}" +"%Y-%m-%d")"
+
+    if [[ "${apiFreshness}" != "${today}" ]]; then
+      apiLastUpdate="$(date -d "$(curl -s "${amiiboApi}/amiibo/lastupdated" | jq -r '.lastUpdated')" +%s)"
+      [[ "$(date -r "${apiCache}" +%s)" -lt "${apiLastUpdate}" ]] && cacheStale="true"
+    fi
+  else
+    cacheStale="false"
+  fi
+
+  if ! jq -e '.amiibo | length > 0' "${apiCache}" >/dev/null; then
+    cacheStale="true"
+  fi
+
+  if "${cacheStale}"; then 
+    curl -s "${amiiboApi}/amiibo/" -o "${apiCache}.new"
+    if jq -e '.amiibo | length > 0' "${apiCache}.new" >/dev/null; then
+      mv "${apiCache}.new" "${apiCache}"
+    fi
+  else
+    touch "${apiCache}"
+  fi
+
+  if [[ -f "${apiCache}" ]]; then
+    cat "${apiCache}"
+  else
+    return 1
+  fi
 }
 
 _textEditor() {

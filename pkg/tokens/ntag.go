@@ -21,6 +21,7 @@ along with TapTo.  If not, see <http://www.gnu.org/licenses/>.
 package tokens
 
 import (
+	"encoding/hex"
 	"bytes"
 	"errors"
 	"fmt"
@@ -49,6 +50,11 @@ var LEGO_DIMENSIONS_MATCHER = []byte{
 	0x01, 0x0F, 0x54, 0x02,
 	0x65, 0x6E}
 
+// Can be identified by matching address 0x09-0x0F
+var AMIIBO_MATCHER = []byte{
+	      0x48, 0x0F, 0xE0,
+	0xF1, 0x10, 0xFF, 0xEE}
+
 func ReadNtag(pnd nfc.Device) ([]byte, error) {
 	blockCount, err := getNtagBlockCount(pnd)
 	if err != nil {
@@ -56,6 +62,15 @@ func ReadNtag(pnd nfc.Device) ([]byte, error) {
 	}
 
 	log.Debug().Msgf("NTAG has %d blocks", blockCount)
+
+	header, _ := comm(pnd, []byte{READ_COMMAND, byte(0)}, 16)
+	if bytes.Equal(header[9:], AMIIBO_MATCHER) {
+		log.Info().Msg("found Amiibo")
+		amiibo, _ := comm(pnd, []byte{READ_COMMAND, byte(21)}, 16)
+		amiibo = amiibo[:8]
+		log.Info().Msg("Amiibo identifier:" + hex.EncodeToString(amiibo))
+		return amiibo, nil
+	}
 
 	allBlocks := make([]byte, 0)
 	currentBlock := 4
