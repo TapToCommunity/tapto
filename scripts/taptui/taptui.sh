@@ -193,6 +193,8 @@ nfcjokes=(
   Because it needs to touch base!"
 "What did the NFC reader say to the card?
   Tag! You're it!"
+"I wanted to tell you an Amiibo joke,
+  but they were all out of stock!"
 )
 
 keycodes=(
@@ -500,7 +502,7 @@ main() {
 }
 
 _Read() {
-  local nfcSCAN nfcUID nfcTXT mappedMatch message amiibo amiiboName amiiboGameSeries amiiboCharacter amiiboVariation amiiboType amiiboSeries
+  local nfcSCAN nfcUID nfcTXT mappedMatch message amiibo amiiboName amiiboGameSeries amiiboCharacter amiiboVariation amiiboType amiiboSeries nolabel
 
   nfcSCAN="$(_readTag)"
   exitcode="${?}"; [[ "${exitcode}" -ge 1 ]] && return "${exitcode}"
@@ -557,7 +559,15 @@ _EOF_
   case "${?}" in
     1)
       # No button with "Re-Map" label
-      _writeTextToMap --uid "${nfcUID}" "$(_commandPalette)"
+      [[ -n "${amiibo}" ]] && nolabel="Amiibo"
+      if _yesno "Remap by" \
+        --ok-label "UID" --yes-label "UID" \
+        --no-label "${nolabel:=Match Text}" --cancel-label "${nolabel}"
+      then
+        _writeTextToMap --uid "${nfcUID}" "$(_commandPalette)"
+      else
+        _writeTextToMap --matchText "${nfcTXT}" "$(_commandPalette)"
+      fi
       ;;
     3)
       # Extra button with "Clone Tag" label
@@ -1577,14 +1587,18 @@ _writeTag() {
 }
 
 # Write text string to NFC map (overrides physical NFC Tag contents)
-# Usage: _writeTextToMap [--uid "UID"] <"Text">
+# Usage: _writeTextToMap [--uid "UID" | --matchText "Text"] <"Text">
 _writeTextToMap() {
-  local txt uid oldMapEntry
+  local txt uid oldMapEntry matchText
 
   while [[ "${#}" -gt "0" ]]; do
     case "${1}" in
     --uid)
       uid="${2}"
+      shift 2
+      ;;
+    --matchText)
+      matchText="${2}"
       shift 2
       ;;
     *)
@@ -1594,21 +1608,31 @@ _writeTextToMap() {
     esac
   done
 
+  [[ -f "${map}" ]] || echo "${mapHeader}" > "${map}"
+
   # Check if UID is provided
-  [[ -z "${uid}" ]] && uid="$(_readTag | cut -d ',' -f 2 )"
+  [[ -z "${uid}" ]] && [[ -z "${matchText}" ]] && uid="$(_readTag | cut -d ',' -f 2 )"
 
-  # Check if the map file exists and read the existing entry for the given UID
-  if [[ -f "${map}" ]]; then
-    oldMapEntry=$(grep "^${uid}," "${map}")
-  else
-    echo "${mapHeader}" > "${map}"
-  fi
+  if [[ -n "${uid}" ]]; then
+    # Check if the map file exists and read the existing entry for the given UID
+    [[ -f "${map}" ]] && oldMapEntry="$(grep "^${uid}," "${map}")"
 
-  # If an existing entry is found, ask to replace it
-  if [[ -n "$oldMapEntry" ]] && _yesno "UID:${uid}\nText:${txt}\n\nAdd entry to map? This will replace:\n${oldMapEntry}"; then
-    sed -i "s|^${uid},.*|${uid},,${txt}|g" "${map}"
-  elif _yesno "UID:${uid}\nText:${txt}\n\nAdd entry to map?"; then
-    echo "${uid},,${txt}" >> "${map}"
+    # If an existing entry is found, ask to replace it
+    if [[ -n "${oldMapEntry}" ]] && _yesno "UID:${uid}\nText:${txt}\n\nAdd entry to map? This will replace:\n${oldMapEntry}"; then
+      sed -i "s|^${uid},.*|${uid},,${txt}|g" "${map}"
+    elif _yesno "UID:${uid}\nText:${txt}\n\nAdd entry to map?"; then
+      echo "${uid},,${txt}" >> "${map}"
+    fi
+  elif [[ -n "${matchText}" ]]; then
+    # Check if the map file exists and read the existing entry for the given UID
+    [[ -f "${map}" ]] && oldMapEntry="$(grep "^.*,${matchText//[\[\.*^$/]/\\$&}," "${map}")"
+
+    # If an existing entry is found, ask to replace it
+    if [[ -n "${oldMapEntry}" ]] && _yesno "Match Text:${matchText}\nText:${txt}\n\nAdd entry to map? This will replace:\n${oldMapEntry}"; then
+      sed -i "s|^,${matchText//[\[\.*^$/]/\\$&}.*|,${matchText},${txt}|g" "${map}"
+    elif _yesno "Match Text:${matchText}\nText:${txt}\n\nAdd entry to map?"; then
+      echo ",${matchText},${txt}" >> "${map}"
+    fi
   fi
 }
 
