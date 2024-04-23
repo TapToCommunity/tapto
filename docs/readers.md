@@ -101,9 +101,10 @@ This reader has not been thoroughly tested yet, but it shouldn't have any proble
 
 Can be bought directly [from Elechouse](https://www.elechouse.com/product/pn532-nfc-usb-module/).
 
-Clones are also available on AliExpress by searching for "pn532 type c".
+Clones are also available on AliExpress by searching for "pn532 type c" or "pcr532".
 
 - [AliExpress (China) - Allinbest Store](https://www.aliexpress.us/item/1005006326438326.html)
+- [AliExpress (China) - MI YU KOUNG Official Store](https://www.aliexpress.com/item/1005005262748046.html)
 
 ## PN532 Module
 
