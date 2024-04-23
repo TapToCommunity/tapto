@@ -11,7 +11,7 @@ Join the [wizzo.dev Discord](https://wizzo.dev/discord) for all your label needs
 ## Pre-built Readers
 
 - **[BedroomNinja](https://ko-fi.com/ninja3dp)** &mdash; UK based &mdash; ships to UK, Europe, and USA
-- **[Grumpy Old Gamer](https://www.ebay.co.uk/usr/grumpyoldgamer)** &mdash; UK based, ships worldwide
+- **[Grumpy Old Gamer](https://ko-fi.com/goguk)** &mdash; UK based, ships worldwide
 - **[wizzo](https://wizzo.dev/shop)** &mdash; Australia based &mdash; ships worldwide
 
 ## Cases
