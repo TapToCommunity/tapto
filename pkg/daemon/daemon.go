@@ -26,6 +26,7 @@ import (
 	"os"
 	"strings"
 	"time"
+	"regexp"
 
 	"golang.org/x/exp/slices"
 
@@ -92,10 +93,23 @@ func launchToken(
 		}
 	}
 
-	if v, ok := textMap[token.Text]; ok {
-		log.Info().Msg("launching with csv text match override")
-		text = v
-		mapped = true
+		// Iterate over the textMap and check if token.Text matches any regex pattern
+	for pattern, cmd := range textMap {
+		 re, err := regexp.Compile(pattern)
+		 if err != nil {
+			 if pattern, ok := textMap[token.Text]; ok {
+			 	 log.Info().Msg("launching with csv text match override")
+			 	 text = pattern
+			 	 mapped = true
+				 break
+			 }
+		 }
+		 if re.MatchString(token.Text) {
+		 	 log.Info().Msg("launching with regex text match override")
+		 	 text = cmd
+		 	 mapped = true
+		 	 break // Exit loop once a match is found
+		 }
 	}
 
 	if text == "" {
