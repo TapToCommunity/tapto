@@ -516,6 +516,7 @@ _EOF_
   if [[ "${nfcTXT}" == '**amiibo:'* ]]; then
     amiibo="${nfcTXT#**amiibo:}"
     amiiboVariation="${amiibo:4:2}"
+    [[ "${amiiboVariation}" == "ff" ]] && amiiboVariation="Skylander"
     amiibo="$(_amiibo | jq -r --arg head_val "${amiibo:0:-8}" --arg tail_val "${amiibo:8}" '.amiibo[] | select(.head == $head_val and .tail == $tail_val)')"
     amiiboName="$(jq -r '.name' <<< "${amiibo}")"
     [[ "${?}" -ge 1 ]] && amiiboName="${nfcTXT}"
@@ -564,9 +565,15 @@ _EOF_
         --ok-label "UID" --yes-label "UID" \
         --no-label "${nolabel:=Match Text}" --cancel-label "${nolabel}"
       then
+        # OK button (Label UID)
         _writeTextToMap --uid "${nfcUID}" "$(_commandPalette)"
       else
-        _writeTextToMap --matchText "${nfcTXT}" "$(_commandPalette)"
+        # No button (Label Match Text or Amiibo)
+        if [[ -z "${amiibo}" ]]; then
+          _writeTextToMap --matchText "${nfcTXT}" "$(_commandPalette)"
+        else
+          _writeTextToMap --matchText "$(_amiiboRegex "${amiibo}")" "$(_commandPalette)"
+        fi
       fi
       ;;
     3)
@@ -1405,8 +1412,9 @@ _Mappings() {
   if [[ "${exitcode}" == "3" ]]; then
     _yesno "Read tag or type match text?" \
       --ok-label "Read tag" --yes-label "Read tag" \
-      --no-label "Cancel" \
-      --extra-button --extra-label "Match text"
+      --no-label "Amiibo" --cancel-label "Amiibo" \
+      --extra-button --extra-label "Match text" \
+      --help-button --help-label "Cancel"
     case "${?}" in
       0)
         # Yes button (Read tag)
@@ -1415,6 +1423,13 @@ _Mappings() {
         # Enclose field in quotes if it's needed to escape a comma
         [[ "${new_match_uid}" == \"*\" ]] || [[ "${new_match_uid}" == *,* ]] && new_match_uid="\"${new_match_uid}\""
         ;;
+      1)
+        # No button (Amiibo)
+        new_match_text="amiibo:$(_amiiboRegex)"
+        exitcode="${?}"; [[ "${exitcode}" -ge 1 ]] && return "${exitcode}"
+        # Enclose field in quotes if it's needed to escape a comma
+        [[ "${new_match_text}" == \"*\" ]] || [[ "${new_match_text}" == *,* ]] && new_match_text="\"${new_match_text}\""
+        ;;
       3)
         # Extra button (Match text)
         new_match_text="$(_inputbox "Replace match text" "${match_text}")"
@@ -1422,7 +1437,7 @@ _Mappings() {
         # Enclose field in quotes if it's needed to escape a comma
         [[ "${new_match_text}" == \"*\" ]] || [[ "${new_match_text}" == *,* ]] && new_match_text="\"${new_match_text}\""
         ;;
-      1|255)
+      2|255)
         # No button (Cancel)
         _Mappings
         return
@@ -1671,7 +1686,7 @@ _searchMatchText() {
 
   sed 1d "${map}" | while IFS=, read -r match_uid match_text text; do
     [[ -z "${match_text}" ]] && continue
-    if [[ "${nfcTxt}" == *"${match_text}"* ]]; then
+    if [[ "${nfcTxt}" == "${match_text}" ]] || [[ "${nfcTxt}" =~ ${match_text} ]]; then
       echo "${match_uid},${match_text},${text}"
     fi
   done
@@ -1702,22 +1717,19 @@ _amiibo() {
   today="$(date +"%Y-%m-%d")"
   cacheStale="false"
 
-  if [[ ! -f "${apiCache}" ]]; then
+  if [[ ! -f "${apiCache}" ]] || ! jq -e '.amiibo | length > 0' "${apiCache}" >/dev/null; then
     cacheStale="true"
-
-  elif ping -c 1 8.8.8.8 > /dev/null 2>&1 && curl -s -o /dev/null "${amiiboApi}" > /dev/null; then
+  else
     apiFreshness="$(date -r "${apiCache}" +"%Y-%m-%d")"
+  fi
 
-    if [[ "${apiFreshness}" != "${today}" ]]; then
+  if [[ "${apiFreshness}" != "${today}" ]]; then
+    if ping -c 1 8.8.8.8 > /dev/null 2>&1 && curl -s -o /dev/null "${amiiboApi}" > /dev/null; then
       apiLastUpdate="$(date -d "$(curl -s "${amiiboApi}/amiibo/lastupdated" | jq -r '.lastUpdated')" +%s)"
       [[ "$(date -r "${apiCache}" +%s)" -lt "${apiLastUpdate}" ]] && cacheStale="true"
     fi
   else
     cacheStale="false"
-  fi
-
-  if ! jq -e '.amiibo | length > 0' "${apiCache}" >/dev/null; then
-    cacheStale="true"
   fi
 
   if "${cacheStale}"; then 
@@ -1734,6 +1746,127 @@ _amiibo() {
   else
     return 1
   fi
+}
+
+_amiiboRegex() {
+  local categories gameSeries characters variation type amiiboSeries amiibos msg selected selectedGameSeries selectedCharacter selectedVariation selectedType selectedAmiiboSeries selectedAmiibo regex
+  [[ -n "${1}" ]] && regex="${1}"
+
+  while true; do
+    categories=(1 "Game Series" 2 "Character" 3 "Variation" 4 "Type: Figure, Card, Yarn, Band" 5 "Amiibo Series" 6 "Specific Amiibo" 7 "Clear all choices" 8 "Cancel")
+    gameSeries=( "00[0-2]" "Super Mario" "0((0[0-2])|9[c-d])" "Mario (all)" "008" "Yoshi's Woolly World" "00c" "Donkey Kong" "010" "The Legend of Zelda" "014" "The Legend of Zelda: Breath of the Wild" "0(1[89a-f]|[2-4][0-9a-f]|5[0-1])" "Animal Crossing" "058" "Star Fox" "05c" "Metroid" "060" "F-Zero" "064" "Pikmin" "06c" "Punch Out" "070" "Wii Fit" "074" "Kid Icarus" "078" "Classic Nintendo" "07c" "Mii" "080" "Splatoon" "09[c-d]" "Mario Sports Superstars" "0((1[89a-f]|[2-4][0-9a-f]|5[0-1])|a[0-2])" "Animal Crossing (all)" "0(a[0-2])" "Animal Crossing New Horizons" "0a4" "ARMS" "(19[0-9a-f]|1[0-9a-d][0-9a-f]|1d[0-4])" "Pokemon" "1f0" "Kirby" "1f4" "BoxBoy!" "210" "Fire Emblem" "224" "Xenoblade Chronicles" "228" "Earthbound" "22c" "Chibi Robo" "320" "Sonic" "324" "Bayonetta" "334" "Pac-man" "338" "Dark Souls" "33c" "Tekken" "348" "Megaman" "34c" "Street fighter" "350" "Monster Hunter" "35c" "Shovel Knight" "360" "Final Fantasy" "364" "Dragon Quest" "374" "Kellogs" "378" "Metal Gear Solid" "37c" "Castlevania" "380" "Power Pros" "384" "Yu-Gi-Oh!" "38c" "Diablo" "3a0" "Persona" "3b4" "Banjo Kazooie" "3c8" "Fatal Fury" "3dc" "Minecraft" "3f0" "Kingdom Hearts")
+    readarray -t characters < <(_amiibo | jq -r '.amiibo[] | .head[:4] + "\n" + .character')
+    variation=("00" 1 "01" 2 "02" 3 "03" 4 "04" 5 "05" 6 "ff" "Skylander")
+    readarray -t type < <(_amiibo | jq -r '.amiibo[] | .head[6:8] + " " + .type' | sort -u | tr ' ' '\n')
+    readarray -t amiiboSeries < <(_amiibo | jq -r '.amiibo[] | .tail[4:6] + " " + .amiiboSeries' | sort -u | sed "s/ /\n/")
+    readarray -t amiibos < <(_amiibo | jq -r '.amiibo[] | .head + .tail + " " + .name' | sed "s/ /\n/")
+
+    [[ -n "${regex}" ]] && msg="Current matching string: ${regex}"
+    selected="$(_menu  --colors \
+      --default-item "${selected}" \
+      -- "${categories[@]}")"
+    case "${selected}" in
+      1)
+        # Game Series
+        msg="Current matching string: ${selectedCharacter:-${underline}${selectedGameSeries:-...}${reset}.}${selectedVariation:-..}${selectedType:-..}....${selectedAmiiboSeries:-..}02"
+        selectedGameSeries="$(_menu --colors \
+          --default-item "${selectedGameSeries}" \
+          -- ... "Any game Series" "${gameSeries[@]}")"
+        if [[ "${selectedGameSeries}" == "..." ]]; then unset selectedGameSeries
+        else
+          unset selectedCharacter
+        fi
+      ;;
+      2)
+        # Character
+        if [[ -n "${regex}" ]] && _yesno "Filter by current choices?\n${regex}"; then
+          readarray -t characters < <( \
+            _amiibo | jq -r '.amiibo[] | .head + .tail + " " + .head[:4] + " " + .character' | grep "^${regex}" | awk '{$1=""; print substr($0,2)}' | sort -u | sed "s/ /\n/")
+        fi
+        msg="Current matching string: ${selectedGameSeries:-...}${underline}.${reset}${selectedVariation:-..}${selectedType:-..}....${selectedAmiiboSeries:-..}02"
+        selectedCharacter="$(_menu --colors \
+          --default-item "${selectedCharacter}" \
+          -- "${selectedGameSeries:-...}." "Any character" "${characters[@]}")"
+        if [[ "${selectedCharacter}" == "...." ]]; then unset selectedCharacter
+        else
+          unset selectedGameSeries
+          readarray -t variation < <( \
+            _amiibo | jq -r '.amiibo[] | .head[:4] + " " + .head[4:6] + " " + if .head[4:6] == "ff" then "Skylander" else "Variation" end' | \
+            grep "^${selectedCharacter}" | awk '{$1=""; print substr($0,2)}' | sort -u | tr ' ' '\n')
+          msg="Current matching string: ${selectedCharacter:-${selectedGameSeries:-...}.}${underline}${selectedVariation:-..}${reset}${selectedType:-..}....${selectedAmiiboSeries:-..}02"
+          selectedVariation="$(_menu --colors \
+            --default-item "${selectedVariation}" \
+            -- .. "Any variation" "${variation[@]}")"
+          [[ "${selectedVariation}" == ".." ]] && unset selectedVariation
+        fi
+      ;;
+      3)
+        # Variation
+        if [[ -n "${regex}" ]] && _yesno "Filter by current choices?\n${regex}"; then
+          readarray -t variation < <( \
+            _amiibo | jq -r '.amiibo[] | .head + .tail + " " + .head[4:6] + " " + .character' | grep "^${regex}" | awk '{$1=""; print substr($0,2)}' | sed "s/ /\n/")
+        fi
+        msg="Current matching string: ${selectedCharacter:-${selectedGameSeries:-...}.}${underline}${selectedVariation:-..}${reset}${selectedType:-..}....${selectedAmiiboSeries:-..}02"
+        selectedVariation="$(_menu --colors \
+          --default-item "${selectedVariation}" \
+          -- .. "Any variation" "${variation[@]}")"
+        [[ "${selectedVariation}" == ".." ]] && unset selectedVariation
+      ;;
+      4)
+        # Type
+        if [[ -n "${regex}" ]] && _yesno "Filter by current choices?\n${regex}"; then
+          readarray -t type < <( \
+            _amiibo | jq -r '.amiibo[] | .head + .tail + " " + .head[6:8] + " " + .type' | grep "^${regex}" | awk '{$1=""; print substr($0,2)}' | sort -u | tr ' ' '\n')
+        fi
+        msg="Current matching string: ${selectedCharacter:-${selectedGameSeries:-...}.}${selectedVariation:-..}${underline}${selectedType:-..}${reset}....${selectedAmiiboSeries:-..}02"
+        selectedType="$(_menu --colors \
+          --default-item "${selectedType}" \
+          -- .. "Any type" "${type[@]}")"
+        [[ "${selectedType}" == ".." ]] && unset selectedType
+      ;;
+      5)
+        # Amiibo Series
+        if [[ -n "${regex}" ]] && _yesno "Filter by current choices?\n${regex}"; then
+          readarray -t amiiboSeries < <( \
+            _amiibo | jq -r '.amiibo[] | .head + .tail + " " + .tail[4:6] + " " + .amiiboSeries' | grep "^${regex}" | awk '{$1=""; print substr($0,2)}' | sort -u | sed "s/ /\n/")
+        fi
+        msg="Current matching string: ${selectedCharacter:-${selectedGameSeries:-...}.}${selectedVariation:-..}${selectedType:-..}....${underline}${selectedAmiiboSeries:-..}${reset}02"
+        selectedAmiiboSeries="$(_menu --colors \
+          --default-item "${selectedAmiiboSeries}" \
+          -- .. "Any series" "${amiiboSeries[@]}")"
+        [[ "${selectedAmiiboSeries}" == ".." ]] && unset selectedAmiiboSeries
+      ;;
+      6)
+        # Amiibo
+        if [[ -n "${regex}" ]] && _yesno "Filter by current choices?\n${regex}"; then
+          readarray -t amiibos < <(_amiibo | jq -r '.amiibo[] | .head + .tail + " " + .character' | grep "^${regex}" | sed "s/ /\n/")
+        fi
+        [[ -n "${regex}" ]] && msg="Current matching string: ${regex}"
+        selectedAmiibo="$(_menu --colors \
+          --default-item "${selectedAmiibo}" \
+          -- "UNSET" "Unset" "${amiibos[@]}")"
+        [[ "${selectedAmiibo}" == "UNSET" ]] && unset selectedAmiibo
+      ;;
+      7)
+        # Clear all
+        unset selectedGameSeries selectedCharacter selectedVariation selectedType selectedAmiiboSeries selectedAmiibo
+      ;;
+      8)
+        # Cancel
+        return
+      ;;
+    esac
+
+    regex="${selectedCharacter:-${selectedGameSeries:-...}.}${selectedVariation:-..}${selectedType:-..}....${selectedAmiiboSeries:-..}02"
+    if [[ -n "${selectedAmiibo}" ]]; then
+      regex="${selectedAmiibo}"
+      unset selectedGameSeries selectedCharacter selectedVariation selectedType selectedAmiiboSeries selectedAmiibo
+    fi
+
+    _yesno "Continue editing?\nCurrent choice:\n${regex}" --no-label "Finish" --cancel-label "Finish" || break
+  done
+
+  echo "${regex}"
 }
 
 _textEditor() {
