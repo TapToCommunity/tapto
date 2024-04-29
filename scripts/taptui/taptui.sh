@@ -34,31 +34,19 @@ amiiboApi="https://www.amiiboapi.com/api"
 [[ -d "${sdroot}" ]] || map="${scriptdir}/nfc.csv"
 [[ -d "${sdroot}" ]] && PATH="${sdroot}/linux:${sdroot}/Scripts:${PATH}"
 mapHeader="match_uid,match_text,text"
-nfcStatus="$("${nfcCommand}" --service status)"
-case "${nfcStatus}" in
-  "tapto service running")
-    nfcStatus="true"
-    nfcUnavailable="false"
-    msg="Service: Enabled"
-    ;;
-  "tapto service not running")
-    nfcStatus="false"
-    nfcUnavailable="false"
-    msg="Service: Disabled"
-    ;;
-  *)
-    nfcStatus="false"
-    nfcUnavailable="true"
-    msg="Service: Unavailable"
-esac
-nfcSocket="UNIX-CONNECT:/tmp/tapto/tapto.sock"
-if [[ -S "${nfcSocket#*:}" ]]; then
-  nfcReadingStatus="$(echo "status" | socat - "${nfcSocket}")"
-  nfcReadingStatus="$(cut -d ',' -f 3 <<< "${nfcReadingStatus}")"
+taptoAPI="localhost:7497/api/v1"
+if taptoStatus="$(curl -s "${taptoAPI}/status")"; then
+  nfcUnavailable="false"
+  nfcStatus="true"
+  msg="Service: Enabled"
+  nfcReadingStatus="$(jq -r '.launching' <<< "${taptoStatus}")"
   # Disable reading for the duration of the script
   # we trap the EXIT signal and execute the _exit() function to turn it on again
-  echo "disable" | socat - "${nfcSocket}"
+  curl -s -X Put -H "Content-Type: application/json" -d '{"launching:false}' "${taptoAPI}/status"
 else
+  nfcUnavailable="true"
+  nfcStatus="false"
+  msg="Service: Unavailable"
   nfcReadingStatus="false"
 fi
 # Match MiSTer theme
@@ -506,8 +494,8 @@ _Read() {
 
   nfcSCAN="$(_readTag)"
   exitcode="${?}"; [[ "${exitcode}" -ge 1 ]] && return "${exitcode}"
-  nfcTXT="$(cut -d ',' -f 4- <<< "${nfcSCAN}" )"
-  nfcUID="$(cut -d ',' -f 2 <<< "${nfcSCAN}" )"
+  nfcTXT="$(jq -r '.text' <<< "${nfcSCAN}" )"
+  nfcUID="$(jq -r '.uid' <<< "${nfcSCAN}" )"
   read -rd '' message <<_EOF_
 ${bold}Tag UID:${unbold} ${nfcUID}
 ${bold}Tag contents:${unbold}
@@ -1594,9 +1582,10 @@ _writeTag() {
   txt="${1}"
 
   _infobox "Present NFC tag to begin writing..."
+  #_tapto POST write "${txt}" || { _error "Unable to write the NFC Tag"; return 1; }
   "${nfcCommand}" -write "${txt}" || { _error "Unable to write the NFC Tag"; return 1; }
   # Workaround for -write enabling launching games again
-  echo "disable" | socat - "${nfcSocket}"
+  _tapto settings PUT '{"launching":false}'
 
   _msgbox "${txt} \n successfully written to NFC tag"
 }
@@ -1653,19 +1642,20 @@ _writeTextToMap() {
 
 # Read UID and Text from tag, returns comma separated values below
 # Usage: _readTag
-# Returns: "Unix epoch time","UID","core launch status","text"
+# Returns: json object
 _readTag() {
   local lastScanTime currentScan currentScanTime scanSuccess
-  lastScanTime="$(echo "status" | socat - "${nfcSocket}" | cut -d ',' -f 1)"
+  lastScanTime="$(_tapto status | jq -r '.lastToken.scanTime')"
   _infobox "Scan NFC Tag to continue...\n\nPress any key to go back"
   while true; do
-    currentScan="$(echo "status" | socat - "${nfcSocket}" 2>/dev/null)"
-    currentScanTime="$(cut -d ',' -f 1 <<< "${currentScan}")"
+    currentScan="$(_tapto status | jq -c '.activeToken')"
+    currentScanTime="$(jq -r '.scanTime' <<< "${currentScan}")"
     [[ "${lastScanTime}" != "${currentScanTime}" ]] && { scanSuccess="true" ; break; }
     sleep 1
     read -t 1 -n 1 -r  && return 1
   done
-  currentScan="$(echo "status" | socat - "${nfcSocket}")"
+  # I hope this next command is reduntant
+  #currentScan="$(_tapto status)"
   if [[ ! "${scanSuccess}" ]]; then
     _yesno "Tag not read" --yes-label "Retry" && _readTag
     return 1
@@ -2059,9 +2049,42 @@ _error() {
   return "${answer}"
 }
 
+_tapto() {
+  local x h d url
+
+  while [[ ${#} -gt 0 ]]; do
+    case "${1}" in
+      POST) x=("-X" "POST"); shift ;;
+      PUT) x=("-X" "PUT"); shift ;;
+      DELETE) x=("-X" "DELETE"); shift ;;
+      GET) x=("-X" "GET"); shift ;;
+      OPTIONS) x=("-X" "OPTIONS"); shift ;;
+      Content-Type) h+=("-H" "Content-Type: ${2}"); shift 2 ;;
+      Accept) h+=("-H" "Accept: ${2}"); shift 2 ;;
+      Authorization) h+=("-H" "Authorization: ${2}"); shift 2 ;;
+      Link) h+=("-H" "Link: ${2}"); shift 2 ;;
+      status) url="status"; shift ;;
+      launch) url="launch"; shift ;;
+      games) url="games"; shift ;;
+      systems) url="systems"; shift ;;
+      #mappings) url="mappings"; shift ;;
+      history) url="history"; shift ;;
+      settings) url="settings"; shift ;;
+      log) url="settings/log/download"; shift ;;
+      #index) url="settings/index/games"; shift ;;
+      readers) url="readers/0/write"; shift ;;
+      *) d="${1}"; break ;;
+    esac
+  done
+  [[ "${#h[@]}" -eq 0 ]] && h=("-H" "Content-Type: application/json")
+  [[ "${#x[@]}" -eq 0 ]] && x=("-X" "GET")
+
+  curl -s "${x[@]}" "${h[@]}" -d "${d}" "${taptoAPI}/${url}"
+}
+
 _exit() {
   clear
-  "${nfcReadingStatus}" && echo "enable" | socat - "${nfcSocket}"
+  "${nfcReadingStatus}" && _tapto settings PUT '{"launching":true}'
   exit "${1:-0}"
 }
 trap _exit EXIT
