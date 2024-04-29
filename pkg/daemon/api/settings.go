@@ -8,6 +8,7 @@ import (
 	"github.com/go-chi/render"
 	"github.com/rs/zerolog/log"
 	"github.com/wizzomafizzo/tapto/pkg/config"
+	"github.com/wizzomafizzo/tapto/pkg/daemon/state"
 	"github.com/wizzomafizzo/tapto/pkg/platforms/mister"
 )
 
@@ -19,13 +20,14 @@ type SettingsResponse struct {
 	ExitGame          bool     `json:"exitGame"`
 	ExitGameBlocklist []string `json:"exitGameBlocklist"`
 	Debug             bool     `json:"debug"`
+	Launching         bool     `json:"launching"`
 }
 
 func (sr *SettingsResponse) Render(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
-func handleSettings(cfg *config.UserConfig) http.HandlerFunc {
+func handleSettings(cfg *config.UserConfig, st *state.State) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		log.Info().Msg("received settings request")
 
@@ -37,6 +39,7 @@ func handleSettings(cfg *config.UserConfig) http.HandlerFunc {
 			ExitGame:          cfg.GetExitGame(),
 			ExitGameBlocklist: make([]string, 0),
 			Debug:             cfg.GetDebug(),
+			Launching:         !st.IsLauncherDisabled(),
 		}
 
 		resp.ExitGameBlocklist = append(resp.ExitGameBlocklist, cfg.GetExitGameBlocklist()...)
@@ -57,13 +60,14 @@ type UpdateSettingsRequest struct {
 	ExitGame          *bool     `json:"exitGame"`
 	ExitGameBlocklist *[]string `json:"exitGameBlocklist"`
 	Debug             *bool     `json:"debug"`
+	Launching         *bool     `json:"launching"`
 }
 
 func (usr *UpdateSettingsRequest) Bind(r *http.Request) error {
 	return nil
 }
 
-func handleSettingsUpdate(cfg *config.UserConfig) http.HandlerFunc {
+func handleSettingsUpdate(cfg *config.UserConfig, st *state.State) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		log.Info().Msg("received settings update request")
 
@@ -103,6 +107,15 @@ func handleSettingsUpdate(cfg *config.UserConfig) http.HandlerFunc {
 		if req.Debug != nil {
 			log.Info().Bool("debug", *req.Debug).Msg("updating debug")
 			cfg.SetDebug(*req.Debug)
+		}
+
+		if req.Launching != nil {
+			log.Info().Bool("launching", *req.Launching).Msg("updating launching")
+			if *req.Launching {
+				st.EnableLauncher()
+			} else {
+				st.DisableLauncher()
+			}
 		}
 
 		err = cfg.SaveConfig()
