@@ -4,6 +4,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"strings"
 
 	"github.com/go-chi/render"
 	"github.com/rs/zerolog/log"
@@ -18,6 +19,7 @@ type SettingsResponse struct {
 	DisableSounds     bool     `json:"disableSounds"`
 	ProbeDevice       bool     `json:"probeDevice"`
 	ExitGame          bool     `json:"exitGame"`
+	ExitGameDelay     int8     `json:"exitGameDelay"`
 	ExitGameBlocklist []string `json:"exitGameBlocklist"`
 	Debug             bool     `json:"debug"`
 	Launching         bool     `json:"launching"`
@@ -37,6 +39,7 @@ func handleSettings(cfg *config.UserConfig, st *state.State) http.HandlerFunc {
 			DisableSounds:     cfg.GetDisableSounds(),
 			ProbeDevice:       cfg.GetProbeDevice(),
 			ExitGame:          cfg.GetExitGame(),
+			ExitGameDelay:     cfg.GetExitGameDelay(),
 			ExitGameBlocklist: make([]string, 0),
 			Debug:             cfg.GetDebug(),
 			Launching:         !st.IsLauncherDisabled(),
@@ -55,9 +58,11 @@ func handleSettings(cfg *config.UserConfig, st *state.State) http.HandlerFunc {
 
 type UpdateSettingsRequest struct {
 	ConnectionString  *string   `json:"connectionString"`
+	AllowCommands     *bool     `json:"allowCommands"`
 	DisableSounds     *bool     `json:"disableSounds"`
 	ProbeDevice       *bool     `json:"probeDevice"`
 	ExitGame          *bool     `json:"exitGame"`
+	ExitGameDelay     *int8     `json:"exitGameDelay"`
 	ExitGameBlocklist *[]string `json:"exitGameBlocklist"`
 	Debug             *bool     `json:"debug"`
 	Launching         *bool     `json:"launching"`
@@ -84,6 +89,16 @@ func handleSettingsUpdate(cfg *config.UserConfig, st *state.State) http.HandlerF
 			cfg.SetConnectionString(*req.ConnectionString)
 		}
 
+		if req.AllowCommands != nil {
+			if !strings.HasPrefix(r.RemoteAddr, "127.0.0.1:") {
+				http.Error(w, "AllowCommands can only be changed from localhost", http.StatusForbidden)
+				log.Info().Str("remoteAddr", r.RemoteAddr).Bool("allowCommands", *req.AllowCommands).Msg("AllowCommands can only be changed from localhost")
+			} else {
+				log.Info().Bool("allowCommands", *req.AllowCommands).Msg("updating allow commands")
+				cfg.SetAllowCommands(*req.AllowCommands)
+			}
+		}
+
 		if req.DisableSounds != nil {
 			log.Info().Bool("disableSounds", *req.DisableSounds).Msg("updating disable sounds")
 			cfg.SetDisableSounds(*req.DisableSounds)
@@ -92,6 +107,11 @@ func handleSettingsUpdate(cfg *config.UserConfig, st *state.State) http.HandlerF
 		if req.ProbeDevice != nil {
 			log.Info().Bool("probeDevice", *req.ProbeDevice).Msg("updating probe device")
 			cfg.SetProbeDevice(*req.ProbeDevice)
+		}
+
+		if req.ExitGameDelay != nil {
+			log.Info().Int8("exitGameDelay", *req.ExitGameDelay).Msg("updating exit game delay")
+			cfg.SetExitGameDelay(*req.ExitGameDelay)
 		}
 
 		if req.ExitGame != nil {
