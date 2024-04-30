@@ -872,9 +872,7 @@ _commandSetting() {
     "Disable"  "Disable Linux commands" "off"
   )
 
-  [[ -f "${settings}" ]] || echo "[tapto]" > "${settings}" || { _error "Can't create settings file" ; return 1 ; }
-
-  if grep -q "^allow_commands=yes" "${settings}"; then
+  if _tapto settings | jq -e '.allowCommands' >/dev/null; then
     menuOptions[2]="on"
   else
     menuOptions[5]="on"
@@ -889,20 +887,8 @@ _EOF_
   selected="$(_radiolist --help-button -- "${menuOptions[@]}" )"
   [[ "${?}" -eq 2 ]] && { _msgbox "${helpmsg}" ; "${FUNCNAME[0]}" ; return ; }
   case "${selected}" in
-    Enable)
-      if grep -q "^allow_commands=" "${settings}"; then
-        sed -i "s/^allow_commands=.*/allow_commands=yes/" "${settings}"
-      else
-        echo "allow_commands=yes" >> "${settings}"
-      fi
-      ;;
-    Disable)
-      if grep -q "^allow_commands=" "${settings}"; then
-        sed -i "s/^allow_commands=.*/allow_commands=no/" "${settings}"
-      else
-        echo "allow_commands=no" >> "${settings}"
-      fi
-      ;;
+    Enable) _tapto settings PUT '{"allowCommands":true}' ;;
+    Disable) _tapto settings PUT '{"allowCommands":false}' ;;
   esac
 }
 
@@ -913,9 +899,7 @@ _soundSetting() {
     "Disable"  "Disable sounds played when a tag is scanned"  "off"
   )
 
-  [[ -f "${settings}" ]] || echo "[tapto]" > "${settings}" || { _error "Can't create settings file" ; return 1 ; }
-
-  if grep -q "^disable_sounds=no" "${settings}"; then
+  if _tapto settings | jq -e '.disableSounds' >/dev/null; then
     menuOptions[5]="on"
   else
     menuOptions[2]="on"
@@ -924,18 +908,10 @@ _soundSetting() {
   selected="$(_radiolist -- "${menuOptions[@]}" )"
   case "${selected}" in
     Enable)
-      if grep -q "^disable_sounds=" "${settings}"; then
-        sed -i "s/^disable_sounds=.*/disable_sounds=yes/" "${settings}"
-      else
-        echo "disable_sounds=yes" >> "${settings}"
-      fi
+      _tapto settings PUT '{"disableSounds":false}'
       ;;
     Disable)
-      if grep -q "^disable_sounds=" "${settings}"; then
-        sed -i "s/^disable_sounds=.*/disable_sounds=no/" "${settings}"
-      else
-        echo "disable_sounds=no" >> "${settings}"
-      fi
+      _tapto settings PUT '{"disableSounds":true}'
       ;;
   esac
 }
@@ -948,44 +924,27 @@ _connectionSetting() {
     "Custom"    "Manually enter a custom connection string"                 "off"
   )
 
-  [[ -f "${settings}" ]] || echo "[tapto]" > "${settings}" || { _error "Can't create settings file" ; return 1 ; }
-
-  if ! grep -q "^connection_string=.*" "${settings}"; then
+  if [[ -z "$(_tapto setting | jq -r '.connectionString')" ]]; then
     menuOptions[2]="on"
-  elif grep -q "^connection_string=\"\"" "${settings}"; then
-    menuOptions[2]="on"
-  elif grep -q "^connection_string=\"pn532_uart:/dev/ttyUSB0\"" "${settings}"; then
+  elif [[ "$(_tapto setting | jq -r '.connectionString')" = "pn532_uart:/dev/ttyUSB0" ]]; then
     menuOptions[5]="on"
-  elif grep -q "^connection_string=\".*\"" "${settings}"; then
+  elif [[ -n "$(_tapto setting | jq -r '.connectionString')" ]]; then
     menuOptions[8]="on"
-    customString="$(grep "^connection_string=" "${settings}" | cut -d '=' -f 2)"
+    customString="$(_tapto setting | jq -r '.connectionString')"
     menuOptions[7]="Current custom option: ${customString}"
   fi
 
   selected="$(_radiolist -- "${menuOptions[@]}" )"
   case "${selected}" in
     Default)
-      if grep -q "^connection_string=" "${settings}"; then
-        sed -i "s/^connection_string=.*/connection_string=\"\"/" "${settings}"
-      else
-        echo 'connection_string=""' >> "${settings}"
-      fi
+      _tapto settings PUT '{"connectionString":""}'
       ;;
     PN532)
-      if grep -q "^connection_string=" "${settings}"; then
-        sed -i 's/^connection_string=.*/connection_string="pn532_uart:\/dev\/ttyUSB0"/' "${settings}"
-      else
-        echo 'connection_string="pn532_uart:/dev/ttyUSB0"' >> "${settings}"
-      fi
+      _tapto settings PUT '{"connectionString":"pn532_uart:/dev/ttyUSB0"}'
       ;;
     Custom)
       customString="$(_inputbox "Enter connection string" "${customString}")"
-      #TODO sanitize input
-      if grep -q "^connection_string=" "${settings}"; then
-        sed -i "s/^connection_string=.*/connection_string=\"${customString}\"/" "${settings}"
-      else
-        echo "connection_string=\"${customString}\"" >> "${settings}"
-      fi
+      _tapto settings PUT "{\"connectionString\":\"${customString}\"}"
       ;;
   esac
 }
@@ -997,158 +956,96 @@ _probeSetting() {
     "Disable"  "Disable detection of a serial based reader device"  "off"
   )
 
-  [[ -f "${settings}" ]] || echo "[tapto]" > "${settings}" || { _error "Can't create settings file" ; return 1 ; }
-
-  # Check if probe_device is set to "no" in the settings
-  if grep -q "^probe_device=no" "${settings}"; then
-    # If probe_device is "no", set the corresponding radio button to "on"
-    menuOptions[5]="on" # Disable option is selected
+  if _tapto settings | jq -e '.probeDevice' >/dev/null; then
+    menuOptions[2]="on"
   else
-    # If probe_device is not "no", set the corresponding radio button to "on"
-    menuOptions[2]="on" # Enable option is selected by default
+    menuOptions[5]="on"
   fi
 
   selected="$(_radiolist -- "${menuOptions[@]}" )"
   case "${selected}" in
-    Enable)
-      if grep -q "^probe_device=" "${settings}"; then
-        sed -i "s/^probe_device=.*/probe_device=yes/" "${settings}"
-      else
-        echo "probe_device=yes" >> "${settings}"
-      fi
-      ;;
-    Disable)
-      if grep -q "^probe_device=" "${settings}"; then
-        sed -i "s/^probe_device=.*/probe_device=no/" "${settings}"
-      else
-        echo "probe_device=no" >> "${settings}"
-      fi
-      ;;
+    Enable) _tapto settings PUT '{"probeDevice":true}' ;;
+    Disable) _tapto settings PUT '{"probeDevice":false}' ;;
   esac
 }
 
 _exitGameSetting() {
     local menuOptions selected
   menuOptions=(
-    "Enable"   "Return to menu core when the card is removed"   "off"
-    "Disable"  "Do not return to menu core when the card is removed"  "off"
+    "Insert"  "Return to menu core when the card is removed"        "off"
+    "Tap"     "Do not return to menu core when the card is removed" "off"
   )
 
-  [[ -f "${settings}" ]] || echo "[tapto]" > "${settings}" || { _error "Can't create settings file" ; return 1 ; }
-
-  # Check if probe_device is set to "no" in the settings
-  if grep -q "^exit_game=no" "${settings}"; then
-    # If exit_game is "no", set the corresponding radio button to "on"
-    menuOptions[5]="on" # Disable option is selected
+  if _tapto settings | jq -e '.exitGame' >/dev/null; then
+    menuOptions[2]="on"
   else
-    # If exit_game is not "no", set the corresponding radio button to "on"
-    menuOptions[2]="on" # Enable option is selected
+    menuOptions[5]="on"
   fi
 
   selected="$(_radiolist -- "${menuOptions[@]}" )"
   case "${selected}" in
-    Enable)
-      if grep -q "^exit_game=" "${settings}"; then
-        sed -i "s/^exit_game=.*/exit_game=yes/" "${settings}"
-      else
-        echo "exit_game=yes" >> "${settings}"
-      fi
-      ;;
-    Disable)
-      if grep -q "^exit_game=" "${settings}"; then
-        sed -i "s/^exit_game=.*/exit_game=no/" "${settings}"
-      else
-        echo "exit_game=no" >> "${settings}"
-      fi
-      ;;
+    Insert) _tapto settings PUT '{"exitGame":true}' ;;
+    Tap) _tapto settings PUT '{"exitGame":false}' ;;
   esac
 }
 
 _exitGameBlocklistSetting() {
-  local menuOptions selected customString
+  local menuOptions selected customString state
   menuOptions=(
     "Disable"   "All cores will exit when a card is removed"  "off"
     "Enable"    "Enter a custom list of core names"  "off"
   )
 
-  [[ -f "${settings}" ]] || echo "[tapto]" > "${settings}" || { _error "Can't create settings file" ; return 1 ; }
+  state="$(_tapto settings)"
 
-  if ! grep -q "^exit_game_blocklist=" "${settings}"; then
-    menuOptions[2]="on"
-  elif grep -q "^exit_game_blocklist=\"\"" "${settings}"; then
+  if [[ -z "$(jq -r '.exitGameBlocklist[]' <<< "${state}" )" ]]; then
     menuOptions[2]="on"
   else
     menuOptions[5]="on"
-  fi
-
-  if grep -q "^exit_game_blocklist=\"..*\"" "${settings}"; then
-    customString="$(grep "^exit_game_blocklist=" "${settings}" | cut -d '"' -f 2)"
+    customString="$(jq -r '.exitGameBlocklist | @csv' <<< "${state}")"
+    customString="${customString//\"}"
     menuOptions[4]="Enter a custom list of core names, current value: ${customString}"
   fi
 
   selected="$(_radiolist -- "${menuOptions[@]}" )"
   case "${selected}" in
-    Disable)
-      if grep -q "^exit_game_blocklist=" "${settings}"; then
-        sed -i "s/^exit_game_blocklist=.*/exit_game_blocklist=\"\"/" "${settings}"
-      else
-        echo "exit_game_blocklist=\"\"" >> "${settings}"
-      fi
-      ;;
+    Disable) _tapto settings PUT '{"exitGameBlocklist":[]}' ;;
     Enable)
-
       customString="$(_inputbox "Enter core list, comma separated (SNES, GENESIS)" "${customString}")"
-      if grep -q "^exit_game_blocklist=" "${settings}"; then
-        sed -i "s/^exit_game_blocklist=.*/exit_game_blocklist=\"${customString}\"/" "${settings}"
-      else
-        echo "exit_game_blocklist=\"${customString}\"" >> "${settings}"
-      fi
+      customString="\"${customString//,/\",\"}\""
+      _tapto settings PUT "{\"exitGameBlocklist\":[${customString}]}"
       ;;
   esac
 }
 
 _exitGameDelaySetting() {
-  local menuOptions selected customString delayInSeconds exitcode
+  local menuOptions selected customString delayInSeconds exitcode state
   menuOptions=(
     "Disable"   "Set the delay to 0"               "off"
     "Enable"    "Enter a custom delay in seconds"  "off"
   )
 
-  [[ -f "${settings}" ]] || echo "[tapto]" > "${settings}" || { _error "Can't create settings file" ; return 1 ; }
+  state="$(_tapto settings)"
 
-  if grep -q "^exit_game_delay=[1-9][0-9]*" "${settings}"; then
-    menuOptions[5]="on"
-  else 
+  if [[ "$(jq -r '.exitGameDelay' <<< "${state}" )" == 0 ]]; then
     menuOptions[2]="on"
-  fi
-
-  if grep -q "^exit_game_delay=.*" "${settings}"; then
-    customString="$(grep "^exit_game_delay=" "${settings}" | cut -d '=' -f 2)"
+  else 
+    menuOptions[5]="on"
+    customString="$(jq -r '.exitGameDelay' <<< "${state}")"
     menuOptions[4]="Change the delay in seconds, current value: ${customString}"
   fi
 
   selected="$(_radiolist -- "${menuOptions[@]}" )"
   case "${selected}" in
-    Disable)
-      if grep -q "^exit_game_delay=" "${settings}"; then
-        sed -i "s/^exit_game_delay=.*/exit_game_delay=0/" "${settings}"
-      else
-        echo 'exit_game_delay=0' >> "${settings}"
-      fi
-      ;;
+    Disable) _tapto settings PUT '{"exitGameDelay":0}' ;;
     Enable)
-
       while true; do
         delayInSeconds="$(_inputbox "Enter delay in seconds" "${customString}")"
         exitcode="${?}"; [[ "${exitcode}" -ge 1 ]] && { "${FUNCNAME[0]}" ; return ; }
         [[ "${delayInSeconds}" == +([0-9]*) ]] && break
         _error "${delayInSeconds} is not a positive number"
       done
-      if grep -q "^exit_game_delay=" "${settings}"; then
-        sed -i "s/^exit_game_delay=.*/exit_game_delay=${delayInSeconds}/" "${settings}"
-      else
-        echo "exit_game_delay=${delayInSeconds}" >> "${settings}"
-      fi
+      _tapto settings PUT "{\"exitGameDelay\":${delayInSeconds}" ;;
       ;;
   esac
 }
