@@ -343,6 +343,11 @@ func readerPollLoop(
 			mister.ExitGame()
 			currentlyLoadedCard = state.Token{}
 			continue
+		} else if mister.GetActiveCoreName() == mrextConfig.MenuCore {
+			// in case we are on the menu core we need to forget
+			// the currently loaded card
+			candidateForRemove = false
+			currentlyLoadedCard = state.Token{}
 		}
 
 		// if there is no card (newScanned.UID == "")
