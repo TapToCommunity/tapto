@@ -490,19 +490,22 @@ main() {
 }
 
 _Read() {
-  local nfcSCAN nfcUID nfcTXT mappedMatch message amiibo amiiboName amiiboGameSeries amiiboCharacter amiiboVariation amiiboType amiiboSeries nolabel
+  local nfcType nfcSCAN nfcUID nfcTXT mappedMatch message amiibo amiiboName amiiboGameSeries amiiboCharacter amiiboVariation amiiboType amiiboSeries nolabel
 
   nfcSCAN="$(_readTag)"
   exitcode="${?}"; [[ "${exitcode}" -ge 1 ]] && return "${exitcode}"
+  nfcType="$(jq -r '.type' <<< "${nfcSCAN}" )"
   nfcTXT="$(jq -r '.text' <<< "${nfcSCAN}" )"
+  nfcData="$(jq -r '.data' <<< "${nfcSCAN}" )"
   nfcUID="$(jq -r '.uid' <<< "${nfcSCAN}" )"
   read -rd '' message <<_EOF_
+${bold}Tag type:${unbold} ${nfcType}
 ${bold}Tag UID:${unbold} ${nfcUID}
 ${bold}Tag contents:${unbold}
 ${nfcTXT}
 _EOF_
-  if [[ "${nfcTXT}" == '**amiibo:'* ]]; then
-    amiibo="${nfcTXT#**amiibo:}"
+  if [[ "${nfcType}" == 'Amiibo' ]]; then
+    amiibo="${nfcData}"
     amiiboVariation="${amiibo:4:2}"
     [[ "${amiiboVariation}" == "ff" ]] && amiiboVariation="Skylander"
     amiibo="$(_amiibo | jq -r --arg head_val "${amiibo:0:-8}" --arg tail_val "${amiibo:8}" '.amiibo[] | select(.head == $head_val and .tail == $tail_val)')"
@@ -514,6 +517,7 @@ _EOF_
     amiiboSeries="$(jq -r '.amiiboSeries' <<< "${amiibo}")"
     unset message
     read -rd '' message <<_EOF_
+${bold}Tag type:${unbold} ${nfcType}
 ${bold}Tag UID:${unbold} ${nfcUID}
 ${bold}Amiibo:${unbold}
   ${bold}Name:${unbold}           ${amiiboName}
@@ -532,7 +536,7 @@ ${bold}Mapped match by UID:${unbold}
 ${mappedMatch}
 _EOF_
 
-  [[ -f "${map}" ]] && matchedEntry="$(_searchMatchText "${nfcTXT}")"
+  [[ -f "${map}" ]] && matchedEntry="$(_searchMatchText "${nfcTXT:-${nfcData}}")"
   [[ -n "${matchedEntry}" ]] && read -rd '' message <<_EOF_
 ${message}
 
@@ -548,7 +552,7 @@ _EOF_
   case "${?}" in
     1)
       # No button with "Re-Map" label
-      [[ -n "${amiibo}" ]] && nolabel="Amiibo"
+      [[ "${nfcType}" == "Amiibo" ]] && nolabel="Amiibo"
       if _yesno "Remap by" \
         --ok-label "UID" --yes-label "UID" \
         --no-label "${nolabel:=Match Text}" --cancel-label "${nolabel}"
@@ -557,10 +561,10 @@ _EOF_
         _writeTextToMap --uid "${nfcUID}" "$(_commandPalette)"
       else
         # No button (Label Match Text or Amiibo)
-        if [[ -z "${amiibo}" ]]; then
-          _writeTextToMap --matchText "${nfcTXT}" "$(_commandPalette)"
-        else
+        if [[ "${nfcType}" == "Amiibo" ]]; then
           _writeTextToMap --matchText "$(_amiiboRegex "${amiibo}")" "$(_commandPalette)"
+        else
+          _writeTextToMap --matchText "${nfcTXT}" "$(_commandPalette)"
         fi
       fi
       ;;
@@ -907,12 +911,8 @@ _soundSetting() {
 
   selected="$(_radiolist -- "${menuOptions[@]}" )"
   case "${selected}" in
-    Enable)
-      _tapto settings PUT '{"disableSounds":false}'
-      ;;
-    Disable)
-      _tapto settings PUT '{"disableSounds":true}'
-      ;;
+    Enable) _tapto settings PUT '{"disableSounds":false}' ;;
+    Disable) _tapto settings PUT '{"disableSounds":true}' ;;
   esac
 }
 
@@ -936,12 +936,8 @@ _connectionSetting() {
 
   selected="$(_radiolist -- "${menuOptions[@]}" )"
   case "${selected}" in
-    Default)
-      _tapto settings PUT '{"connectionString":""}'
-      ;;
-    PN532)
-      _tapto settings PUT '{"connectionString":"pn532_uart:/dev/ttyUSB0"}'
-      ;;
+    Default) _tapto settings PUT '{"connectionString":""}' ;;
+    PN532) _tapto settings PUT '{"connectionString":"pn532_uart:/dev/ttyUSB0"}' ;;
     Custom)
       customString="$(_inputbox "Enter connection string" "${customString}")"
       _tapto settings PUT "{\"connectionString\":\"${customString}\"}"
@@ -1045,7 +1041,7 @@ _exitGameDelaySetting() {
         [[ "${delayInSeconds}" == +([0-9]*) ]] && break
         _error "${delayInSeconds} is not a positive number"
       done
-      _tapto settings PUT "{\"exitGameDelay\":${delayInSeconds}" ;;
+      _tapto settings PUT "{\"exitGameDelay\":${delayInSeconds}"
       ;;
   esac
 }
@@ -1542,12 +1538,14 @@ _writeTextToMap() {
 # Returns: json object
 _readTag() {
   local lastScanTime currentScan currentScanTime scanSuccess
-  lastScanTime="$(_tapto status | jq -r '.lastToken.scanTime')"
+  lastScanTime="$(_tapto status | jq -r '.lastToken.scanTime' | date -f - +%s)"
   _infobox "Scan NFC Tag to continue...\n\nPress any key to go back"
   while true; do
     currentScan="$(_tapto status | jq -c '.activeToken')"
-    currentScanTime="$(jq -r '.scanTime' <<< "${currentScan}")"
-    [[ "${lastScanTime}" != "${currentScanTime}" ]] && { scanSuccess="true" ; break; }
+    currentScanTime="$( \
+      jq -r '.scanTime' <<< "${currentScan}" | \
+      date -f - +%s 2>/dev/null || echo 0)"
+    [[ "${currentScanTime}" -gt "${lastScanTime}" ]] && { scanSuccess="true" ; break; }
     sleep 1
     read -t 1 -n 1 -r  && return 1
   done
@@ -1567,6 +1565,7 @@ _readTag() {
 _searchMatchText() {
   local nfcTxt
   nfcTxt="${1}"
+  [[ -z "${nfcTxt}" ]] && return
 
   [[ -f "${map}" ]] || return
   [[ $(head -n 1 "${map}") == "${mapHeader}" ]] || return
@@ -1962,19 +1961,20 @@ _tapto() {
       Link) h+=("-H" "Link: ${2}"); shift 2 ;;
       status) url="status"; shift ;;
       launch) url="launch"; shift ;;
-      games) url="games"; shift ;;
+      games) url="games?system=${2}"; shift 2 ;;
       systems) url="systems"; shift ;;
       #mappings) url="mappings"; shift ;;
       history) url="history"; shift ;;
       settings) url="settings"; shift ;;
       log) url="settings/log/download"; shift ;;
       #index) url="settings/index/games"; shift ;;
-      readers) url="readers/0/write"; shift ;;
+      write) url="readers/0/write"; shift ;;
       *) d="${1}"; break ;;
     esac
   done
   [[ "${#h[@]}" -eq 0 ]] && h=("-H" "Content-Type: application/json")
   [[ "${#x[@]}" -eq 0 ]] && x=("-X" "GET")
+  [[ -z "${url}" ]] && url="status"
 
   curl -s "${x[@]}" "${h[@]}" -d "${d}" "${taptoAPI}/${url}"
 }
