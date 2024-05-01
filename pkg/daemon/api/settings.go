@@ -91,8 +91,8 @@ func handleSettingsUpdate(cfg *config.UserConfig, st *state.State) http.HandlerF
 
 		if req.AllowCommands != nil {
 			if !strings.HasPrefix(r.RemoteAddr, "127.0.0.1:") {
-				http.Error(w, "AllowCommands can only be changed from localhost", http.StatusForbidden)
-				log.Info().Str("remoteAddr", r.RemoteAddr).Bool("allowCommands", *req.AllowCommands).Msg("AllowCommands can only be changed from localhost")
+				http.Error(w, "allow_commands can only be changed from localhost", http.StatusForbidden)
+				log.Info().Str("remoteAddr", r.RemoteAddr).Bool("allowCommands", *req.AllowCommands).Msg("allow_commands can only be changed from localhost")
 			} else {
 				log.Info().Bool("allowCommands", *req.AllowCommands).Msg("updating allow commands")
 				cfg.SetAllowCommands(*req.AllowCommands)

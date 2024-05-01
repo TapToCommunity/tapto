@@ -135,10 +135,18 @@ func (s *State) IsLauncherDisabled() bool {
 	return s.disableLauncher
 }
 
-func (s *State) GetDB() (map[string]string, map[string]string) {
+type OldDb struct {
+	Uids  map[string]string
+	Texts map[string]string
+}
+
+func (s *State) GetDB() OldDb {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	return s.uidMap, s.textMap
+	return OldDb{
+		Uids:  s.uidMap,
+		Texts: s.textMap,
+	}
 }
 
 func (s *State) GetDBLoadTime() time.Time {

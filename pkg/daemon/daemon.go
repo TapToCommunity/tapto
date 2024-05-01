@@ -24,9 +24,9 @@ package daemon
 import (
 	"fmt"
 	"os"
+	"regexp"
 	"strings"
 	"time"
-	"regexp"
 
 	"golang.org/x/exp/slices"
 
@@ -65,6 +65,48 @@ func inExitGameBlocklist(cfg *config.UserConfig) bool {
 	return slices.Contains(blocklist, strings.ToLower(mister.GetActiveCoreName()))
 }
 
+func getMapping(db *database.Database, oldDb state.OldDb, token state.Token) (string, bool) {
+	// check nfc.csv uids
+	if v, ok := oldDb.Uids[token.UID]; ok {
+		log.Info().Msg("launching with csv uid match override")
+		return v, true
+	}
+
+	// check db uids
+	if v, err := db.GetUidMapping(token.UID); err == nil {
+		if err != nil {
+			log.Error().Err(err).Msgf("error getting db uid mapping")
+		} else if v != "" {
+			log.Info().Msg("launching with db uid match override")
+			return v, true
+		}
+	}
+
+	// check nfc.csv texts
+	for pattern, cmd := range oldDb.Texts {
+		// check if pattern is a regex
+		re, err := regexp.Compile(pattern)
+
+		// not a regex
+		if err != nil {
+			if pattern, ok := oldDb.Texts[token.Text]; ok {
+				log.Info().Msg("launching with csv text match override")
+				return pattern, true
+			}
+		}
+
+		// regex
+		if re.MatchString(token.Text) {
+			log.Info().Msg("launching with csv regex text match override")
+			return cmd, true
+		}
+	}
+
+	// TODO: db text mappings
+
+	return "", false
+}
+
 func launchToken(
 	cfg *config.UserConfig,
 	token state.Token,
@@ -72,48 +114,16 @@ func launchToken(
 	db *database.Database,
 	kbd input.Keyboard,
 ) error {
-	uidMap, textMap := state.GetDB()
-
 	text := token.Text
-	mapped := false
 
-	if v, ok := uidMap[token.UID]; ok {
-		log.Info().Msg("launching with csv uid match override")
-		text = v
-		mapped = true
-	}
-
-	if v, err := db.GetUidMapping(token.UID); err == nil {
-		if err != nil {
-			log.Error().Err(err).Msgf("error getting db uid mapping")
-		} else if v != "" {
-			log.Info().Msg("launching with db uid match override")
-			text = v
-			mapped = true
-		}
-	}
-
-		// Iterate over the textMap and check if token.Text matches any regex pattern
-	for pattern, cmd := range textMap {
-		 re, err := regexp.Compile(pattern)
-		 if err != nil {
-			 if pattern, ok := textMap[token.Text]; ok {
-			 	 log.Info().Msg("launching with csv text match override")
-			 	 text = pattern
-			 	 mapped = true
-				 break
-			 }
-		 }
-		 if re.MatchString(token.Text) {
-		 	 log.Info().Msg("launching with regex text match override")
-		 	 text = cmd
-		 	 mapped = true
-		 	 break // Exit loop once a match is found
-		 }
+	mappingText, mapped := getMapping(db, state.GetDB(), token)
+	if mapped {
+		log.Info().Msgf("found mapping: %s", mappingText)
+		text = mappingText
 	}
 
 	if text == "" {
-		return fmt.Errorf("no text NDEF found in card or database")
+		return fmt.Errorf("no text NDEF found in card or mappings")
 	}
 
 	log.Info().Msgf("launching with text: %s", text)
