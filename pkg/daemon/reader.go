@@ -95,7 +95,7 @@ func pollDevice(
 		Type:     record.Type,
 		UID:      cardUid,
 		Text:     tagText,
-		Data:     string(record.Bytes[:]),
+		Data:     hex.EncodeToString(record.Bytes),
 		ScanTime: time.Now(),
 	}
 
