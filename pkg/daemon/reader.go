@@ -61,7 +61,7 @@ func pollDevice(
 
 	log.Info().Msgf("found token UID: %s", cardUid)
 
-	var record []byte
+	var record tokens.TagData
 	cardType := tokens.GetCardType(target)
 
 	if cardType == tokens.TypeNTAG {
@@ -82,22 +82,20 @@ func pollDevice(
 		cardType = tokens.TypeMifare
 	}
 
-	log.Debug().Msgf("record bytes: %s", hex.EncodeToString(record))
-	tagText := tokens.ParseRecordText(record)
-	if len(record) == 8 {
-		tagText = "**amiibo:" + hex.EncodeToString(record)
+	log.Debug().Msgf("record bytes: %s", hex.EncodeToString(record.Bytes))
+	tagText := tokens.ParseRecordText(record.Bytes)
+
+	if tagText == "" {
+		log.Warn().Msg("no text NDEF found")
 	} else {
-		if tagText == "" {
-			log.Warn().Msg("no text NDEF found")
-		} else {
-			log.Info().Msgf("decoded text NDEF: %s", tagText)
-		}
+		log.Info().Msgf("decoded text NDEF: %s", tagText)
 	}
 
 	card := state.Token{
-		Type:     cardType,
+		Type:     record.Type,
 		UID:      cardUid,
 		Text:     tagText,
+		Data:     string(record.Bytes[:]),
 		ScanTime: time.Now(),
 	}
 

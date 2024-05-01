@@ -60,7 +60,6 @@ var commandMappings = map[string]func(*cmdEnv) error{
 	"input.coinp1": cmdCoinP1,
 	"input.coinp2": cmdCoinP2,
 
-	"amiibo":	 cmdAmiibo,	 // NOOP
 	"key":     cmdKey,     // DEPRECATED
 	"coinp1":  cmdCoinP1,  // DEPRECATED
 	"coinp2":  cmdCoinP2,  // DEPRECATED
@@ -243,11 +242,6 @@ func cmdDelay(env *cmdEnv) error {
 
 	time.Sleep(time.Duration(amount) * time.Millisecond)
 
-	return nil
-}
-
-// NOOP
-func cmdAmiibo(env *cmdEnv) error {
 	return nil
 }
 

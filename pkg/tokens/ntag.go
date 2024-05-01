@@ -21,8 +21,8 @@ along with TapTo.  If not, see <http://www.gnu.org/licenses/>.
 package tokens
 
 import (
-	"encoding/hex"
 	"bytes"
+	"encoding/hex"
 	"errors"
 	"fmt"
 
@@ -52,13 +52,13 @@ var LEGO_DIMENSIONS_MATCHER = []byte{
 
 // Can be identified by matching address 0x09-0x0F
 var AMIIBO_MATCHER = []byte{
-	      0x48, 0x0F, 0xE0,
+	0x48, 0x0F, 0xE0,
 	0xF1, 0x10, 0xFF, 0xEE}
 
-func ReadNtag(pnd nfc.Device) ([]byte, error) {
+func ReadNtag(pnd nfc.Device) (TagData, error) {
 	blockCount, err := getNtagBlockCount(pnd)
 	if err != nil {
-		return []byte{}, err
+		return TagData{}, err
 	}
 
 	log.Debug().Msgf("NTAG has %d blocks", blockCount)
@@ -69,7 +69,10 @@ func ReadNtag(pnd nfc.Device) ([]byte, error) {
 		amiibo, _ := comm(pnd, []byte{READ_COMMAND, byte(21)}, 16)
 		amiibo = amiibo[:8]
 		log.Info().Msg("Amiibo identifier:" + hex.EncodeToString(amiibo))
-		return amiibo, nil
+		return TagData{
+			Type:  TypeAmiibo,
+			Bytes: amiibo,
+		}, nil
 	}
 
 	allBlocks := make([]byte, 0)
@@ -78,12 +81,15 @@ func ReadNtag(pnd nfc.Device) ([]byte, error) {
 	for i := 0; i <= (blockCount / 4); i++ {
 		blocks, err := comm(pnd, []byte{READ_COMMAND, byte(currentBlock)}, 16)
 		if err != nil {
-			return nil, err
+			return TagData{}, err
 		}
 
 		if byte(currentBlock) == 0x04 && bytes.Equal(blocks[0:14], LEGO_DIMENSIONS_MATCHER) {
 			log.Info().Msg("found Lego Dimensions tag")
-			return []byte{}, nil
+			return TagData{
+				Type:  TypeLegoDimensions,
+				Bytes: []byte{},
+			}, nil
 		}
 
 		allBlocks = append(allBlocks, blocks...)
@@ -98,7 +104,10 @@ func ReadNtag(pnd nfc.Device) ([]byte, error) {
 		}
 	}
 
-	return allBlocks, nil
+	return TagData{
+		Type:  TypeNTAG,
+		Bytes: allBlocks,
+	}, nil
 }
 
 func WriteNtag(pnd nfc.Device, text string) ([]byte, error) {
