@@ -287,7 +287,7 @@ func main() {
 		// TODO: this is doubling up on the split logic in daemon
 		cmds := strings.Split(*launchOpt, "||")
 		for i, cmd := range cmds {
-			err := launcher.LaunchToken(cfg, true, kbd, cmd, len(cmds), i)
+			err, _ := launcher.LaunchToken(cfg, true, kbd, cmd, len(cmds), i)
 			if err != nil {
 				log.Error().Msgf("error launching token: %s", err)
 				fmt.Println("Error launching token:", err)

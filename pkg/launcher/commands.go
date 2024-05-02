@@ -26,6 +26,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -69,6 +70,8 @@ var commandMappings = map[string]func(*cmdEnv) error{
 	"system":  cmdSystem,  // DEPRECATED
 	"get":     cmdHttpGet, // DEPRECATED
 }
+
+var softwareChangeCommands = []string{"launch.system", "launch.random", "mister.core"}
 
 type cmdEnv struct {
 	args          string
@@ -328,6 +331,10 @@ func cmdLaunch(env *cmdEnv) error {
 	return fmt.Errorf("file not found: %s", env.args)
 }
 
+/**
+ * Will launch a command related to the token, and if it is a software that will
+ * change the currently loaded software will also return a boolean set to true
+ */
 func LaunchToken(
 	cfg *config.UserConfig,
 	manual bool,
@@ -335,13 +342,13 @@ func LaunchToken(
 	text string,
 	totalCommands int,
 	currentIndex int,
-) error {
+) (error, bool) {
 	// explicit commands must begin with **
 	if strings.HasPrefix(text, "**") {
 		text = strings.TrimPrefix(text, "**")
 		ps := strings.SplitN(text, ":", 2)
 		if len(ps) < 2 {
-			return fmt.Errorf("invalid command: %s", text)
+			return fmt.Errorf("invalid command: %s", text), false
 		}
 
 		cmd, args := strings.ToLower(strings.TrimSpace(ps[0])), strings.TrimSpace(ps[1])
@@ -357,9 +364,9 @@ func LaunchToken(
 		}
 
 		if f, ok := commandMappings[cmd]; ok {
-			return f(env)
+			return f(env), slices.Contains(softwareChangeCommands, cmd)
 		} else {
-			return fmt.Errorf("unknown command: %s", cmd)
+			return fmt.Errorf("unknown command: %s", cmd), false
 		}
 	}
 
@@ -372,5 +379,5 @@ func LaunchToken(
 		text:          text,
 		totalCommands: totalCommands,
 		currentIndex:  currentIndex,
-	})
+	}), true
 }

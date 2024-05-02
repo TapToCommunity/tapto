@@ -342,13 +342,18 @@ func readerPollLoop(
 			st.SetCardRemovalTime(time.Time{})
 			mister.ExitGame()
 			currentlyLoadedCard = state.Token{}
+			st.SetCurrentlyLoadedSoftware("")
 			continue
 		}
 
 		// if there is no card (newScanned.UID == "")
 		// if the card is the same as the one we have scanned before ( activeCard.UID == newScanned.UID)
 		// if the card is the same that has been loaded last time (newScanned.UID == currentlyLoadedCard.UID)
-		if newScanned.UID == "" || activeCard.UID == newScanned.UID || newScanned.UID == currentlyLoadedCard.UID {
+		// if the card has the same ID of the currently loaded software
+		if newScanned.UID == "" ||
+			activeCard.UID == newScanned.UID ||
+			newScanned.UID == currentlyLoadedCard.UID ||
+			st.GetCurrentlyLoadedSoftware() == newScanned.UID {
 			continue
 		}
 
