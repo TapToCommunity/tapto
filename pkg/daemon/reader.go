@@ -40,7 +40,9 @@ func pollDevice(
 		return activeCard, removed, err
 	}
 
-	log.Info().Msgf("debug count %d target %s err %s", count, target.String(), err)
+	if count > 1 {
+		log.Info().Msg("More than one card on the reader")
+	}
 
 	if count <= 0 {
 		if activeCard.UID != "" && time.Since(activeCard.ScanTime) > timeToForgetCard {
@@ -357,17 +359,19 @@ func readerPollLoop(
 			continue
 		}
 
-		// if the card has the same ID of the currently loaded software
-		if st.GetCurrentlyLoadedSoftware() == newScanned.UID {
-			// keeping a separate if to have specific logging
-			log.Info().Msgf("Token with UID %s has been skipped because is the currently loaded software", newScanned.UID)
-			continue
-		}
-
 		// should we play success if launcher is disabled?
 		mister.PlaySuccess(cfg)
 
 		if st.IsLauncherDisabled() {
+			continue
+		}
+
+		// if the card has the same ID of the currently loaded software
+		if st.GetCurrentlyLoadedSoftware() == newScanned.UID {
+			// keeping a separate if to have specific logging
+			log.Info().Msgf("Token with UID %s has been skipped because is the currently loaded software", newScanned.UID)
+			candidateForRemove = false
+			currentlyLoadedCard = newScanned
 			continue
 		}
 
