@@ -349,11 +349,16 @@ func readerPollLoop(
 		// if there is no card (newScanned.UID == "")
 		// if the card is the same as the one we have scanned before ( activeCard.UID == newScanned.UID)
 		// if the card is the same that has been loaded last time (newScanned.UID == currentlyLoadedCard.UID)
-		// if the card has the same ID of the currently loaded software
 		if newScanned.UID == "" ||
 			activeCard.UID == newScanned.UID ||
-			newScanned.UID == currentlyLoadedCard.UID ||
-			st.GetCurrentlyLoadedSoftware() == newScanned.UID {
+			newScanned.UID == currentlyLoadedCard.UID {
+			continue
+		}
+
+		// if the card has the same ID of the currently loaded software
+		if st.GetCurrentlyLoadedSoftware() == newScanned.UID {
+			// keeping a separate if to have specific logging
+			log.Info().Msgf("Token with UID %s has been skipped because is the currently loaded software", newScanned.UID)
 			continue
 		}
 
