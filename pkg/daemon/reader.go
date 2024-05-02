@@ -335,6 +335,8 @@ func readerPollLoop(
 			continue
 		}
 
+		// this will update the state for the activeCard
+		// the local variable activeCard is still the previous one and will be updated next loop
 		st.SetActiveCard(newScanned)
 
 		if shouldExit(candidateForRemove, cfg, st) {
