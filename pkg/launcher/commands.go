@@ -26,10 +26,11 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"slices"
 	"strconv"
 	"strings"
 	"time"
+
+	"golang.org/x/exp/slices"
 
 	"github.com/rs/zerolog/log"
 	"github.com/wizzomafizzo/mrext/pkg/input"

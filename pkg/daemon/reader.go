@@ -40,6 +40,8 @@ func pollDevice(
 		return activeCard, removed, err
 	}
 
+	log.Info().Msgf("debug count %d target %s err %s", count, target.String(), err)
+
 	if count <= 0 {
 		if activeCard.UID != "" && time.Since(activeCard.ScanTime) > timeToForgetCard {
 			log.Info().Msg("card removed")
