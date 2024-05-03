@@ -67,108 +67,6 @@ cmdPalette=(
   "delay"          "Delay next command by specified milliseconds"
   "shell"          "Run Linux command"
 )
-consoles=(
-  "AdventureVision"   "Adventure Vision"
-  "Amiga"             "Amiga"
-  "Amstrad"           "Amstrad CPC"
-  "AmstradPCW"        "Amstrad PCW"
-  "Apogee"            "Apogee BK-01"
-  "AppleI"            "Apple I"
-  "AppleII"           "Apple IIe"
-  "Arcade"            "Arcade"
-  "Arcadia"           "Arcadia 2001"
-  "Arduboy"           "Arduboy"
-  "Atari2600"         "Atari 2600"
-  "Atari5200"         "Atari 5200"
-  "Atari7800"         "Atari 7800"
-  "Atari800"          "Atari 800XL"
-  "AtariLynx"         "Atari Lynx"
-  "AcornAtom"         "Atom"
-  "BBCMicro"          "BBC Micro/Master"
-  "BK0011M"           "BK0011M"
-  "Astrocade"         "Bally Astrocade"
-  "Chip8"             "Chip-8"
-  "CasioPV1000"       "Casio PV-1000"
-  "CasioPV2000"       "Casio PV-2000"
-  "ChannelF"          "Channel F"
-  "ColecoVision"      "ColecoVision"
-  "C64"               "Commodore 64"
-  "PET2001"           "Commodore PET 2001"
-  "VIC20"             "Commodore VIC-20"
-  "EDSAC"             "EDSAC"
-  "AcornElectron"     "Electron"
-  "FDS"               "Famicom Disk System"
-  "Galaksija"         "Galaksija"
-  "Gamate"            "Gamate"
-  "GameNWatch"        "Game & Watch"
-  "GameGear"          "Game Gear"
-  "Gameboy"           "Gameboy"
-  "Gameboy2P"         "Gameboy (2 Player)"
-  "GBA"               "Gameboy Advance"
-  "GBA2P"             "Gameboy Advance (2 Player)"
-  "GameboyColor"      "Gameboy Color"
-  "Genesis"           "Genesis"
-  "Sega32X"           "Genesis 32X"
-  "Intellivision"     "Intellivision"
-  "Interact"          "Interact"
-  "Jupiter"           "Jupiter Ace"
-  "Laser"             "Laser 350/500/700"
-  "Lynx48"            "Lynx 48/96K"
-  "SordM5"            "M5"
-  "MSX"               "MSX"
-  "MacPlus"           "Macintosh Plus"
-  "Odyssey2"          "Magnavox Odyssey2"
-  "MasterSystem"      "Master System"
-  "Aquarius"          "Mattel Aquarius"
-  "MegaDuck"          "Mega Duck"
-  "MultiComp"         "MultiComp"
-  "NES"               "NES"
-  "NESMusic"          "NESMusic"
-  "NeoGeo"            "Neo Geo/Neo Geo CD"
-  "Nintendo64"        "Nintendo 64"
-  "Orao"              "Orao"
-  "Oric"              "Oric"
-  "ao486"             "PC (486SX)"
-  "PCXT"              "PC/XT"
-  "PDP1"              "PDP-1"
-  "PMD85"             "PMD 85-2A"
-  "PSX"               "Playstation"
-  "PocketChallengeV2" "Pocket Challenge V2"
-  "PokemonMini"       "Pokemon Mini"
-  "RX78"              "RX-78 Gundam"
-  "SAMCoupe"          "SAM Coupe"
-  "SG1000"            "SG-1000"
-  "SNES"              "SNES"
-  "SNESMusic"         "SNES Music"
-  "SVI328"            "SV-328"
-  "Saturn"            "Saturn"
-  "MegaCD"            "Sega CD"
-  "QL"                "Sinclair QL"
-  "Specialist"        "Specialist/MX"
-  "SuperGameboy"      "Super Gameboy"
-  "SuperGrafx"        "SuperGrafx"
-  "SuperVision"       "SuperVision"
-  "TI994A"            "TI-99/4A"
-  "TRS80"             "TRS-80"
-  "CoCo2"             "TRS-80 CoCo 2"
-  "ZX81"              "TS-1500"
-  "TSConf"            "TS-Config"
-  "AliceMC10"         "Tandy MC-10"
-  "TatungEinstein"    "Tatung Einstein"
-  "TurboGrafx16"      "TurboGrafx-16"
-  "TurboGrafx16CD"    "TurboGrafx-16 CD"
-  "TomyTutor"         "Tutor"
-  "UK101"             "UK101"
-  "VC4000"            "VC4000"
-  "CreatiVision"      "VTech CreatiVision"
-  "Vector06C"         "Vector-06C"
-  "Vectrex"           "Vectrex"
-  "WonderSwan"        "WonderSwan"
-  "WonderSwanColor"   "WonderSwan Color"
-  "X68000"            "X68000"
-  "ZXSpectrum"        "ZX Spectrum"
-  "ZXNext"            "ZX Spectrum Next"
-)
 
 nfcjokes=(
 "Why did the NFC tag break up with the Wi-Fi router?
@@ -684,7 +582,8 @@ _commandPalette() {
 # Build a command using a command palette
 # Usage: _craftCommand
 _craftCommand(){
-  local command selected console recursion ms bulletList contentType tempFile postData
+  local command selected system systems recursion ms bulletList contentType tempFile postData categories category
+  readarray -t categories < <(_tapto systems | jq -r '.systems[] | .category' | sort -u | sed 's/.*/&\nCategory/')
   command="**"
   selected="$(_menu \
     --cancel-label "Back" \
@@ -696,35 +595,47 @@ _craftCommand(){
 
   case "${selected}" in
     launch.system)
-      console="$(_menu \
+      category="$(_menu \
         --backtitle "${title}" \
-        -- "${consoles[@]}" )"
+        -- "${categories[@]}" )"
+      readarray -t systems < <(_tapto systems | jq -r  ".systems[] | select(.category == \"${category}\") | .id + \"\n\" + .name")
+      system="$(_menu \
+        --backtitle "${title}" \
+        -- "${systems[@]}" )"
       exitcode="${?}"; [[ "${exitcode}" -ge 1 ]] && { "${FUNCNAME[0]}" ; return ; }
-      command="${command}:${console}"
+      command="${command}:${system}"
       ;;
     launch.random)
-      console="$(_menu \
+      category="$(_menu \
         --backtitle "${title}" \
-        -- "${consoles[@]}" )"
+        -- "${categories[@]}" )"
+      readarray -t systems < <(_tapto systems | jq -r  ".systems[] | select(.category == \"${category}\") | .id + \"\n\" + .name")
+      system="$(_menu \
+        --backtitle "${title}" \
+        -- "${systems[@]}" )"
       exitcode="${?}"; [[ "${exitcode}" -ge 1 ]] && { "${FUNCNAME[0]}" ; return ; }
       while true; do
         read -rd '' message <<_EOF_
 Would you like to add more systems to the NFC tag?
 
 Current random systems:
-$(IFS=',' read -ra bulletList <<< "${console}"; printf "* %s\n" "${bulletList[@]}")
+$(IFS=',' read -ra bulletList <<< "${system}"; printf "* %s\n" "${bulletList[@]}")
 _EOF_
-        _yesno "${message}" || break
-        console="${console},$(msg="${console}" _menu \
+        _yesno "${message}" --no-label "Done" --cancel-label "Done" || break
+        category="$(_menu \
           --backtitle "${title}" \
-          -- "${consoles[@]}" )"
+          -- "${categories[@]}" )"
+        readarray -t systems < <(_tapto systems | jq -r  ".systems[] | select(.category == \"${category}\") | .id + \"\n\" + .name")
+        system="${system},$(msg="${system}" _menu \
+          --backtitle "${title}" \
+          -- "${systems[@]}" )"
         exitcode="${?}"
-        console="$(tr ',' '\n' <<< "${console}" | sort -u | tr '\n' ',')"
-        console="${console#,}"
-        console="${console%,}"
+        system="$(tr ',' '\n' <<< "${system}" | sort -u | tr '\n' ',')"
+        system="${system#,}"
+        system="${system%,}"
         [[ "${exitcode}" -ge 1 ]] && break
       done
-      command="${command}:${console}"
+      command="${command}:${system}"
       ;;
     mister.ini)
       ini="$(_radiolist -- \
