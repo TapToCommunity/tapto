@@ -160,8 +160,10 @@ func processLaunchQueue(
 
 			he := database.HistoryEntry{
 				Time: t.ScanTime,
+				Type: t.Type,
 				UID:  t.UID,
 				Text: t.Text,
+				Data: t.Data,
 			}
 
 			if st.IsLauncherDisabled() {

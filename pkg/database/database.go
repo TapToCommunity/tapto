@@ -70,8 +70,10 @@ func (d *Database) Close() error {
 // TODO: metadata
 type HistoryEntry struct {
 	Time    time.Time `json:"time"`
+	Type    string    `json:"type"`
 	UID     string    `json:"uid"`
 	Text    string    `json:"text"`
+	Data    string    `json:"data"`
 	Success bool      `json:"success"`
 }
 
@@ -127,6 +129,7 @@ func (d *Database) GetHistory() ([]HistoryEntry, error) {
 const (
 	MappingTypeUID  = "uid"
 	MappingTypeText = "text"
+	MappingTypeData = "data"
 )
 
 func MappingsKey(mt, arg string) string {
@@ -160,11 +163,37 @@ func (d *Database) AddTextMapping(orig, mapping string) error {
 	})
 }
 
+func (d *Database) AddDataMapping(orig, mapping string) error {
+	return d.bdb.Update(func(txn *bolt.Tx) error {
+		b := txn.Bucket([]byte(BucketMappings))
+		return b.Put([]byte(MappingsKey(
+			MappingTypeData,
+			orig,
+		)), []byte(mapping))
+	})
+}
+
 func (d *Database) GetUidMapping(orig string) (string, error) {
 	var mapping string
 	err := d.bdb.View(func(txn *bolt.Tx) error {
 		b := txn.Bucket([]byte(BucketMappings))
 		v := b.Get([]byte(MappingsKey(MappingTypeUID, normalUid(orig))))
+		if v == nil {
+			return nil
+		}
+
+		mapping = string(v)
+		return nil
+	})
+
+	return mapping, err
+}
+
+func (d *Database) GetDataMapping(orig string) (string, error) {
+	var mapping string
+	err := d.bdb.View(func(txn *bolt.Tx) error {
+		b := txn.Bucket([]byte(BucketMappings))
+		v := b.Get([]byte(MappingsKey(MappingTypeData, normalUid(orig))))
 		if v == nil {
 			return nil
 		}
@@ -195,6 +224,7 @@ func (d *Database) GetTextMapping(orig string) (string, error) {
 type Mappings struct {
 	Uids  map[string]string
 	Texts map[string]string
+	Data  map[string]string
 }
 
 func (d *Database) GetMappings() (Mappings, error) {
@@ -204,6 +234,7 @@ func (d *Database) GetMappings() (Mappings, error) {
 
 		mappings.Uids = make(map[string]string)
 		mappings.Texts = make(map[string]string)
+		mappings.Data = make(map[string]string)
 
 		c := b.Cursor()
 		for k, v := c.First(); k != nil; k, v = c.Next() {
@@ -217,6 +248,8 @@ func (d *Database) GetMappings() (Mappings, error) {
 
 			if parts[0] == MappingTypeUID {
 				mappings.Uids[parts[1]] = val
+			} else if parts[0] == MappingTypeData {
+				mappings.Data[parts[1]] = val
 			} else if parts[0] == MappingTypeText {
 				mappings.Texts[parts[1]] = val
 			}
