@@ -1159,6 +1159,62 @@ _gameLocation() {
   esac
 }
 
+# Browse games using _taptui REST API
+# Usage: _gameBrowser
+# Returns: path to selected game
+_gameBrowser() {
+  local categories category systems system tempFile
+  currentDir=""
+
+  relativeComponents=(
+    ".." "Up one directory"
+  )
+  readarray -t categories < <(_tapto systems | jq -r '.systems[] | .category' | sort -u | sed 's/.*/&\nCategory/')
+  category="$(_menu  --backtitle "${title}"  -- "${categories[@]}" )"
+  readarray -t systems < <(_tapto systems | jq -r  ".systems[] | select(.category == \"${category}\") | .id + \"\n\" + .name")
+  system="$(_menu  --backtitle "${title}"  -- "${systems[@]}" )"
+  tmpFile="$(mktemp)"
+  trap 'rm "${tmpFile}"; _exit' SIGINT # Trap Ctrl+C (SIGINT) to clean up tmp file
+  _infobox "Loading."
+  _tapto games "${system}" | jq -r .results[].path > "${tmpFile}"
+  while true; do
+
+    readarray -t currentDirDirs <<< "$( \
+      grep -o "^${currentDir}[^/]*/" "${tmpFile}" | sort -u |
+      while read -r line; do
+        echo -e "${line#"$currentDir"}\nDirectory"
+      done )"
+    [[ "${#currentDirDirs[@]}" -le "1" ]] && unset currentDirDirs
+
+    readarray -t currentDirFiles <<< "$( \
+      grep -x "^${currentDir}[^/]*$" "${tmpFile}" |
+      while read -r line; do
+        echo -e "${line#"$currentDir"}\nFile"
+      done )"
+    [[ "${#currentDirFiles[@]}" -le "1" ]] && unset currentDirFiles
+
+    selected="$(msg="${currentDir}" _menu --backtitle "${title}" \
+      --title "${system}" -- "${relativeComponents[@]}" "${currentDirDirs[@]}" "${currentDirFiles[@]}")"
+    exitcode="${?}"; [[ "${exitcode}" -ge 1 ]] && { rm "${tmpFile}" ; return "${exitcode}" ; }
+
+    case "${selected,,}" in
+    "..")
+      [[ -z "${currentDir}" ]] && break
+      [[ "${currentDir%/}" != *"/"* ]] && currentDir=""
+      [[ -n "${currentDir}" ]] && currentDir="${currentDir%/*/}/"
+      ;;
+    */)
+      currentDir="${currentDir}${selected}"
+      ;;
+    *)
+      echo "${currentDir}${selected}"
+      break
+      ;;
+    esac
+  done
+  rm "${tmpFile}"
+}
+
 # Map or remap filepath or command for a given NFC tag (written to local database)
 # Usage: _map "UID" "Match Text" "Text"
 # Values may be empty
@@ -1856,6 +1912,12 @@ _error() {
   return "${answer}"
 }
 
+# Tapto REST API handler
+# Usage: _tapto [METHOD] [OPTIONS] [DATA]
+# - METHOD: HTTP method (POST, PUT, DELETE, GET, OPTIONS)
+# - OPTIONS: Additional headers such as Content-Type, Accept, Authorization, Link
+# - DATA: Data to be sent with the request
+# Returns the response from the Tapto REST API
 _tapto() {
   local x h d url
 
@@ -1878,8 +1940,8 @@ _tapto() {
       history) url="history"; shift ;;
       settings) url="settings"; shift ;;
       log) url="settings/log/download"; shift ;;
-      #index) url="settings/index/games"; shift ;;
-      write) url="readers/0/write"; shift ;;
+      index) url="settings/index/games" x=("-X" "POST"); shift ;;
+      write) url="readers/0/write" x=("-X" "POST"); shift ;;
       *) d="${1}"; break ;;
     esac
   done
