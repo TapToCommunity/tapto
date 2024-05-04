@@ -40,6 +40,8 @@ if taptoStatus="$(curl -s "${taptoAPI}/status")"; then
   nfcStatus="true"
   msg="Service: Enabled"
   nfcReadingStatus="$(jq -r '.launching' <<< "${taptoStatus}")"
+  nfcReader="$(jq -r '.reader' <<< "${taptoStatus}")"
+  jq -e '.connected' <<< "${nfcReader}" >/dev/null && msg="${msg} | Connected Reader: $( jq -r '.type' <<< "${nfcReader}")"
   # Disable reading for the duration of the script
   # we trap the EXIT signal and execute the _exit() function to turn it on again
   curl -s -X Put -H "Content-Type: application/json" -d '{"launching:false}' "${taptoAPI}/status"
