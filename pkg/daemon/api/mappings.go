@@ -12,6 +12,7 @@ import (
 type MappingsResponse struct {
 	Uids  map[string]string `json:"uids"`
 	Texts map[string]string `json:"texts"`
+	Data map[string]string `json:"data"`
 }
 
 func (mr *MappingsResponse) Render(w http.ResponseWriter, r *http.Request) error {
@@ -25,6 +26,7 @@ func handleMappings(db *database.Database) http.HandlerFunc {
 		resp := MappingsResponse{
 			Uids:  make(map[string]string),
 			Texts: make(map[string]string),
+			Data:  make(map[string]string),
 		}
 
 		mappings, err := db.GetMappings()
@@ -36,6 +38,7 @@ func handleMappings(db *database.Database) http.HandlerFunc {
 
 		resp.Uids = mappings.Uids
 		resp.Texts = mappings.Texts
+		resp.Data = mappings.Data
 
 		err = render.Render(w, r, &resp)
 		if err != nil {
@@ -50,6 +53,7 @@ type AddMappingRequest struct {
 	Type  string `json:"type"`
 	Match string `json:"match"`
 	Text  string `json:"text"`
+	Data  string `json:"data"`
 }
 
 func (amr *AddMappingRequest) Bind(r *http.Request) error {
@@ -57,7 +61,7 @@ func (amr *AddMappingRequest) Bind(r *http.Request) error {
 		return errors.New("missing type")
 	}
 
-	if amr.Type != database.MappingTypeUID && amr.Type != database.MappingTypeText {
+	if amr.Type != database.MappingTypeUID && amr.Type != database.MappingTypeText && amr.Type != database.MappingTypeData {
 		return errors.New("invalid type: " + amr.Type)
 	}
 
@@ -67,6 +71,10 @@ func (amr *AddMappingRequest) Bind(r *http.Request) error {
 
 	if amr.Text == "" {
 		return errors.New("missing text")
+	}
+
+	if amr.Data == "" {
+		return errors.New("missing data")
 	}
 
 	return nil
@@ -88,6 +96,8 @@ func handleAddMapping(db *database.Database) http.HandlerFunc {
 			err = db.AddUidMapping(req.Match, req.Text)
 		} else if req.Type == database.MappingTypeText {
 			err = db.AddTextMapping(req.Match, req.Text)
+		} else if req.Type == database.MappingTypeData {
+			err = db.AddDataMapping(req.Match, req.Data)
 		} else {
 			http.Error(w, "invalid mapping type", http.StatusBadRequest)
 			return
