@@ -220,14 +220,14 @@ func StartDaemon(cfg *config.UserConfig) (func() error, error) {
 		return nil, err
 	}
 
-	uids, texts, err := launcher.LoadMappings()
+	uids, texts, err := launcher.LoadCsvMappings()
 	if err != nil {
 		log.Error().Msgf("error loading mappings: %s", err)
 	} else {
 		st.SetDB(uids, texts)
 	}
 
-	closeMappingsWatcher, err := launcher.StartMappingsWatcher(
+	closeMappingsWatcher, err := launcher.StartCsvMappingsWatcher(
 		st.GetDBLoadTime,
 		st.SetDB,
 	)
