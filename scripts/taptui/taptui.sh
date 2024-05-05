@@ -1915,9 +1915,10 @@ _error() {
 }
 
 # Tapto REST API handler
-# Usage: _tapto [METHOD] [OPTIONS] [DATA]
+# Usage: _tapto [METHOD] [OPTIONS] [ENDPOINT] [DATA]
 # - METHOD: HTTP method (POST, PUT, DELETE, GET, OPTIONS)
 # - OPTIONS: Additional headers such as Content-Type, Accept, Authorization, Link
+# - ENDPOINT: API endpoints such as, status, launch, games, systems, mappings, etc
 # - DATA: Data to be sent with the request
 # Returns the response from the Tapto REST API
 _tapto() {
@@ -1930,15 +1931,20 @@ _tapto() {
       DELETE) x=("-X" "DELETE"); shift ;;
       GET) x=("-X" "GET"); shift ;;
       OPTIONS) x=("-X" "OPTIONS"); shift ;;
-      Content-Type) h+=("-H" "Content-Type: ${2}"); shift 2 ;;
+      "Content-Type") h+=("-H" "Content-Type: ${2}"); shift 2 ;;
       Accept) h+=("-H" "Accept: ${2}"); shift 2 ;;
       Authorization) h+=("-H" "Authorization: ${2}"); shift 2 ;;
       Link) h+=("-H" "Link: ${2}"); shift 2 ;;
       status) url="status"; shift ;;
       launch) url="launch"; shift ;;
-      games) url="games?system=${2}"; shift 2 ;;
+      games)
+        url="games?system=${2}"
+        shift 2
+        [[ "${1}" =~ ^(query|maxResults)=.* ]] && url="${url}&${1%%&*}"; shift
+        [[ "${1}" =~ ^(query|maxResults)=.* ]] && url="${url}&${1%%&*}"; shift
+        ;;
       systems) url="systems"; shift ;;
-      #mappings) url="mappings"; shift ;;
+      mappings) url="mappings"; shift ;;
       history) url="history"; shift ;;
       settings) url="settings"; shift ;;
       log) url="settings/log/download"; shift ;;
@@ -1951,7 +1957,11 @@ _tapto() {
   [[ "${#x[@]}" -eq 0 ]] && x=("-X" "GET")
   [[ -z "${url}" ]] && url="status"
 
-  curl -s "${x[@]}" "${h[@]}" -d "${d}" "${taptoAPI}/${url}"
+  if [[ -t 1 ]]; then
+    curl -s "${x[@]}" "${h[@]}" -d "${d}" "${taptoAPI}/${url}" | jq --color-output | less -R -X -F
+  else
+    curl -s "${x[@]}" "${h[@]}" -d "${d}" "${taptoAPI}/${url}"
+  fi
 }
 
 _exit() {
