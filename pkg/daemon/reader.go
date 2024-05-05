@@ -335,6 +335,8 @@ func readerPollLoop(
 			continue
 		}
 
+		// this will update the state for the activeCard
+		// the local variable activeCard is still the previous one and will be updated next loop
 		st.SetActiveCard(newScanned)
 
 		if shouldExit(candidateForRemove, cfg, st) {
@@ -343,6 +345,11 @@ func readerPollLoop(
 			mister.ExitGame()
 			currentlyLoadedCard = state.Token{}
 			continue
+		} else if mister.GetActiveCoreName() == mrextConfig.MenuCore {
+			// in case we are on the menu core we need to forget
+			// the currently loaded card
+			candidateForRemove = false
+			currentlyLoadedCard = state.Token{}
 		}
 
 		// if there is no card (newScanned.UID == "")
