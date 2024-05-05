@@ -3,6 +3,7 @@ package api
 import (
 	"net/http"
 	"sync"
+	"strconv"
 
 	"github.com/go-chi/render"
 	"github.com/rs/zerolog/log"
@@ -12,7 +13,7 @@ import (
 	"github.com/wizzomafizzo/tapto/pkg/platforms/mister"
 )
 
-const maxResults = 250
+const defaultMaxResults = 250
 
 type Index struct {
 	mu          sync.Mutex
@@ -125,6 +126,17 @@ func handleGames(cfg *config.UserConfig) http.HandlerFunc {
 
 		query := r.URL.Query().Get("query")
 		system := r.URL.Query().Get("system")
+		maxResultsStr := r.URL.Query().Get("maxResults")
+
+		maxResults := defaultMaxResults
+		if maxResultsStr != "" {
+			parsedMaxResults, err := strconv.Atoi(maxResultsStr)
+			if err != nil {
+				http.Error(w, "Invalid maxResults value", http.StatusBadRequest)
+				return
+			}
+			maxResults = parsedMaxResults
+		}
 
 		if query == "" && system == "" {
 			http.Error(w, "query or system required", http.StatusBadRequest)
@@ -172,7 +184,8 @@ func handleGames(cfg *config.UserConfig) http.HandlerFunc {
 
 		total := len(results)
 
-		if len(results) > maxResults {
+		if maxResults == 0 {
+		} else if len(results) > maxResults {
 			results = results[:maxResults]
 		}
 
