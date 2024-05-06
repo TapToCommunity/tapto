@@ -148,6 +148,8 @@ func RunApiServer(
 
 		r.Get("/mappings", handleMappings(db))
 		r.Post("/mappings", handleAddMapping(db))
+		r.Delete("/mappings/{id}", handleDeleteMapping(db))
+		r.Put("/mappings/{id}", handleUpdateMapping(db))
 
 		r.Get("/history", handleHistory(db))
 

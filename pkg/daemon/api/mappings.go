@@ -3,19 +3,26 @@ package api
 import (
 	"errors"
 	"net/http"
+	"regexp"
+	"time"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
 	"github.com/rs/zerolog/log"
 	"github.com/wizzomafizzo/tapto/pkg/database"
+	"github.com/wizzomafizzo/tapto/pkg/utils"
 )
 
-type MappingsResponse struct {
-	Uids  map[string]string `json:"uids"`
-	Texts map[string]string `json:"texts"`
-	Data map[string]string `json:"data"`
+type MappingResponse struct {
+	database.Mapping
+	Added string `json:"added"`
 }
 
-func (mr *MappingsResponse) Render(w http.ResponseWriter, r *http.Request) error {
+type AllMappingsResponse struct {
+	Mappings []MappingResponse `json:"mappings"`
+}
+
+func (amr *AllMappingsResponse) Render(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
@@ -23,22 +30,31 @@ func handleMappings(db *database.Database) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		log.Info().Msg("received mappings request")
 
-		resp := MappingsResponse{
-			Uids:  make(map[string]string),
-			Texts: make(map[string]string),
-			Data:  make(map[string]string),
+		resp := AllMappingsResponse{
+			Mappings: make([]MappingResponse, 0),
 		}
 
-		mappings, err := db.GetMappings()
+		mappings, err := db.GetAllMappings()
 		if err != nil {
 			log.Error().Err(err).Msg("error getting mappings")
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
-		resp.Uids = mappings.Uids
-		resp.Texts = mappings.Texts
-		resp.Data = mappings.Data
+		mrs := make([]MappingResponse, 0)
+
+		for _, m := range mappings {
+			t := time.Unix(0, m.Added*int64(time.Millisecond))
+
+			mr := MappingResponse{
+				Mapping: m,
+				Added:   t.Format(time.RFC3339),
+			}
+
+			mrs = append(mrs, mr)
+		}
+
+		resp.Mappings = mrs
 
 		err = render.Render(w, r, &resp)
 		if err != nil {
@@ -50,31 +66,32 @@ func handleMappings(db *database.Database) http.HandlerFunc {
 }
 
 type AddMappingRequest struct {
-	Type  string `json:"type"`
-	Match string `json:"match"`
-	Text  string `json:"text"`
-	Data  string `json:"data"`
+	Label    string `json:"label"`
+	Enabled  bool   `json:"enabled"`
+	Type     string `json:"type"`
+	Match    string `json:"match"`
+	Pattern  string `json:"pattern"`
+	Override string `json:"override"`
 }
 
 func (amr *AddMappingRequest) Bind(r *http.Request) error {
-	if amr.Type == "" {
-		return errors.New("missing type")
+	if !utils.Contains(database.AllowedMappingTypes, amr.Type) {
+		return errors.New("invalid type")
 	}
 
-	if amr.Type != database.MappingTypeUID && amr.Type != database.MappingTypeText && amr.Type != database.MappingTypeData {
-		return errors.New("invalid type: " + amr.Type)
+	if !utils.Contains(database.AllowedMatchTypes, amr.Match) {
+		return errors.New("invalid match")
 	}
 
-	if amr.Match == "" {
-		return errors.New("missing match")
+	if amr.Pattern == "" {
+		return errors.New("missing pattern")
 	}
 
-	if amr.Text == "" {
-		return errors.New("missing text")
-	}
-
-	if amr.Data == "" {
-		return errors.New("missing data")
+	if amr.Match == database.MatchTypeRegex {
+		_, err := regexp.Compile(amr.Pattern)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -92,17 +109,16 @@ func handleAddMapping(db *database.Database) http.HandlerFunc {
 			return
 		}
 
-		if req.Type == database.MappingTypeUID {
-			err = db.AddUidMapping(req.Match, req.Text)
-		} else if req.Type == database.MappingTypeText {
-			err = db.AddTextMapping(req.Match, req.Text)
-		} else if req.Type == database.MappingTypeData {
-			err = db.AddDataMapping(req.Match, req.Data)
-		} else {
-			http.Error(w, "invalid mapping type", http.StatusBadRequest)
-			return
+		m := database.Mapping{
+			Label:    req.Label,
+			Enabled:  req.Enabled,
+			Type:     req.Type,
+			Match:    req.Match,
+			Pattern:  req.Pattern,
+			Override: req.Override,
 		}
 
+		err = db.AddMapping(m)
 		if err != nil {
 			log.Error().Err(err).Msg("error adding mapping")
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -110,5 +126,129 @@ func handleAddMapping(db *database.Database) http.HandlerFunc {
 		}
 
 		w.WriteHeader(http.StatusCreated)
+	}
+}
+
+func handleDeleteMapping(db *database.Database) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		log.Info().Msg("received delete mapping request")
+
+		id := chi.URLParam(r, "id")
+		if id == "" {
+			http.Error(w, "missing id", http.StatusBadRequest)
+			return
+		}
+
+		err := db.DeleteMapping(id)
+		if err != nil {
+			log.Error().Err(err).Msg("error deleting mapping")
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		w.WriteHeader(http.StatusOK)
+	}
+}
+
+type UpdateMappingRequest struct {
+	Label    *string `json:"label"`
+	Enabled  *bool   `json:"enabled"`
+	Type     *string `json:"type"`
+	Match    *string `json:"match"`
+	Pattern  *string `json:"pattern"`
+	Override *string `json:"override"`
+}
+
+func (umr *UpdateMappingRequest) Bind(r *http.Request) error {
+	if umr.Label == nil && umr.Enabled == nil && umr.Type == nil && umr.Match == nil && umr.Pattern == nil && umr.Override == nil {
+		return errors.New("missing fields")
+	}
+
+	if umr.Type != nil && !utils.Contains(database.AllowedMappingTypes, *umr.Type) {
+		return errors.New("invalid type")
+	}
+
+	if umr.Match != nil && !utils.Contains(database.AllowedMatchTypes, *umr.Match) {
+		return errors.New("invalid match")
+	}
+
+	if umr.Pattern != nil && *umr.Pattern == "" {
+		return errors.New("missing pattern")
+	}
+
+	if umr.Match != nil && *umr.Match == database.MatchTypeRegex {
+		_, err := regexp.Compile(*umr.Pattern)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func handleUpdateMapping(db *database.Database) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		log.Info().Msg("received update mapping request")
+
+		id := chi.URLParam(r, "id")
+		if id == "" {
+			http.Error(w, "missing id", http.StatusBadRequest)
+			return
+		}
+
+		var req UpdateMappingRequest
+		err := render.Bind(r, &req)
+		if err != nil {
+			log.Error().Err(err).Msg("error decoding request")
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		oldMapping, err := db.GetMapping(id)
+		if err != nil {
+			log.Error().Err(err).Msg("error getting mapping")
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		newMapping := oldMapping
+
+		if req.Label != nil {
+			newMapping.Label = *req.Label
+		}
+
+		if req.Enabled != nil {
+			newMapping.Enabled = *req.Enabled
+		}
+
+		if req.Type != nil {
+			newMapping.Type = *req.Type
+		}
+
+		if req.Match != nil {
+			newMapping.Match = *req.Match
+		}
+
+		if req.Pattern != nil {
+			newMapping.Pattern = *req.Pattern
+		}
+
+		if req.Override != nil {
+			newMapping.Override = *req.Override
+		}
+
+		if oldMapping == newMapping {
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+
+		err = db.UpdateMapping(id, newMapping)
+		if err != nil {
+			log.Error().Err(err).Msg("error updating mapping")
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		w.WriteHeader(http.StatusOK)
 	}
 }
