@@ -696,7 +696,7 @@ _EOF_
       ;;
     input.coinp*)
       while true; do
-        coin="$(_inputbox "Enter number" "1")"
+        coin="$(_rangebox "Enter number" "1" "99" "1")"
         exitcode="${?}"; [[ "${exitcode}" -ge 1 ]] && { "${FUNCNAME[0]}" ; return ; }
         [[ "${coin}" == +([0-9]) ]] && break
         _error "${coin} is not a positive number"
@@ -714,7 +714,7 @@ _EOF_
       ;;
     delay)
       while true; do
-        ms="$(_inputbox "Milliseconds (500 is half a second)" "500")"
+        ms="$(_rangebox "Delay in seconds" "1" "1000" "1")000"
         exitcode="${?}"; [[ "${exitcode}" -ge 1 ]] && { "${FUNCNAME[0]}" ; return ; }
         [[ "${ms}" == +([0-9]) ]] && break
         _error "${ms} is not a positive number"
@@ -928,7 +928,7 @@ _exitGameBlocklistSetting() {
 }
 
 _exitGameDelaySetting() {
-  local menuOptions selected customString delayInSeconds exitcode state
+  local menuOptions selected currentSetting delayInSeconds exitcode state
   menuOptions=(
     "Disable"   "Set the delay to 0"               "off"
     "Enable"    "Enter a custom delay in seconds"  "off"
@@ -940,8 +940,8 @@ _exitGameDelaySetting() {
     menuOptions[2]="on"
   else 
     menuOptions[5]="on"
-    customString="$(jq -r '.exitGameDelay' <<< "${state}")"
-    menuOptions[4]="Change the delay in seconds, current value: ${customString}"
+    currentSetting="$(jq -r '.exitGameDelay' <<< "${state}")"
+    menuOptions[4]="Change the delay in seconds, current value: ${currentSetting}"
   fi
 
   selected="$(_radiolist -- "${menuOptions[@]}" )"
@@ -949,7 +949,7 @@ _exitGameDelaySetting() {
     Disable) _tapto settings PUT '{"exitGameDelay":0}' ;;
     Enable)
       while true; do
-        delayInSeconds="$(_inputbox "Enter delay in seconds" "${customString}")"
+        delayInSeconds="$(_rangebox "Delay in seconds" "0" "60" "${currentSetting}")"
         exitcode="${?}"; [[ "${exitcode}" -ge 1 ]] && { "${FUNCNAME[0]}" ; return ; }
         [[ "${delayInSeconds}" == +([0-9]*) ]] && break
         _error "${delayInSeconds} is not a positive number"
@@ -1231,6 +1231,149 @@ _map() {
 }
 
 _Mappings() {
+  local selected mappings
+
+  while true; do
+    readarray -t mappings < <(_tapto mappings | jq -r '.mappings[] | .id + "\n" + if .label != "" then .label + " (" + .type + ")" else .type + ": " +  .pattern end')
+    selected="$(_menu \
+      --extra-button --extra-label "New" \
+      --cancel-label "Back" --colors \
+      --default-item "${selected}" \
+      -- "${mappings[@]}" \
+      "Legacy" "Legacy CSV mappings")"
+    case "${?}" in
+      1|255) return ;;
+      3) _newMapping ;;
+      0) # OK button
+        [[ "${selected}" == "Legacy" ]] && { _CSVMappings; continue; }
+        _editMapping "${selected}"
+        ;;
+    esac
+
+  done
+
+}
+
+_newMapping() {
+  local nfcSCAN exitcode pattern override
+  _yesno "Read tag or type match text?" \
+    --ok-label "Read tag" --yes-label "Read tag" \
+    --no-label "Amiibo" --cancel-label "Amiibo" \
+    --extra-button --extra-label "Match text" \
+    --help-button --help-label "Cancel"
+  case "${?}" in
+    0) # Yes button (Read tag)
+      nfcSCAN="$(_readTag)"
+      exitcode="${?}"; [[ "${exitcode}" -ge 1 ]] && return "${exitcode}"
+      pattern="$(jq -r '.uid' <<< "${nfcSCAN}" )"
+      type="uid" match="exact"
+      ;;
+    1) # No button (Amiibo)
+      pattern="$(_amiiboRegex)"
+      exitcode="${?}"; [[ "${exitcode}" -ge 1 ]] && return "${exitcode}"
+      type="data" match="regex"
+      ;;
+    3) # Extra button (Match text)
+      pattern="$(_inputbox "Replace match text" "${match_text}")"
+      exitcode="${?}"; [[ "${exitcode}" -ge 1 ]] && return "${exitcode}"
+      type=text match="partial"
+      ;;
+    2|255) # No button (Cancel)
+      return
+      ;;
+  esac
+  override="$(_commandPalette)"
+  while true; do
+    _yesno "Do you want to chain more commands?\nCurrent Command(s):\n\n${override}" --defaultno || break
+    override="${override}||$(_commandPalette)"
+  done
+  label="$(_inputbox "Enter friendly name" "")"
+
+  _tapto POST mappings "{ \"label\": \"${label}\", \"enabled\": true, \"type\": \"${type}\", \"match\": \"${match}\", \"pattern\": \"${pattern}\", \"override\": \"${override}\" }"
+  exitcode="${?}"; [[ "${exitcode}" -ge 1 ]] && return "${exitcode}"
+}
+
+_editMapping() {
+  local id menuOptions selected mapEntry entryLabel entryEnabled entryType entryMatch entryPattern entryOverride
+  id="${1}"
+  mapEntry="$(_tapto mappings | jq ".mappings[] | select(.id == \"${id}\")")"
+
+  entryLabel="$(jq -r '.label' <<<"${mapEntry}")"
+  entryEnabled="$(jq -r '.enabled' <<<"${mapEntry}")"
+  entryType="$(jq -r '.type' <<<"${mapEntry}")"
+  entryMatch="$(jq -r '.match' <<<"${mapEntry}")"
+  entryPattern="$(jq -r '.pattern' <<<"${mapEntry}")"
+  entryOverride="$(jq -r '.override' <<<"${mapEntry}")"
+  entryDate="$(jq -r '.added' <<<"${mapEntry}")"
+
+  menuOptions=(
+    "Label"     "${entryLabel}"
+    "Enabled"   "${entryEnabled}"
+    "Type"      "${entryType}"
+    "Match"     "${entryMatch}"
+    "Pattern"   "${entryPattern}"
+    "Override"  "${entryOverride}"
+    "Write"     "Write text to physical tag"
+    "Delete"    "Remove entry from mappings database"
+  )
+
+  selected="$(msg="ID: ${id} | Added: $(date -d "${entryDate}")" _menu \
+    --cancel-label "Done" \
+    -- "${menuOptions[@]}" )" || return
+  exitcode="${?}"; [[ "${exitcode}" -ge 1 ]] && { "${FUNCNAME[0]}" "${id}" ; return ; }
+
+  case "${selected}" in
+  Label)
+    entryLabel="$(_inputbox "Enter a new label (friendly name)" "${entryLabel}")" || return
+    _tapto PUT mappings "${id}" "{\"label\": \"${entryLabel}\"}"
+    ;;
+  Enabled)
+    entryEnabled="true"
+    _yesno "" \
+      --ok-button "Enable" --yes-button "Enable" \
+      --no-button "Disable" --cancel-label "Disable" \
+      || entryEnabled="false"
+    _tapto PUT mappings "${id}" "{\"enabled\": \"${entryEnabled}\"}"
+    ;;
+  Type)
+    entryType="$(_menu -- \
+      "uid"   "Match by UID" \
+      "text"  "Match by Text" \
+      "data"  "Match by Amiibo/Data")" || return
+    _tapto PUT mappings "${id}" "{\"type\": \"${entryType}\"}"
+    ;;
+  Match)
+    entryMatch="$(_menu -- \
+      "exact"   "Exact match" \
+      "partial" "Partial match" \
+      "regex"   "Match using regular expression")" || return
+    _tapto PUT mappings "${id}" "{\"match\": \"${entryMatch}\"}"
+    ;;
+  Pattern)
+    entryLabel="$(_inputbox \
+      "Enter a new label (friendly name)" "${entryLabel}" \
+      --extra-button --extra-label "Amiibo")"
+    if [[ "${?}" = "3" ]]; then
+      entryLabel="$(_amiiboRegex)" || return
+      _tapto PUT mappings "${id}" "{\"match\": \"regex\"}"
+    fi
+    _tapto PUT mappings "${id}" "{\"pattern\": \"${entryPattern}\"}"
+    ;;
+  Override)
+    entryOverride="$(_commandPalette)" || return
+    _tapto PUT mappings "${id}" "{\"override\": \"${entryOverride}\"}"
+    ;;
+  Write)
+    text="${entryOverride}" _Write
+    return
+    ;;
+  Delete)
+    _tapto DELETE mappings "${id}"
+    ;;
+  esac
+}
+
+_CSVMappings() {
   local oldMap arrayIndex line lineNumber match_uid match_text text menuOptions selected replacement_match_text replacement_match_uid replacement_text message new_match_uid new_text
   unset replacement_match_uid replacement_text
 
@@ -1268,7 +1411,8 @@ _Mappings() {
     case "${?}" in
       0)
         # Yes button (Read tag)
-        new_match_uid="$(set -o pipefail; _readTag | cut -d ',' -f 2)"
+        nfcSCAN="$(_readTag)"
+        new_match_uid="$(jq -r '.uid' <<< "${nfcSCAN}")"
         exitcode="${?}"; [[ "${exitcode}" -ge 1 ]] && return "${exitcode}"
         # Enclose field in quotes if it's needed to escape a comma
         [[ "${new_match_uid}" == \"*\" ]] || [[ "${new_match_uid}" == *,* ]] && new_match_uid="\"${new_match_uid}\""
@@ -1289,7 +1433,7 @@ _Mappings() {
         ;;
       2|255)
         # No button (Cancel)
-        _Mappings
+        "${FUNCNAME[0]}"
         return
         ;;
     esac
@@ -1302,7 +1446,7 @@ _Mappings() {
     # Enclose field in quotes if it's needed to escape a comma
     [[ "${new_text}" == \"*\" ]] || [[ "${new_text}" == *,* ]] && new_text="\"${new_text}\""
     _map "${new_match_uid}" "${new_match_text}" "${new_text}"
-    _Mappings
+    "${FUNCNAME[0]}"
     return
   fi
 
@@ -1323,12 +1467,13 @@ _Mappings() {
   selected="$(_menu \
     --cancel-label "Done" \
     -- "${menuOptions[@]}" )"
-  exitcode="${?}"; [[ "${exitcode}" -ge 1 ]] && { _Mappings ; return ; }
+  exitcode="${?}"; [[ "${exitcode}" -ge 1 ]] && { "${FUNCNAME[0]}" ; return ; }
 
   case "${selected}" in
   UID)
     # Replace match_uid
-    replacement_match_uid="$(_readTag | cut -d ',' -f 2)"
+    nfcSCAN="$(_readTag)"
+    replacement_match_uid="$(jq -r '.uid' <<< "${nfcSCAN}")"
     # Enclose field in quotes if it's needed to escape a comma
     [[ "${replacement_match_uid}" == \"*\" ]] || [[ "${replacement_match_uid}" == *,* ]] && replacement_match_uid="\"${replacement_match_uid}\""
     [[ -z "${replacement_match_uid}" ]] && return
@@ -1361,7 +1506,7 @@ _Mappings() {
   Delete)
     # Delete line from Mappings database
     sed -i "${lineNumber}d" "${map}"
-    _Mappings
+    "${FUNCNAME[0]}"
     return
     ;;
   esac
@@ -1477,7 +1622,7 @@ _writeTextToMap() {
   [[ -f "${map}" ]] || echo "${mapHeader}" > "${map}"
 
   # Check if UID is provided
-  [[ -z "${uid}" ]] && [[ -z "${matchText}" ]] && uid="$(_readTag | cut -d ',' -f 2 )"
+  [[ -z "${uid}" ]] && [[ -z "${matchText}" ]] && uid="$(_readTag | jq -r '.uid' )"
 
   if [[ -n "${uid}" ]]; then
     # Check if the map file exists and read the existing entry for the given UID
@@ -1755,6 +1900,26 @@ _textEditor() {
   return "${exitcode}"
 }
 
+# Ask user for a number
+# Usage: _rangebox "text" "min-value" "max-value" "default-value" [--optional-arguments]
+# You can pass additioal arguments to the dialog program
+# Backtitle is already set
+_rangebox() {
+  local msg opts init
+  msg="${1}"
+  if [[ "${2}" =~ ^[0-9]*$ ]]; then minValue="${2}"; else return 1; fi
+  if [[ "${3}" =~ ^[0-9]*$ ]]; then maxValue="${3}"; else return 1; fi
+  if [[ "${4}" =~ ^[0-9]*$ ]]; then defaultValue="${4}"; else return 1; fi
+  shift 4
+  opts=("${@}")
+  dialog \
+    --backtitle "${title}" \
+    "${opts[@]}" --rangebox "${msg}" 22 77 \
+    "${minValue}" "${maxValue}" "${defaultValue}" \
+    3>&1 1>&2 2>&3 >"$(tty)" <"$(tty)"
+  return "${?}"
+}
+
 # Ask user for a string
 # Usage: _inputbox "My message" "Initial text" [--optional-arguments]
 # You can pass additioal arguments to the dialog program
@@ -1774,7 +1939,7 @@ _inputbox() {
 }
 
 # Display a menu
-# Usage: [msg="message"] _menu [--optional-arguments] -- [ tag item ] ...
+# Usage: [msg="message"] _menu [--optional-arguments] -- [ tag item ] ...
 # You can pass additioal arguments to the dialog program
 # Backtitle is already set
 _menu() {
@@ -1922,7 +2087,7 @@ _error() {
 # - DATA: Data to be sent with the request
 # Returns the response from the Tapto REST API
 _tapto() {
-  local x h d url
+  local x h d url response
 
   while [[ ${#} -gt 0 ]]; do
     case "${1}" in
@@ -1940,11 +2105,15 @@ _tapto() {
       games)
         url="games?system=${2}"
         shift 2
-        [[ "${1}" =~ ^(query|maxResults)=.* ]] && url="${url}&${1%%&*}"; shift
-        [[ "${1}" =~ ^(query|maxResults)=.* ]] && url="${url}&${1%%&*}"; shift
+        [[ "${1}" =~ ^(query|maxResults)=.* ]] && { url="${url}&${1%%&*}"; shift ; }
+        [[ "${1}" =~ ^(query|maxResults)=.* ]] && { url="${url}&${1%%&*}"; shift ; }
         ;;
       systems) url="systems"; shift ;;
-      mappings) url="mappings"; shift ;;
+      mappings)
+	url="mappings";
+	shift
+	[[ "${1}" =~ ^[0-9]+$ ]] && { url="${url}/${1}" ; shift ; }
+	;;
       history) url="history"; shift ;;
       settings) url="settings"; shift ;;
       log) url="settings/log/download"; shift ;;
@@ -1958,7 +2127,12 @@ _tapto() {
   [[ -z "${url}" ]] && url="status"
 
   if [[ -t 1 ]]; then
-    curl -s "${x[@]}" "${h[@]}" -d "${d}" "${taptoAPI}/${url}" | jq --color-output | less -R -X -F
+	  response="$(curl -s "${x[@]}" "${h[@]}" -d "${d}" "${taptoAPI}/${url}")"
+	  if jq <<<"${response}" &>/dev/null ; then
+		  jq --color-output <<<"${response}" | less -R -X -F
+          else
+		  less -R -X -F <<<"${response}"
+	  fi
   else
     curl -s "${x[@]}" "${h[@]}" -d "${d}" "${taptoAPI}/${url}"
   fi
