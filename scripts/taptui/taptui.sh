@@ -30,6 +30,7 @@ nfcCommand="${scriptdir}/tapto.sh"
 settings="${scriptdir}/tapto.ini"
 map="${sdroot}/nfc.csv"
 amiiboApi="https://www.amiiboapi.com/api"
+amiiboAPICache="${sdroot}/Scripts/.config/tapto/amiibo.json"
 #For debugging purpouse
 [[ -d "${sdroot}" ]] || map="${scriptdir}/nfc.csv"
 [[ -d "${sdroot}" ]] && PATH="${sdroot}/linux:${sdroot}/Scripts:${PATH}"
@@ -1711,38 +1712,37 @@ _isInArray() {
 }
 
 _amiibo() {
-  local apiCache today apiFreshness apiLastUpdate cacheStale
+  local today apiFreshness apiLastUpdate cacheStale
 
-  apiCache="${sdroot}/Scripts/amiibo.json"
   today="$(date +"%Y-%m-%d")"
   cacheStale="false"
 
-  if [[ ! -f "${apiCache}" ]] || ! jq -e '.amiibo | length > 0' "${apiCache}" >/dev/null; then
+  if [[ ! -f "${amiiboAPICache}" ]] || ! jq -e '.amiibo | length > 0' "${amiiboAPICache}" >/dev/null; then
     cacheStale="true"
   else
-    apiFreshness="$(date -r "${apiCache}" +"%Y-%m-%d")"
+    apiFreshness="$(date -r "${amiiboAPICache}" +"%Y-%m-%d")"
   fi
 
   if [[ "${apiFreshness}" != "${today}" ]]; then
     if ping -c 1 8.8.8.8 > /dev/null 2>&1 && curl -s -o /dev/null "${amiiboApi}" > /dev/null; then
       apiLastUpdate="$(date -d "$(curl -s "${amiiboApi}/amiibo/lastupdated" | jq -r '.lastUpdated')" +%s)"
-      [[ "$(date -r "${apiCache}" +%s)" -lt "${apiLastUpdate}" ]] && cacheStale="true"
+      [[ "$(date -r "${amiiboAPICache}" +%s)" -lt "${apiLastUpdate}" ]] && cacheStale="true"
     fi
   else
     cacheStale="false"
   fi
 
   if "${cacheStale}"; then 
-    curl -s "${amiiboApi}/amiibo/" -o "${apiCache}.new"
-    if jq -e '.amiibo | length > 0' "${apiCache}.new" >/dev/null; then
-      mv "${apiCache}.new" "${apiCache}"
+    curl -s "${amiiboApi}/amiibo/" -o "${amiiboAPICache}.new"
+    if jq -e '.amiibo | length > 0' "${amiiboAPICache}.new" >/dev/null; then
+      mv "${amiiboAPICache}.new" "${amiiboAPICache}"
     fi
   else
-    touch "${apiCache}"
+    touch "${amiiboAPICache}"
   fi
 
-  if [[ -f "${apiCache}" ]]; then
-    cat "${apiCache}"
+  if [[ -f "${amiiboAPICache}" ]]; then
+    cat "${amiiboAPICache}"
   else
     return 1
   fi
