@@ -1334,7 +1334,7 @@ _editMapping() {
       --ok-button "Enable" --yes-button "Enable" \
       --no-button "Disable" --cancel-label "Disable" \
       || entryEnabled="false"
-    _tapto PUT mappings "${id}" "{\"enabled\": \"${entryEnabled}\"}"
+    _tapto PUT mappings "${id}" "{\"enabled\": ${entryEnabled}}"
     ;;
   Type)
     entryType="$(_menu -- \
