@@ -560,7 +560,7 @@ _commandPalette() {
     Pick)
       fileSelected="$(_fselect "$(_gameLocation)")"
       exitcode="${?}"; [[ "${exitcode}" -ge 1 ]] && return "${exitcode}"
-      [[ ! -f "${fileSelected//.zip\/*/.zip}" ]] && { _error "No file was selected." ; return ; }
+      #[[ ! -f "${fileSelected//.zip\/*/.zip}" ]] && { _error "No file was selected." ; return ; }
       # shellcheck disable=SC2001
       fileSelected="$(sed -E "s#/media/(usb[0-7]|fat|network)(/cifs)?(/games)?/##i" <<< "${fileSelected}")"
 
@@ -1013,7 +1013,7 @@ _EOF_
       echo "${fullPath}"
       return
     fi
-  elif [[ -f "${fullPath}" ]]; then
+  elif [[ ! -d "${fullPath}" ]]; then
     echo "${fullPath}"
     return
   fi
@@ -1146,15 +1146,19 @@ _gameLocation() {
     "goto"  "Go to directory (keyboard required)"
     "fat"   "${underline}${bold}SD Card${reset}"
     "${gameLocations[@]}"
+    "systems" "browse games by system"
   )
 
-  selected="$(_menu --default-item "fat" --colors -- "${gameLocations[@]}")"
-  exitcode="${?}"; [[ "${exitcode}" -ge 1 ]] && return "${exitcode}"
+  selected="$(_menu --default-item "${selected:-fat}" --cancel-button "Back" --no-button "Back" --colors -- "${gameLocations[@]}")"
+  [[ "${?}" =~ ^(1|255)$ ]] && { "${FUNCNAME[1]}" ; return ; }
 
   case "${selected}" in
     "goto")
       dir="$(_inputbox "Input a directory to go to" "${sdroot}")"
       echo "${dir%/}"
+      ;;
+    "systems")
+      _gameBrowser
       ;;
     *)
       echo "${basedir}/${selected}"
@@ -1166,20 +1170,22 @@ _gameLocation() {
 # Usage: _gameBrowser
 # Returns: path to selected game
 _gameBrowser() {
-  local categories category systems system tempFile
+  local relativeComponents categories category systems system tempFile currentDirDirs currentDir currentDirFiles selected
   currentDir=""
 
   relativeComponents=(
     ".." "Up one directory"
   )
   readarray -t categories < <(_tapto systems | jq -r '.systems[] | .category' | sort -u | sed 's/.*/&\nCategory/')
-  category="$(_menu  --backtitle "${title}"  -- "${categories[@]}" )"
+  category="$(_menu  --backtitle "${title}" --cancel-button "Back" --no-button "Back" -- "${categories[@]}" )"
+  [[ "${?}" =~ ^(1|255)$ ]] && { selected="systems" "${FUNCNAME[1]}" ; return ; }
   readarray -t systems < <(_tapto systems | jq -r  ".systems[] | select(.category == \"${category}\") | .id + \"\n\" + .name")
-  system="$(_menu  --backtitle "${title}"  -- "${systems[@]}" )"
+  system="$(_menu  --backtitle "${title}" --cancel-button "Back" --no-button "Back"  -- "${systems[@]}" )"
+  [[ "${?}" =~ ^(1|255)$ ]] && { "${FUNCNAME[1]}" ; return ; }
   tmpFile="$(mktemp)"
   trap 'rm "${tmpFile}"; _exit' SIGINT # Trap Ctrl+C (SIGINT) to clean up tmp file
   _infobox "Loading."
-  _tapto games "${system}" | jq -r .results[].path > "${tmpFile}"
+  _tapto games "${system}" maxResults=0 | jq -r .results[].path > "${tmpFile}"
   while true; do
 
     readarray -t currentDirDirs <<< "$( \
@@ -1202,7 +1208,7 @@ _gameBrowser() {
 
     case "${selected,,}" in
     "..")
-      [[ -z "${currentDir}" ]] && break
+      [[ -z "${currentDir}" ]] && { "${FUNCNAME[0]}"; return; }
       [[ "${currentDir%/}" != *"/"* ]] && currentDir=""
       [[ -n "${currentDir}" ]] && currentDir="${currentDir%/*/}/"
       ;;
