@@ -350,12 +350,33 @@ func readerPollLoop(
 			continue
 		}
 
-		// if there is no card (newScanned.UID == "")
-		// if the card is the same as the one we have scanned before ( activeCard.UID == newScanned.UID)
+		// From here we didn't exit a game, but we want short circuit and do nothing if the following happens
+
+		// If we have exit_game=yes, we need to avoid exiting by error or be too much sensible re-launching a game
 		// if the card is the same that has been loaded last time (newScanned.UID == currentlyLoadedCard.UID)
-		if newScanned.UID == "" ||
-			activeCard.UID == newScanned.UID ||
-			newScanned.UID == currentlyLoadedCard.UID {
+		if cfg.GetExitGame() {
+			if newScanned.UID == currentlyLoadedCard.UID {
+				continue
+			}
+		}
+
+		// in any case if the new scanned card has no UID we never want to go on with launching anything
+		// if the card is the same as the one we have scanned before ( activeCard.UID == newScanned.UID) we don't relaunch
+		// this will avoid card left on the reader to trigger the command multiple times per second
+		// in order to tap a card fast, so insert a coin multiple times, you have to get on and off from the reader with the card
+
+		if newScanned.UID == "" || activeCard.UID == newScanned.UID {
+			continue
+		}
+
+		// if the card has the same ID of the currently loaded software it means we re-read a card that was already there
+		// this could happen in combination with exit_game_delay and tapping for coins or other commands not meant to interrupt
+		// a game. In that case when we put back the same software card, we don't want to reboot, only to keep running it
+		if st.GetCurrentlyLoadedSoftware() == newScanned.UID {
+			// keeping a separate if to have specific logging
+			log.Info().Msgf("Token with UID %s has been skipped because is the currently loaded software", newScanned.UID)
+			candidateForRemove = false
+			currentlyLoadedCard = newScanned
 			continue
 		}
 
@@ -363,15 +384,6 @@ func readerPollLoop(
 		mister.PlaySuccess(cfg)
 
 		if st.IsLauncherDisabled() {
-			continue
-		}
-
-		// if the card has the same ID of the currently loaded software
-		if st.GetCurrentlyLoadedSoftware() == newScanned.UID {
-			// keeping a separate if to have specific logging
-			log.Info().Msgf("Token with UID %s has been skipped because is the currently loaded software", newScanned.UID)
-			candidateForRemove = false
-			currentlyLoadedCard = newScanned
 			continue
 		}
 
