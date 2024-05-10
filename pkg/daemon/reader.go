@@ -339,6 +339,8 @@ func readerPollLoop(
 			continue
 		}
 
+		// this will update the state for the activeCard
+		// the local variable activeCard is still the previous one and will be updated next loop
 		st.SetActiveCard(newScanned)
 
 		if shouldExit(candidateForRemove, cfg, st) {
@@ -348,6 +350,11 @@ func readerPollLoop(
 			currentlyLoadedCard = state.Token{}
 			st.SetCurrentlyLoadedSoftware("")
 			continue
+		} else if mister.GetActiveCoreName() == mrextConfig.MenuCore {
+			// in case we are on the menu core we need to forget
+			// the currently loaded card
+			candidateForRemove = false
+			currentlyLoadedCard = state.Token{}
 		}
 
 		// From here we didn't exit a game, but we want short circuit and do nothing if the following happens

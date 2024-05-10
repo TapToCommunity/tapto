@@ -224,7 +224,6 @@ func StartDaemon(cfg *config.UserConfig) (func() error, error) {
 	socket, err := StartSocketServer(st)
 	if err != nil {
 		log.Error().Msgf("error starting socket server: %s", err)
-		return nil, err
 	}
 
 	return func() error {
