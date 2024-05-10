@@ -351,10 +351,10 @@ func readerPollLoop(
 			st.SetCurrentlyLoadedSoftware("")
 			continue
 		} else if mister.GetActiveCoreName() == mrextConfig.MenuCore {
-			// in case we are on the menu core we need to forget
-			// the currently loaded card
+			// at any time we are on the current menu we should forget old values
 			candidateForRemove = false
 			currentlyLoadedCard = state.Token{}
+			st.SetCurrentlyLoadedSoftware("")
 		}
 
 		// From here we didn't exit a game, but we want short circuit and do nothing if the following happens
