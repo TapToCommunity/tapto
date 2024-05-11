@@ -34,13 +34,13 @@ import (
 	"github.com/wizzomafizzo/tapto/pkg/platforms/mister"
 )
 
-type NfcMappingEntry struct {
+type CsvMappingEntry struct {
 	MatchUID  string `csv:"match_uid"`
 	MatchText string `csv:"match_text"`
 	Text      string `csv:"text"`
 }
 
-func LoadMappings() (map[string]string, map[string]string, error) {
+func LoadCsvMappings() (map[string]string, map[string]string, error) {
 	uids := make(map[string]string)
 	texts := make(map[string]string)
 
@@ -57,7 +57,7 @@ func LoadMappings() (map[string]string, map[string]string, error) {
 		_ = c.Close()
 	}(f)
 
-	entries := make([]NfcMappingEntry, 0)
+	entries := make([]CsvMappingEntry, 0)
 	err = gocsv.Unmarshal(f, &entries)
 	if err != nil {
 		return nil, nil, err
@@ -89,7 +89,7 @@ func LoadMappings() (map[string]string, map[string]string, error) {
 	return uids, texts, nil
 }
 
-func StartMappingsWatcher(
+func StartCsvMappingsWatcher(
 	getLoadTime func() time.Time,
 	setMappings func(map[string]string, map[string]string),
 ) (func() error, error) {
@@ -126,7 +126,7 @@ func StartMappingsWatcher(
 					}
 					time.Sleep(delay)
 					log.Info().Msg("database changed, reloading")
-					uids, texts, err := LoadMappings()
+					uids, texts, err := LoadCsvMappings()
 					if err != nil {
 						log.Error().Msgf("error loading database: %s", err)
 					} else {
@@ -142,7 +142,7 @@ func StartMappingsWatcher(
 							log.Error().Msgf("error watching database: %s", err)
 						}
 						log.Info().Msg("database changed, reloading")
-						uids, texts, err := LoadMappings()
+						uids, texts, err := LoadCsvMappings()
 						if err != nil {
 							log.Error().Msgf("error loading database: %s", err)
 						} else {

@@ -29,14 +29,21 @@ import (
 )
 
 const (
-	TypeNTAG      = "NTAG"
-	TypeMifare    = "MIFARE"
-	WRITE_COMMAND = byte(0xA2)
-	READ_COMMAND  = byte(0x30)
+	TypeNTAG           = "NTAG"
+	TypeMifare         = "MIFARE"
+	TypeAmiibo         = "Amiibo"
+	TypeLegoDimensions = "LegoDimensions"
+	WRITE_COMMAND      = byte(0xA2)
+	READ_COMMAND       = byte(0x30)
 )
 
 var SupportedCardTypes = []nfc.Modulation{
 	{Type: nfc.ISO14443a, BaudRate: nfc.Nbr106},
+}
+
+type TagData struct {
+	Type  string
+	Bytes []byte
 }
 
 func GetCardUID(target nfc.Target) string {

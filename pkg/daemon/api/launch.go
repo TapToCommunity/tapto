@@ -17,8 +17,10 @@ type LaunchRequestMetadata struct {
 }
 
 type LaunchRequest struct {
+	Type     string                 `json:"type"`
 	UID      string                 `json:"uid"`
 	Text     string                 `json:"text"`
+	Data     string                 `json:"data"`
 	Metadata *LaunchRequestMetadata `json:"metadata"`
 }
 
@@ -48,7 +50,9 @@ func handleLaunch(
 			UID:      req.UID,
 			Text:     req.Text,
 			ScanTime: time.Now(),
-			FromApi: true,
+			FromApi:  true,
+			Type:     req.Type,
+			Data:     req.Data,
 		}
 
 		st.SetActiveCard(t)

@@ -15,6 +15,7 @@ type TokenResponse struct {
 	Type     string    `json:"type"`
 	UID      string    `json:"uid"`
 	Text     string    `json:"text"`
+	Data     string    `json:"data"`
 	ScanTime time.Time `json:"scanTime"`
 }
 
@@ -69,12 +70,14 @@ func newStatus(cfg *config.UserConfig, st *state.State, tr *mister.Tracker) Stat
 			Type:     active.Type,
 			UID:      active.UID,
 			Text:     active.Text,
+			Data:     active.Data,
 			ScanTime: active.ScanTime,
 		},
 		LastToken: TokenResponse{
 			Type:     last.Type,
 			UID:      last.UID,
 			Text:     last.Text,
+			Data:     last.Data,
 			ScanTime: last.ScanTime,
 		},
 		GamesIndex: IndexResponse{

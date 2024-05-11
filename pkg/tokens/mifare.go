@@ -50,7 +50,7 @@ func buildMifareAuthCommand(block byte, cardUid string) []byte {
 }
 
 // ReadMifare reads data from all blocks in sectors 1-15
-func ReadMifare(pnd nfc.Device, cardUid string) ([]byte, error) {
+func ReadMifare(pnd nfc.Device, cardUid string) (TagData, error) {
 	permissionSectors := []int{4, 8, 12, 16, 20, 24, 28, 32, 36, 40, 44, 48, 52, 56, 60}
 	var allBlocks = []byte{}
 	for block := 0; block < 64; block++ {
@@ -75,7 +75,7 @@ func ReadMifare(pnd nfc.Device, cardUid string) ([]byte, error) {
 
 		blockData, err := comm(pnd, []byte{0x30, byte(block)}, 16)
 		if err != nil {
-			return nil, err
+			return TagData{}, err
 		}
 
 		allBlocks = append(allBlocks, blockData...)
@@ -89,7 +89,10 @@ func ReadMifare(pnd nfc.Device, cardUid string) ([]byte, error) {
 
 	}
 
-	return allBlocks, nil
+	return TagData{
+		Type:  TypeMifare,
+		Bytes: allBlocks,
+	}, nil
 }
 
 // getMifareCapacityInBytes returns the Mifare card capacity

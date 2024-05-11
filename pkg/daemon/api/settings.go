@@ -4,10 +4,12 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"strings"
 
 	"github.com/go-chi/render"
 	"github.com/rs/zerolog/log"
 	"github.com/wizzomafizzo/tapto/pkg/config"
+	"github.com/wizzomafizzo/tapto/pkg/daemon/state"
 	"github.com/wizzomafizzo/tapto/pkg/platforms/mister"
 )
 
@@ -17,15 +19,17 @@ type SettingsResponse struct {
 	DisableSounds     bool     `json:"disableSounds"`
 	ProbeDevice       bool     `json:"probeDevice"`
 	ExitGame          bool     `json:"exitGame"`
+	ExitGameDelay     int8     `json:"exitGameDelay"`
 	ExitGameBlocklist []string `json:"exitGameBlocklist"`
 	Debug             bool     `json:"debug"`
+	Launching         bool     `json:"launching"`
 }
 
 func (sr *SettingsResponse) Render(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
-func handleSettings(cfg *config.UserConfig) http.HandlerFunc {
+func handleSettings(cfg *config.UserConfig, st *state.State) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		log.Info().Msg("received settings request")
 
@@ -35,8 +39,10 @@ func handleSettings(cfg *config.UserConfig) http.HandlerFunc {
 			DisableSounds:     cfg.GetDisableSounds(),
 			ProbeDevice:       cfg.GetProbeDevice(),
 			ExitGame:          cfg.GetExitGame(),
+			ExitGameDelay:     cfg.GetExitGameDelay(),
 			ExitGameBlocklist: make([]string, 0),
 			Debug:             cfg.GetDebug(),
+			Launching:         !st.IsLauncherDisabled(),
 		}
 
 		resp.ExitGameBlocklist = append(resp.ExitGameBlocklist, cfg.GetExitGameBlocklist()...)
@@ -52,18 +58,21 @@ func handleSettings(cfg *config.UserConfig) http.HandlerFunc {
 
 type UpdateSettingsRequest struct {
 	ConnectionString  *string   `json:"connectionString"`
+	AllowCommands     *bool     `json:"allowCommands"`
 	DisableSounds     *bool     `json:"disableSounds"`
 	ProbeDevice       *bool     `json:"probeDevice"`
 	ExitGame          *bool     `json:"exitGame"`
+	ExitGameDelay     *int8     `json:"exitGameDelay"`
 	ExitGameBlocklist *[]string `json:"exitGameBlocklist"`
 	Debug             *bool     `json:"debug"`
+	Launching         *bool     `json:"launching"`
 }
 
 func (usr *UpdateSettingsRequest) Bind(r *http.Request) error {
 	return nil
 }
 
-func handleSettingsUpdate(cfg *config.UserConfig) http.HandlerFunc {
+func handleSettingsUpdate(cfg *config.UserConfig, st *state.State) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		log.Info().Msg("received settings update request")
 
@@ -80,6 +89,16 @@ func handleSettingsUpdate(cfg *config.UserConfig) http.HandlerFunc {
 			cfg.SetConnectionString(*req.ConnectionString)
 		}
 
+		if req.AllowCommands != nil {
+			if !strings.HasPrefix(r.RemoteAddr, "127.0.0.1:") {
+				http.Error(w, "allow_commands can only be changed from localhost", http.StatusForbidden)
+				log.Info().Str("remoteAddr", r.RemoteAddr).Bool("allowCommands", *req.AllowCommands).Msg("allow_commands can only be changed from localhost")
+			} else {
+				log.Info().Bool("allowCommands", *req.AllowCommands).Msg("updating allow commands")
+				cfg.SetAllowCommands(*req.AllowCommands)
+			}
+		}
+
 		if req.DisableSounds != nil {
 			log.Info().Bool("disableSounds", *req.DisableSounds).Msg("updating disable sounds")
 			cfg.SetDisableSounds(*req.DisableSounds)
@@ -88,6 +107,11 @@ func handleSettingsUpdate(cfg *config.UserConfig) http.HandlerFunc {
 		if req.ProbeDevice != nil {
 			log.Info().Bool("probeDevice", *req.ProbeDevice).Msg("updating probe device")
 			cfg.SetProbeDevice(*req.ProbeDevice)
+		}
+
+		if req.ExitGameDelay != nil {
+			log.Info().Int8("exitGameDelay", *req.ExitGameDelay).Msg("updating exit game delay")
+			cfg.SetExitGameDelay(*req.ExitGameDelay)
 		}
 
 		if req.ExitGame != nil {
@@ -103,6 +127,15 @@ func handleSettingsUpdate(cfg *config.UserConfig) http.HandlerFunc {
 		if req.Debug != nil {
 			log.Info().Bool("debug", *req.Debug).Msg("updating debug")
 			cfg.SetDebug(*req.Debug)
+		}
+
+		if req.Launching != nil {
+			log.Info().Bool("launching", *req.Launching).Msg("updating launching")
+			if *req.Launching {
+				st.EnableLauncher()
+			} else {
+				st.DisableLauncher()
+			}
 		}
 
 		err = cfg.SaveConfig()
