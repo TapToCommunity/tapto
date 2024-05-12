@@ -19,8 +19,9 @@ type Token struct {
 	Type                  string
 	UID                   string
 	Text                  string
-  Data                  string
+        Data                  string
 	ScanTime              time.Time
+	fromApi               bool
 	isSoftwareLoadCommand bool
 }
 
