@@ -21,8 +21,8 @@ type Token struct {
 	Text                  string
         Data                  string
 	ScanTime              time.Time
-	fromApi               bool
-	isSoftwareLoadCommand bool
+	FromApi               bool
+	IsSoftwareLoadCommand bool
 }
 
 type State struct {
