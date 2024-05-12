@@ -208,7 +208,6 @@ func readerPollLoop(
 	pbp := PeriodBetweenPolls
 	var lastError time.Time
 	var candidateForRemove bool
-	var currentlyLoadedCard state.Token
 	playFail := func() {
 		if time.Since(lastError) > 1*time.Second {
 			mister.PlayFail(cfg)
@@ -319,7 +318,7 @@ func readerPollLoop(
 			candidateForRemove = true
 			// if we were removing but we put back the card we had before
 			// then we are ok blocking the exit process
-		} else if candidateForRemove && (newScanned.UID == currentlyLoadedCard.UID) {
+		} else if candidateForRemove && (newScanned.UID == st.GetCurrentlyLoadedSoftware()) {
 			log.Info().Msgf("Card was removed but inserted back")
 			st.SetCardRemovalTime(time.Time{})
 			candidateForRemove = false
@@ -347,25 +346,15 @@ func readerPollLoop(
 			candidateForRemove = false
 			st.SetCardRemovalTime(time.Time{})
 			mister.ExitGame()
-			currentlyLoadedCard = state.Token{}
 			st.SetCurrentlyLoadedSoftware("")
 			continue
 		} else if mister.GetActiveCoreName() == mrextConfig.MenuCore {
 			// at any time we are on the current menu we should forget old values
 			candidateForRemove = false
-			currentlyLoadedCard = state.Token{}
 			st.SetCurrentlyLoadedSoftware("")
 		}
 
 		// From here we didn't exit a game, but we want short circuit and do nothing if the following happens
-
-		// If we have exit_game=yes, we need to avoid exiting by error or be too much sensible re-launching a game
-		// if the card is the same that has been loaded last time (newScanned.UID == currentlyLoadedCard.UID)
-		if cfg.GetExitGame() {
-			if newScanned.UID == currentlyLoadedCard.UID {
-				continue
-			}
-		}
 
 		// in any case if the new scanned card has no UID we never want to go on with launching anything
 		// if the card is the same as the one we have scanned before ( activeCard.UID == newScanned.UID) we don't relaunch
@@ -383,7 +372,6 @@ func readerPollLoop(
 			// keeping a separate if to have specific logging
 			log.Info().Msgf("Token with UID %s has been skipped because is the currently loaded software", newScanned.UID)
 			candidateForRemove = false
-			currentlyLoadedCard = newScanned
 			continue
 		}
 
@@ -394,10 +382,11 @@ func readerPollLoop(
 			continue
 		}
 
-		// we are about to change card, so we also stop the exit process
+		log.Info().Msgf("About to process token %s: \n current software: %s \n activeCard: %s \n", newScanned.UID, st.GetCurrentlyLoadedSoftware(), activeCard.UID)
+
+		// we are about to exec a command, we reset timers, we evaluate next loop if we need to start exiting again
 		st.SetCardRemovalTime(time.Time{})
 		candidateForRemove = false
-		currentlyLoadedCard = newScanned
 		tq.Enqueue(newScanned)
 	}
 
