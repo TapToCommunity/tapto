@@ -16,13 +16,12 @@ const (
 )
 
 type Token struct {
-	Type                  string
-	UID                   string
-	Text                  string
-        Data                  string
-	ScanTime              time.Time
-	FromApi               bool
-	IsSoftwareLoadCommand bool
+	Type     string
+	UID      string
+	Text     string
+	Data     string
+	ScanTime time.Time
+	FromApi  bool
 }
 
 type State struct {
