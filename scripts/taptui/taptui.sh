@@ -29,35 +29,27 @@ searchCommand="${scriptdir}/search.sh"
 nfcCommand="${scriptdir}/tapto.sh"
 settings="${scriptdir}/tapto.ini"
 map="${sdroot}/nfc.csv"
+amiiboApi="https://www.amiiboapi.com/api"
+amiiboAPICache="${sdroot}/Scripts/.config/tapto/amiibo.json"
 #For debugging purpouse
 [[ -d "${sdroot}" ]] || map="${scriptdir}/nfc.csv"
 [[ -d "${sdroot}" ]] && PATH="${sdroot}/linux:${sdroot}/Scripts:${PATH}"
 mapHeader="match_uid,match_text,text"
-nfcStatus="$("${nfcCommand}" --service status)"
-case "${nfcStatus}" in
-  "tapto service running")
-    nfcStatus="true"
-    nfcUnavailable="false"
-    msg="Service: Enabled"
-    ;;
-  "tapto service not running")
-    nfcStatus="false"
-    nfcUnavailable="false"
-    msg="Service: Disabled"
-    ;;
-  *)
-    nfcStatus="false"
-    nfcUnavailable="true"
-    msg="Service: Unavailable"
-esac
-nfcSocket="UNIX-CONNECT:/tmp/tapto/tapto.sock"
-if [[ -S "${nfcSocket#*:}" ]]; then
-  nfcReadingStatus="$(echo "status" | socat - "${nfcSocket}")"
-  nfcReadingStatus="$(cut -d ',' -f 3 <<< "${nfcReadingStatus}")"
+taptoAPI="localhost:7497/api/v1"
+if taptoStatus="$(curl -s "${taptoAPI}/status")"; then
+  nfcUnavailable="false"
+  nfcStatus="true"
+  msg="Service: Enabled"
+  nfcReadingStatus="$(jq -r '.launching' <<< "${taptoStatus}")"
+  nfcReader="$(jq -r '.reader' <<< "${taptoStatus}")"
+  jq -e '.connected' <<< "${nfcReader}" >/dev/null && msg="${msg} | Connected Reader: $( jq -r '.type' <<< "${nfcReader}")"
   # Disable reading for the duration of the script
   # we trap the EXIT signal and execute the _exit() function to turn it on again
-  echo "disable" | socat - "${nfcSocket}"
+  curl -s -X Put -H "Content-Type: application/json" -d '{"launching:false}' "${taptoAPI}/status"
 else
+  nfcUnavailable="true"
+  nfcStatus="false"
+  msg="Service: Unavailable"
   nfcReadingStatus="false"
 fi
 # Match MiSTer theme
@@ -78,108 +70,6 @@ cmdPalette=(
   "delay"          "Delay next command by specified milliseconds"
   "shell"          "Run Linux command"
 )
-consoles=(
-  "AdventureVision"   "Adventure Vision"
-  "Amiga"             "Amiga"
-  "Amstrad"           "Amstrad CPC"
-  "AmstradPCW"        "Amstrad PCW"
-  "Apogee"            "Apogee BK-01"
-  "AppleI"            "Apple I"
-  "AppleII"           "Apple IIe"
-  "Arcade"            "Arcade"
-  "Arcadia"           "Arcadia 2001"
-  "Arduboy"           "Arduboy"
-  "Atari2600"         "Atari 2600"
-  "Atari5200"         "Atari 5200"
-  "Atari7800"         "Atari 7800"
-  "Atari800"          "Atari 800XL"
-  "AtariLynx"         "Atari Lynx"
-  "AcornAtom"         "Atom"
-  "BBCMicro"          "BBC Micro/Master"
-  "BK0011M"           "BK0011M"
-  "Astrocade"         "Bally Astrocade"
-  "Chip8"             "Chip-8"
-  "CasioPV1000"       "Casio PV-1000"
-  "CasioPV2000"       "Casio PV-2000"
-  "ChannelF"          "Channel F"
-  "ColecoVision"      "ColecoVision"
-  "C64"               "Commodore 64"
-  "PET2001"           "Commodore PET 2001"
-  "VIC20"             "Commodore VIC-20"
-  "EDSAC"             "EDSAC"
-  "AcornElectron"     "Electron"
-  "FDS"               "Famicom Disk System"
-  "Galaksija"         "Galaksija"
-  "Gamate"            "Gamate"
-  "GameNWatch"        "Game & Watch"
-  "GameGear"          "Game Gear"
-  "Gameboy"           "Gameboy"
-  "Gameboy2P"         "Gameboy (2 Player)"
-  "GBA"               "Gameboy Advance"
-  "GBA2P"             "Gameboy Advance (2 Player)"
-  "GameboyColor"      "Gameboy Color"
-  "Genesis"           "Genesis"
-  "Sega32X"           "Genesis 32X"
-  "Intellivision"     "Intellivision"
-  "Interact"          "Interact"
-  "Jupiter"           "Jupiter Ace"
-  "Laser"             "Laser 350/500/700"
-  "Lynx48"            "Lynx 48/96K"
-  "SordM5"            "M5"
-  "MSX"               "MSX"
-  "MacPlus"           "Macintosh Plus"
-  "Odyssey2"          "Magnavox Odyssey2"
-  "MasterSystem"      "Master System"
-  "Aquarius"          "Mattel Aquarius"
-  "MegaDuck"          "Mega Duck"
-  "MultiComp"         "MultiComp"
-  "NES"               "NES"
-  "NESMusic"          "NESMusic"
-  "NeoGeo"            "Neo Geo/Neo Geo CD"
-  "Nintendo64"        "Nintendo 64"
-  "Orao"              "Orao"
-  "Oric"              "Oric"
-  "ao486"             "PC (486SX)"
-  "PCXT"              "PC/XT"
-  "PDP1"              "PDP-1"
-  "PMD85"             "PMD 85-2A"
-  "PSX"               "Playstation"
-  "PocketChallengeV2" "Pocket Challenge V2"
-  "PokemonMini"       "Pokemon Mini"
-  "RX78"              "RX-78 Gundam"
-  "SAMCoupe"          "SAM Coupe"
-  "SG1000"            "SG-1000"
-  "SNES"              "SNES"
-  "SNESMusic"         "SNES Music"
-  "SVI328"            "SV-328"
-  "Saturn"            "Saturn"
-  "MegaCD"            "Sega CD"
-  "QL"                "Sinclair QL"
-  "Specialist"        "Specialist/MX"
-  "SuperGameboy"      "Super Gameboy"
-  "SuperGrafx"        "SuperGrafx"
-  "SuperVision"       "SuperVision"
-  "TI994A"            "TI-99/4A"
-  "TRS80"             "TRS-80"
-  "CoCo2"             "TRS-80 CoCo 2"
-  "ZX81"              "TS-1500"
-  "TSConf"            "TS-Config"
-  "AliceMC10"         "Tandy MC-10"
-  "TatungEinstein"    "Tatung Einstein"
-  "TurboGrafx16"      "TurboGrafx-16"
-  "TurboGrafx16CD"    "TurboGrafx-16 CD"
-  "TomyTutor"         "Tutor"
-  "UK101"             "UK101"
-  "VC4000"            "VC4000"
-  "CreatiVision"      "VTech CreatiVision"
-  "Vector06C"         "Vector-06C"
-  "Vectrex"           "Vectrex"
-  "WonderSwan"        "WonderSwan"
-  "WonderSwanColor"   "WonderSwan Color"
-  "X68000"            "X68000"
-  "ZXSpectrum"        "ZX Spectrum"
-  "ZXNext"            "ZX Spectrum Next"
-)
 
 nfcjokes=(
 "Why did the NFC tag break up with the Wi-Fi router?
@@ -192,6 +82,8 @@ nfcjokes=(
   Because it needs to touch base!"
 "What did the NFC reader say to the card?
   Tag! You're it!"
+"I wanted to tell you an Amiibo joke,
+  but they were all out of stock!"
 )
 
 keycodes=(
@@ -499,17 +391,44 @@ main() {
 }
 
 _Read() {
-  local nfcSCAN nfcUID nfcTXT mappedMatch message
+  local nfcType nfcSCAN nfcUID nfcTXT mappedMatch message amiibo amiiboName amiiboGameSeries amiiboCharacter amiiboVariation amiiboType amiiboSeries nolabel
 
   nfcSCAN="$(_readTag)"
   exitcode="${?}"; [[ "${exitcode}" -ge 1 ]] && return "${exitcode}"
-  nfcTXT="$(cut -d ',' -f 4- <<< "${nfcSCAN}" )"
-  nfcUID="$(cut -d ',' -f 2 <<< "${nfcSCAN}" )"
+  nfcType="$(jq -r '.type' <<< "${nfcSCAN}" )"
+  nfcTXT="$(jq -r '.text' <<< "${nfcSCAN}" )"
+  nfcData="$(jq -r '.data' <<< "${nfcSCAN}" )"
+  nfcUID="$(jq -r '.uid' <<< "${nfcSCAN}" )"
   read -rd '' message <<_EOF_
+${bold}Tag type:${unbold} ${nfcType}
 ${bold}Tag UID:${unbold} ${nfcUID}
 ${bold}Tag contents:${unbold}
 ${nfcTXT}
 _EOF_
+  if [[ "${nfcType}" == 'Amiibo' ]]; then
+    amiibo="${nfcData}"
+    amiiboVariation="${amiibo:4:2}"
+    [[ "${amiiboVariation}" == "ff" ]] && amiiboVariation="Skylander"
+    amiibo="$(_amiibo | jq -r --arg head_val "${amiibo:0:-8}" --arg tail_val "${amiibo:8}" '.amiibo[] | select(.head == $head_val and .tail == $tail_val)')"
+    amiiboName="$(jq -r '.name' <<< "${amiibo}")"
+    [[ "${?}" -ge 1 ]] && amiiboName="${nfcTXT}"
+    amiiboGameSeries="$(jq -r '.gameSeries' <<< "${amiibo}")"
+    amiiboCharacter="$(jq -r '.character' <<< "${amiibo}")"
+    amiiboType="$(jq -r '.type' <<< "${amiibo}")"
+    amiiboSeries="$(jq -r '.amiiboSeries' <<< "${amiibo}")"
+    unset message
+    read -rd '' message <<_EOF_
+${bold}Tag type:${unbold} ${nfcType}
+${bold}Tag UID:${unbold} ${nfcUID}
+${bold}Amiibo:${unbold}
+  ${bold}Name:${unbold}           ${amiiboName}
+  ${bold}Game Series:${unbold}    ${amiiboGameSeries}
+  ${bold}Character:${unbold}      ${amiiboCharacter}
+  ${bold}Variation:${unbold}      ${amiiboVariation}
+  ${bold}Type:${unbold}           ${amiiboType}
+  ${bold}Amiibo Series:${unbold}  ${amiiboSeries}
+_EOF_
+  fi
   [[ -f "${map}" ]] && mappedMatch="$(grep -i "^${nfcUID}" "${map}")"
   [[ -n "${mappedMatch}" ]] && read -rd '' message <<_EOF_
 ${message}
@@ -518,7 +437,7 @@ ${bold}Mapped match by UID:${unbold}
 ${mappedMatch}
 _EOF_
 
-  [[ -f "${map}" ]] && matchedEntry="$(_searchMatchText "${nfcTXT}")"
+  [[ -f "${map}" ]] && matchedEntry="$(_searchMatchText "${nfcTXT:-${nfcData}}")"
   [[ -n "${matchedEntry}" ]] && read -rd '' message <<_EOF_
 ${message}
 
@@ -526,14 +445,29 @@ ${bold}Mapped match by match_text:${unbold}
 ${matchedEntry}
 _EOF_
   [[ -n "${nfcSCAN}" ]] && _yesno "${message}" \
-    --colors --ok-label "OK" --yes-label "OK" \
+    --colors --no-collapse \
+    --ok-label "OK" --yes-label "OK" \
     --no-label "Re-Map" --cancel-label "Re-Map" \
     --extra-button --extra-label "Clone Tag" \
     --help-button --help-label "Copy to Map"
   case "${?}" in
     1)
       # No button with "Re-Map" label
-      _writeTextToMap --uid "${nfcUID}" "$(_commandPalette)"
+      [[ "${nfcType}" == "Amiibo" ]] && nolabel="Amiibo"
+      if _yesno "Remap by" \
+        --ok-label "UID" --yes-label "UID" \
+        --no-label "${nolabel:=Match Text}" --cancel-label "${nolabel}"
+      then
+        # OK button (Label UID)
+        _writeTextToMap --uid "${nfcUID}" "$(_commandPalette)"
+      else
+        # No button (Label Match Text or Amiibo)
+        if [[ "${nfcType}" == "Amiibo" ]]; then
+          _writeTextToMap --matchText "$(_amiiboRegex "${amiibo}")" "$(_commandPalette)"
+        else
+          _writeTextToMap --matchText "${nfcTXT}" "$(_commandPalette)"
+        fi
+      fi
       ;;
     3)
       # Extra button with "Clone Tag" label
@@ -626,7 +560,7 @@ _commandPalette() {
     Pick)
       fileSelected="$(_fselect "$(_gameLocation)")"
       exitcode="${?}"; [[ "${exitcode}" -ge 1 ]] && return "${exitcode}"
-      [[ ! -f "${fileSelected//.zip\/*/.zip}" ]] && { _error "No file was selected." ; return ; }
+      #[[ ! -f "${fileSelected//.zip\/*/.zip}" ]] && { _error "No file was selected." ; return ; }
       # shellcheck disable=SC2001
       fileSelected="$(sed -E "s#/media/(usb[0-7]|fat|network)(/cifs)?(/games)?/##i" <<< "${fileSelected}")"
 
@@ -651,7 +585,8 @@ _commandPalette() {
 # Build a command using a command palette
 # Usage: _craftCommand
 _craftCommand(){
-  local command selected console recursion ms bulletList contentType tempFile postData
+  local command selected system systems recursion ms bulletList contentType tempFile postData categories category
+  readarray -t categories < <(_tapto systems | jq -r '.systems[] | .category' | sort -u | sed 's/.*/&\nCategory/')
   command="**"
   selected="$(_menu \
     --cancel-label "Back" \
@@ -663,35 +598,47 @@ _craftCommand(){
 
   case "${selected}" in
     launch.system)
-      console="$(_menu \
+      category="$(_menu \
         --backtitle "${title}" \
-        -- "${consoles[@]}" )"
+        -- "${categories[@]}" )"
+      readarray -t systems < <(_tapto systems | jq -r  ".systems[] | select(.category == \"${category}\") | .id + \"\n\" + .name")
+      system="$(_menu \
+        --backtitle "${title}" \
+        -- "${systems[@]}" )"
       exitcode="${?}"; [[ "${exitcode}" -ge 1 ]] && { "${FUNCNAME[0]}" ; return ; }
-      command="${command}:${console}"
+      command="${command}:${system}"
       ;;
     launch.random)
-      console="$(_menu \
+      category="$(_menu \
         --backtitle "${title}" \
-        -- "${consoles[@]}" )"
+        -- "${categories[@]}" )"
+      readarray -t systems < <(_tapto systems | jq -r  ".systems[] | select(.category == \"${category}\") | .id + \"\n\" + .name")
+      system="$(_menu \
+        --backtitle "${title}" \
+        -- "${systems[@]}" )"
       exitcode="${?}"; [[ "${exitcode}" -ge 1 ]] && { "${FUNCNAME[0]}" ; return ; }
       while true; do
         read -rd '' message <<_EOF_
 Would you like to add more systems to the NFC tag?
 
 Current random systems:
-$(IFS=',' read -ra bulletList <<< "${console}"; printf "* %s\n" "${bulletList[@]}")
+$(IFS=',' read -ra bulletList <<< "${system}"; printf "* %s\n" "${bulletList[@]}")
 _EOF_
-        _yesno "${message}" || break
-        console="${console},$(msg="${console}" _menu \
+        _yesno "${message}" --no-label "Done" --cancel-label "Done" || break
+        category="$(_menu \
           --backtitle "${title}" \
-          -- "${consoles[@]}" )"
+          -- "${categories[@]}" )"
+        readarray -t systems < <(_tapto systems | jq -r  ".systems[] | select(.category == \"${category}\") | .id + \"\n\" + .name")
+        system="${system},$(msg="${system}" _menu \
+          --backtitle "${title}" \
+          -- "${systems[@]}" )"
         exitcode="${?}"
-        console="$(tr ',' '\n' <<< "${console}" | sort -u | tr '\n' ',')"
-        console="${console#,}"
-        console="${console%,}"
+        system="$(tr ',' '\n' <<< "${system}" | sort -u | tr '\n' ',')"
+        system="${system#,}"
+        system="${system%,}"
         [[ "${exitcode}" -ge 1 ]] && break
       done
-      command="${command}:${console}"
+      command="${command}:${system}"
       ;;
     mister.ini)
       ini="$(_radiolist -- \
@@ -750,7 +697,7 @@ _EOF_
       ;;
     input.coinp*)
       while true; do
-        coin="$(_inputbox "Enter number" "1")"
+        coin="$(_rangebox "Enter number" "1" "99" "1")"
         exitcode="${?}"; [[ "${exitcode}" -ge 1 ]] && { "${FUNCNAME[0]}" ; return ; }
         [[ "${coin}" == +([0-9]) ]] && break
         _error "${coin} is not a positive number"
@@ -768,7 +715,7 @@ _EOF_
       ;;
     delay)
       while true; do
-        ms="$(_inputbox "Milliseconds (500 is half a second)" "500")"
+        ms="$(_rangebox "Delay in seconds" "1" "1000" "1")000"
         exitcode="${?}"; [[ "${exitcode}" -ge 1 ]] && { "${FUNCNAME[0]}" ; return ; }
         [[ "${ms}" == +([0-9]) ]] && break
         _error "${ms} is not a positive number"
@@ -843,9 +790,7 @@ _commandSetting() {
     "Disable"  "Disable Linux commands" "off"
   )
 
-  [[ -f "${settings}" ]] || echo "[tapto]" > "${settings}" || { _error "Can't create settings file" ; return 1 ; }
-
-  if grep -q "^allow_commands=yes" "${settings}"; then
+  if _tapto settings | jq -e '.allowCommands' >/dev/null; then
     menuOptions[2]="on"
   else
     menuOptions[5]="on"
@@ -860,20 +805,8 @@ _EOF_
   selected="$(_radiolist --help-button -- "${menuOptions[@]}" )"
   [[ "${?}" -eq 2 ]] && { _msgbox "${helpmsg}" ; "${FUNCNAME[0]}" ; return ; }
   case "${selected}" in
-    Enable)
-      if grep -q "^allow_commands=" "${settings}"; then
-        sed -i "s/^allow_commands=.*/allow_commands=yes/" "${settings}"
-      else
-        echo "allow_commands=yes" >> "${settings}"
-      fi
-      ;;
-    Disable)
-      if grep -q "^allow_commands=" "${settings}"; then
-        sed -i "s/^allow_commands=.*/allow_commands=no/" "${settings}"
-      else
-        echo "allow_commands=no" >> "${settings}"
-      fi
-      ;;
+    Enable) _tapto settings PUT '{"allowCommands":true}' ;;
+    Disable) _tapto settings PUT '{"allowCommands":false}' ;;
   esac
 }
 
@@ -884,9 +817,7 @@ _soundSetting() {
     "Disable"  "Disable sounds played when a tag is scanned"  "off"
   )
 
-  [[ -f "${settings}" ]] || echo "[tapto]" > "${settings}" || { _error "Can't create settings file" ; return 1 ; }
-
-  if grep -q "^disable_sounds=no" "${settings}"; then
+  if _tapto settings | jq -e '.disableSounds' >/dev/null; then
     menuOptions[5]="on"
   else
     menuOptions[2]="on"
@@ -894,20 +825,8 @@ _soundSetting() {
 
   selected="$(_radiolist -- "${menuOptions[@]}" )"
   case "${selected}" in
-    Enable)
-      if grep -q "^disable_sounds=" "${settings}"; then
-        sed -i "s/^disable_sounds=.*/disable_sounds=yes/" "${settings}"
-      else
-        echo "disable_sounds=yes" >> "${settings}"
-      fi
-      ;;
-    Disable)
-      if grep -q "^disable_sounds=" "${settings}"; then
-        sed -i "s/^disable_sounds=.*/disable_sounds=no/" "${settings}"
-      else
-        echo "disable_sounds=no" >> "${settings}"
-      fi
-      ;;
+    Enable) _tapto settings PUT '{"disableSounds":false}' ;;
+    Disable) _tapto settings PUT '{"disableSounds":true}' ;;
   esac
 }
 
@@ -919,44 +838,23 @@ _connectionSetting() {
     "Custom"    "Manually enter a custom connection string"                 "off"
   )
 
-  [[ -f "${settings}" ]] || echo "[tapto]" > "${settings}" || { _error "Can't create settings file" ; return 1 ; }
-
-  if ! grep -q "^connection_string=.*" "${settings}"; then
+  if [[ -z "$(_tapto setting | jq -r '.connectionString')" ]]; then
     menuOptions[2]="on"
-  elif grep -q "^connection_string=\"\"" "${settings}"; then
-    menuOptions[2]="on"
-  elif grep -q "^connection_string=\"pn532_uart:/dev/ttyUSB0\"" "${settings}"; then
+  elif [[ "$(_tapto setting | jq -r '.connectionString')" = "pn532_uart:/dev/ttyUSB0" ]]; then
     menuOptions[5]="on"
-  elif grep -q "^connection_string=\".*\"" "${settings}"; then
+  elif [[ -n "$(_tapto setting | jq -r '.connectionString')" ]]; then
     menuOptions[8]="on"
-    customString="$(grep "^connection_string=" "${settings}" | cut -d '=' -f 2)"
+    customString="$(_tapto setting | jq -r '.connectionString')"
     menuOptions[7]="Current custom option: ${customString}"
   fi
 
   selected="$(_radiolist -- "${menuOptions[@]}" )"
   case "${selected}" in
-    Default)
-      if grep -q "^connection_string=" "${settings}"; then
-        sed -i "s/^connection_string=.*/connection_string=\"\"/" "${settings}"
-      else
-        echo 'connection_string=""' >> "${settings}"
-      fi
-      ;;
-    PN532)
-      if grep -q "^connection_string=" "${settings}"; then
-        sed -i 's/^connection_string=.*/connection_string="pn532_uart:\/dev\/ttyUSB0"/' "${settings}"
-      else
-        echo 'connection_string="pn532_uart:/dev/ttyUSB0"' >> "${settings}"
-      fi
-      ;;
+    Default) _tapto settings PUT '{"connectionString":""}' ;;
+    PN532) _tapto settings PUT '{"connectionString":"pn532_uart:/dev/ttyUSB0"}' ;;
     Custom)
       customString="$(_inputbox "Enter connection string" "${customString}")"
-      #TODO sanitize input
-      if grep -q "^connection_string=" "${settings}"; then
-        sed -i "s/^connection_string=.*/connection_string=\"${customString}\"/" "${settings}"
-      else
-        echo "connection_string=\"${customString}\"" >> "${settings}"
-      fi
+      _tapto settings PUT "{\"connectionString\":\"${customString}\"}"
       ;;
   esac
 }
@@ -968,158 +866,96 @@ _probeSetting() {
     "Disable"  "Disable detection of a serial based reader device"  "off"
   )
 
-  [[ -f "${settings}" ]] || echo "[tapto]" > "${settings}" || { _error "Can't create settings file" ; return 1 ; }
-
-  # Check if probe_device is set to "no" in the settings
-  if grep -q "^probe_device=no" "${settings}"; then
-    # If probe_device is "no", set the corresponding radio button to "on"
-    menuOptions[5]="on" # Disable option is selected
+  if _tapto settings | jq -e '.probeDevice' >/dev/null; then
+    menuOptions[2]="on"
   else
-    # If probe_device is not "no", set the corresponding radio button to "on"
-    menuOptions[2]="on" # Enable option is selected by default
+    menuOptions[5]="on"
   fi
 
   selected="$(_radiolist -- "${menuOptions[@]}" )"
   case "${selected}" in
-    Enable)
-      if grep -q "^probe_device=" "${settings}"; then
-        sed -i "s/^probe_device=.*/probe_device=yes/" "${settings}"
-      else
-        echo "probe_device=yes" >> "${settings}"
-      fi
-      ;;
-    Disable)
-      if grep -q "^probe_device=" "${settings}"; then
-        sed -i "s/^probe_device=.*/probe_device=no/" "${settings}"
-      else
-        echo "probe_device=no" >> "${settings}"
-      fi
-      ;;
+    Enable) _tapto settings PUT '{"probeDevice":true}' ;;
+    Disable) _tapto settings PUT '{"probeDevice":false}' ;;
   esac
 }
 
 _exitGameSetting() {
     local menuOptions selected
   menuOptions=(
-    "Enable"   "Return to menu core when the card is removed"   "off"
-    "Disable"  "Do not return to menu core when the card is removed"  "off"
+    "Insert"  "Return to menu core when the card is removed"        "off"
+    "Tap"     "Do not return to menu core when the card is removed" "off"
   )
 
-  [[ -f "${settings}" ]] || echo "[tapto]" > "${settings}" || { _error "Can't create settings file" ; return 1 ; }
-
-  # Check if probe_device is set to "no" in the settings
-  if grep -q "^exit_game=no" "${settings}"; then
-    # If exit_game is "no", set the corresponding radio button to "on"
-    menuOptions[5]="on" # Disable option is selected
+  if _tapto settings | jq -e '.exitGame' >/dev/null; then
+    menuOptions[2]="on"
   else
-    # If exit_game is not "no", set the corresponding radio button to "on"
-    menuOptions[2]="on" # Enable option is selected
+    menuOptions[5]="on"
   fi
 
   selected="$(_radiolist -- "${menuOptions[@]}" )"
   case "${selected}" in
-    Enable)
-      if grep -q "^exit_game=" "${settings}"; then
-        sed -i "s/^exit_game=.*/exit_game=yes/" "${settings}"
-      else
-        echo "exit_game=yes" >> "${settings}"
-      fi
-      ;;
-    Disable)
-      if grep -q "^exit_game=" "${settings}"; then
-        sed -i "s/^exit_game=.*/exit_game=no/" "${settings}"
-      else
-        echo "exit_game=no" >> "${settings}"
-      fi
-      ;;
+    Insert) _tapto settings PUT '{"exitGame":true}' ;;
+    Tap) _tapto settings PUT '{"exitGame":false}' ;;
   esac
 }
 
 _exitGameBlocklistSetting() {
-  local menuOptions selected customString
+  local menuOptions selected customString state
   menuOptions=(
     "Disable"   "All cores will exit when a card is removed"  "off"
     "Enable"    "Enter a custom list of core names"  "off"
   )
 
-  [[ -f "${settings}" ]] || echo "[tapto]" > "${settings}" || { _error "Can't create settings file" ; return 1 ; }
+  state="$(_tapto settings)"
 
-  if ! grep -q "^exit_game_blocklist=" "${settings}"; then
-    menuOptions[2]="on"
-  elif grep -q "^exit_game_blocklist=\"\"" "${settings}"; then
+  if [[ -z "$(jq -r '.exitGameBlocklist[]' <<< "${state}" )" ]]; then
     menuOptions[2]="on"
   else
     menuOptions[5]="on"
-  fi
-
-  if grep -q "^exit_game_blocklist=\"..*\"" "${settings}"; then
-    customString="$(grep "^exit_game_blocklist=" "${settings}" | cut -d '"' -f 2)"
+    customString="$(jq -r '.exitGameBlocklist | @csv' <<< "${state}")"
+    customString="${customString//\"}"
     menuOptions[4]="Enter a custom list of core names, current value: ${customString}"
   fi
 
   selected="$(_radiolist -- "${menuOptions[@]}" )"
   case "${selected}" in
-    Disable)
-      if grep -q "^exit_game_blocklist=" "${settings}"; then
-        sed -i "s/^exit_game_blocklist=.*/exit_game_blocklist=\"\"/" "${settings}"
-      else
-        echo "exit_game_blocklist=\"\"" >> "${settings}"
-      fi
-      ;;
+    Disable) _tapto settings PUT '{"exitGameBlocklist":[]}' ;;
     Enable)
-
       customString="$(_inputbox "Enter core list, comma separated (SNES, GENESIS)" "${customString}")"
-      if grep -q "^exit_game_blocklist=" "${settings}"; then
-        sed -i "s/^exit_game_blocklist=.*/exit_game_blocklist=\"${customString}\"/" "${settings}"
-      else
-        echo "exit_game_blocklist=\"${customString}\"" >> "${settings}"
-      fi
+      customString="\"${customString//,/\",\"}\""
+      _tapto settings PUT "{\"exitGameBlocklist\":[${customString}]}"
       ;;
   esac
 }
 
 _exitGameDelaySetting() {
-  local menuOptions selected customString delayInSeconds exitcode
+  local menuOptions selected currentSetting delayInSeconds exitcode state
   menuOptions=(
     "Disable"   "Set the delay to 0"               "off"
     "Enable"    "Enter a custom delay in seconds"  "off"
   )
 
-  [[ -f "${settings}" ]] || echo "[tapto]" > "${settings}" || { _error "Can't create settings file" ; return 1 ; }
+  state="$(_tapto settings)"
 
-  if grep -q "^exit_game_delay=[1-9][0-9]*" "${settings}"; then
-    menuOptions[5]="on"
-  else 
+  if [[ "$(jq -r '.exitGameDelay' <<< "${state}" )" == 0 ]]; then
     menuOptions[2]="on"
-  fi
-
-  if grep -q "^exit_game_delay=.*" "${settings}"; then
-    customString="$(grep "^exit_game_delay=" "${settings}" | cut -d '=' -f 2)"
-    menuOptions[4]="Change the delay in seconds, current value: ${customString}"
+  else 
+    menuOptions[5]="on"
+    currentSetting="$(jq -r '.exitGameDelay' <<< "${state}")"
+    menuOptions[4]="Change the delay in seconds, current value: ${currentSetting}"
   fi
 
   selected="$(_radiolist -- "${menuOptions[@]}" )"
   case "${selected}" in
-    Disable)
-      if grep -q "^exit_game_delay=" "${settings}"; then
-        sed -i "s/^exit_game_delay=.*/exit_game_delay=0/" "${settings}"
-      else
-        echo 'exit_game_delay=0' >> "${settings}"
-      fi
-      ;;
+    Disable) _tapto settings PUT '{"exitGameDelay":0}' ;;
     Enable)
-
       while true; do
-        delayInSeconds="$(_inputbox "Enter delay in seconds" "${customString}")"
+        delayInSeconds="$(_rangebox "Delay in seconds" "0" "60" "${currentSetting}")"
         exitcode="${?}"; [[ "${exitcode}" -ge 1 ]] && { "${FUNCNAME[0]}" ; return ; }
         [[ "${delayInSeconds}" == +([0-9]*) ]] && break
         _error "${delayInSeconds} is not a positive number"
       done
-      if grep -q "^exit_game_delay=" "${settings}"; then
-        sed -i "s/^exit_game_delay=.*/exit_game_delay=${delayInSeconds}/" "${settings}"
-      else
-        echo "exit_game_delay=${delayInSeconds}" >> "${settings}"
-      fi
+      _tapto settings PUT "{\"exitGameDelay\":${delayInSeconds}"
       ;;
   esac
 }
@@ -1177,7 +1013,7 @@ _EOF_
       echo "${fullPath}"
       return
     fi
-  elif [[ -f "${fullPath}" ]]; then
+  elif [[ ! -d "${fullPath}" ]]; then
     echo "${fullPath}"
     return
   fi
@@ -1310,20 +1146,82 @@ _gameLocation() {
     "goto"  "Go to directory (keyboard required)"
     "fat"   "${underline}${bold}SD Card${reset}"
     "${gameLocations[@]}"
+    "systems" "browse games by system"
   )
 
-  selected="$(_menu --default-item "fat" --colors -- "${gameLocations[@]}")"
-  exitcode="${?}"; [[ "${exitcode}" -ge 1 ]] && return "${exitcode}"
+  selected="$(_menu --default-item "${selected:-fat}" --cancel-button "Back" --no-button "Back" --colors -- "${gameLocations[@]}")"
+  [[ "${?}" =~ ^(1|255)$ ]] && { "${FUNCNAME[1]}" ; return ; }
 
   case "${selected}" in
     "goto")
       dir="$(_inputbox "Input a directory to go to" "${sdroot}")"
       echo "${dir%/}"
       ;;
+    "systems")
+      _gameBrowser
+      ;;
     *)
       echo "${basedir}/${selected}"
       ;;
   esac
+}
+
+# Browse games using _taptui REST API
+# Usage: _gameBrowser
+# Returns: path to selected game
+_gameBrowser() {
+  local relativeComponents categories category systems system tempFile currentDirDirs currentDir currentDirFiles selected
+  currentDir=""
+
+  relativeComponents=(
+    ".." "Up one directory"
+  )
+  readarray -t categories < <(_tapto systems | jq -r '.systems[] | .category' | sort -u | sed 's/.*/&\nCategory/')
+  category="$(_menu  --backtitle "${title}" --cancel-button "Back" --no-button "Back" -- "${categories[@]}" )"
+  [[ "${?}" =~ ^(1|255)$ ]] && { selected="systems" "${FUNCNAME[1]}" ; return ; }
+  readarray -t systems < <(_tapto systems | jq -r  ".systems[] | select(.category == \"${category}\") | .id + \"\n\" + .name")
+  system="$(_menu  --backtitle "${title}" --cancel-button "Back" --no-button "Back"  -- "${systems[@]}" )"
+  [[ "${?}" =~ ^(1|255)$ ]] && { "${FUNCNAME[1]}" ; return ; }
+  tmpFile="$(mktemp)"
+  trap 'rm "${tmpFile}"; _exit' SIGINT # Trap Ctrl+C (SIGINT) to clean up tmp file
+  _infobox "Loading."
+  _tapto games "${system}" maxResults=0 | jq -r .results[].path > "${tmpFile}"
+  while true; do
+
+    readarray -t currentDirDirs <<< "$( \
+      grep -o "^${currentDir}[^/]*/" "${tmpFile}" | sort -u |
+      while read -r line; do
+        echo -e "${line#"$currentDir"}\nDirectory"
+      done )"
+    [[ "${#currentDirDirs[@]}" -le "1" ]] && unset currentDirDirs
+
+    readarray -t currentDirFiles <<< "$( \
+      grep -x "^${currentDir}[^/]*$" "${tmpFile}" |
+      while read -r line; do
+        echo -e "${line#"$currentDir"}\nFile"
+      done )"
+    [[ "${#currentDirFiles[@]}" -le "1" ]] && unset currentDirFiles
+
+    selected="$(msg="${currentDir}" _menu --backtitle "${title}" \
+      --title "${system}" -- "${relativeComponents[@]}" "${currentDirDirs[@]}" "${currentDirFiles[@]}")"
+    exitcode="${?}"; [[ "${exitcode}" -ge 1 ]] && { rm "${tmpFile}" ; return "${exitcode}" ; }
+
+    case "${selected,,}" in
+    "..")
+      [[ -z "${currentDir}" ]] && { "${FUNCNAME[0]}"; return; }
+      [[ "${currentDir%/}" != *"/"* ]] && currentDir=""
+      [[ -n "${currentDir}" ]] && currentDir="${currentDir%/*/}/"
+      ;;
+    */)
+      currentDir="${currentDir}${selected}"
+      ;;
+    *)
+      echo "${currentDir}${selected}"
+      break
+      ;;
+    esac
+  done
+  rm "${tmpFile}"
 }
 
 # Map or remap filepath or command for a given NFC tag (written to local database)
@@ -1340,6 +1238,149 @@ _map() {
 }
 
 _Mappings() {
+  local selected mappings
+
+  while true; do
+    readarray -t mappings < <(_tapto mappings | jq -r '.mappings[] | .id + "\n" + if .label != "" then .label + " (" + .type + ")" else .type + ": " +  .pattern end')
+    selected="$(_menu \
+      --extra-button --extra-label "New" \
+      --cancel-label "Back" --colors \
+      --default-item "${selected}" \
+      -- "${mappings[@]}" \
+      "Legacy" "Legacy CSV mappings")"
+    case "${?}" in
+      1|255) return ;;
+      3) _newMapping ;;
+      0) # OK button
+        [[ "${selected}" == "Legacy" ]] && { _CSVMappings; continue; }
+        _editMapping "${selected}"
+        ;;
+    esac
+
+  done
+
+}
+
+_newMapping() {
+  local nfcSCAN exitcode pattern override
+  _yesno "Read tag or type match text?" \
+    --ok-label "Read tag" --yes-label "Read tag" \
+    --no-label "Amiibo" --cancel-label "Amiibo" \
+    --extra-button --extra-label "Match text" \
+    --help-button --help-label "Cancel"
+  case "${?}" in
+    0) # Yes button (Read tag)
+      nfcSCAN="$(_readTag)"
+      exitcode="${?}"; [[ "${exitcode}" -ge 1 ]] && return "${exitcode}"
+      pattern="$(jq -r '.uid' <<< "${nfcSCAN}" )"
+      type="uid" match="exact"
+      ;;
+    1) # No button (Amiibo)
+      pattern="$(_amiiboRegex)"
+      exitcode="${?}"; [[ "${exitcode}" -ge 1 ]] && return "${exitcode}"
+      type="data" match="regex"
+      ;;
+    3) # Extra button (Match text)
+      pattern="$(_inputbox "Replace match text" "${match_text}")"
+      exitcode="${?}"; [[ "${exitcode}" -ge 1 ]] && return "${exitcode}"
+      type=text match="partial"
+      ;;
+    2|255) # No button (Cancel)
+      return
+      ;;
+  esac
+  override="$(_commandPalette)"
+  while true; do
+    _yesno "Do you want to chain more commands?\nCurrent Command(s):\n\n${override}" --defaultno || break
+    override="${override}||$(_commandPalette)"
+  done
+  label="$(_inputbox "Enter friendly name" "")"
+
+  _tapto POST mappings "{ \"label\": \"${label}\", \"enabled\": true, \"type\": \"${type}\", \"match\": \"${match}\", \"pattern\": \"${pattern}\", \"override\": \"${override}\" }"
+  exitcode="${?}"; [[ "${exitcode}" -ge 1 ]] && return "${exitcode}"
+}
+
+_editMapping() {
+  local id menuOptions selected mapEntry entryLabel entryEnabled entryType entryMatch entryPattern entryOverride
+  id="${1}"
+  mapEntry="$(_tapto mappings | jq ".mappings[] | select(.id == \"${id}\")")"
+
+  entryLabel="$(jq -r '.label' <<<"${mapEntry}")"
+  entryEnabled="$(jq -r '.enabled' <<<"${mapEntry}")"
+  entryType="$(jq -r '.type' <<<"${mapEntry}")"
+  entryMatch="$(jq -r '.match' <<<"${mapEntry}")"
+  entryPattern="$(jq -r '.pattern' <<<"${mapEntry}")"
+  entryOverride="$(jq -r '.override' <<<"${mapEntry}")"
+  entryDate="$(jq -r '.added' <<<"${mapEntry}")"
+
+  menuOptions=(
+    "Label"     "${entryLabel}"
+    "Enabled"   "${entryEnabled}"
+    "Type"      "${entryType}"
+    "Match"     "${entryMatch}"
+    "Pattern"   "${entryPattern}"
+    "Override"  "${entryOverride}"
+    "Write"     "Write text to physical tag"
+    "Delete"    "Remove entry from mappings database"
+  )
+
+  selected="$(msg="ID: ${id} | Added: $(date -d "${entryDate}")" _menu \
+    --cancel-label "Done" \
+    -- "${menuOptions[@]}" )" || return
+  exitcode="${?}"; [[ "${exitcode}" -ge 1 ]] && { "${FUNCNAME[0]}" "${id}" ; return ; }
+
+  case "${selected}" in
+  Label)
+    entryLabel="$(_inputbox "Enter a new label (friendly name)" "${entryLabel}")" || return
+    _tapto PUT mappings "${id}" "{\"label\": \"${entryLabel}\"}"
+    ;;
+  Enabled)
+    entryEnabled="true"
+    _yesno "" \
+      --ok-button "Enable" --yes-button "Enable" \
+      --no-button "Disable" --cancel-label "Disable" \
+      || entryEnabled="false"
+    _tapto PUT mappings "${id}" "{\"enabled\": ${entryEnabled}}"
+    ;;
+  Type)
+    entryType="$(_menu -- \
+      "uid"   "Match by UID" \
+      "text"  "Match by Text" \
+      "data"  "Match by Amiibo/Data")" || return
+    _tapto PUT mappings "${id}" "{\"type\": \"${entryType}\"}"
+    ;;
+  Match)
+    entryMatch="$(_menu -- \
+      "exact"   "Exact match" \
+      "partial" "Partial match" \
+      "regex"   "Match using regular expression")" || return
+    _tapto PUT mappings "${id}" "{\"match\": \"${entryMatch}\"}"
+    ;;
+  Pattern)
+    entryLabel="$(_inputbox \
+      "Enter a new label (friendly name)" "${entryLabel}" \
+      --extra-button --extra-label "Amiibo")"
+    if [[ "${?}" = "3" ]]; then
+      entryLabel="$(_amiiboRegex)" || return
+      _tapto PUT mappings "${id}" "{\"match\": \"regex\"}"
+    fi
+    _tapto PUT mappings "${id}" "{\"pattern\": \"${entryPattern}\"}"
+    ;;
+  Override)
+    entryOverride="$(_commandPalette)" || return
+    _tapto PUT mappings "${id}" "{\"override\": \"${entryOverride}\"}"
+    ;;
+  Write)
+    text="${entryOverride}" _Write
+    return
+    ;;
+  Delete)
+    _tapto DELETE mappings "${id}"
+    ;;
+  esac
+}
+
+_CSVMappings() {
   local oldMap arrayIndex line lineNumber match_uid match_text text menuOptions selected replacement_match_text replacement_match_uid replacement_text message new_match_uid new_text
   unset replacement_match_uid replacement_text
 
@@ -1371,15 +1412,24 @@ _Mappings() {
   if [[ "${exitcode}" == "3" ]]; then
     _yesno "Read tag or type match text?" \
       --ok-label "Read tag" --yes-label "Read tag" \
-      --no-label "Cancel" \
-      --extra-button --extra-label "Match text"
+      --no-label "Amiibo" --cancel-label "Amiibo" \
+      --extra-button --extra-label "Match text" \
+      --help-button --help-label "Cancel"
     case "${?}" in
       0)
         # Yes button (Read tag)
-        new_match_uid="$(set -o pipefail; _readTag | cut -d ',' -f 2)"
+        nfcSCAN="$(_readTag)"
+        new_match_uid="$(jq -r '.uid' <<< "${nfcSCAN}")"
         exitcode="${?}"; [[ "${exitcode}" -ge 1 ]] && return "${exitcode}"
         # Enclose field in quotes if it's needed to escape a comma
         [[ "${new_match_uid}" == \"*\" ]] || [[ "${new_match_uid}" == *,* ]] && new_match_uid="\"${new_match_uid}\""
+        ;;
+      1)
+        # No button (Amiibo)
+        new_match_text="amiibo:$(_amiiboRegex)"
+        exitcode="${?}"; [[ "${exitcode}" -ge 1 ]] && return "${exitcode}"
+        # Enclose field in quotes if it's needed to escape a comma
+        [[ "${new_match_text}" == \"*\" ]] || [[ "${new_match_text}" == *,* ]] && new_match_text="\"${new_match_text}\""
         ;;
       3)
         # Extra button (Match text)
@@ -1388,9 +1438,9 @@ _Mappings() {
         # Enclose field in quotes if it's needed to escape a comma
         [[ "${new_match_text}" == \"*\" ]] || [[ "${new_match_text}" == *,* ]] && new_match_text="\"${new_match_text}\""
         ;;
-      1|255)
+      2|255)
         # No button (Cancel)
-        _Mappings
+        "${FUNCNAME[0]}"
         return
         ;;
     esac
@@ -1403,7 +1453,7 @@ _Mappings() {
     # Enclose field in quotes if it's needed to escape a comma
     [[ "${new_text}" == \"*\" ]] || [[ "${new_text}" == *,* ]] && new_text="\"${new_text}\""
     _map "${new_match_uid}" "${new_match_text}" "${new_text}"
-    _Mappings
+    "${FUNCNAME[0]}"
     return
   fi
 
@@ -1424,12 +1474,13 @@ _Mappings() {
   selected="$(_menu \
     --cancel-label "Done" \
     -- "${menuOptions[@]}" )"
-  exitcode="${?}"; [[ "${exitcode}" -ge 1 ]] && { _Mappings ; return ; }
+  exitcode="${?}"; [[ "${exitcode}" -ge 1 ]] && { "${FUNCNAME[0]}" ; return ; }
 
   case "${selected}" in
   UID)
     # Replace match_uid
-    replacement_match_uid="$(_readTag | cut -d ',' -f 2)"
+    nfcSCAN="$(_readTag)"
+    replacement_match_uid="$(jq -r '.uid' <<< "${nfcSCAN}")"
     # Enclose field in quotes if it's needed to escape a comma
     [[ "${replacement_match_uid}" == \"*\" ]] || [[ "${replacement_match_uid}" == *,* ]] && replacement_match_uid="\"${replacement_match_uid}\""
     [[ -z "${replacement_match_uid}" ]] && return
@@ -1462,7 +1513,7 @@ _Mappings() {
   Delete)
     # Delete line from Mappings database
     sed -i "${lineNumber}d" "${map}"
-    _Mappings
+    "${FUNCNAME[0]}"
     return
     ;;
   esac
@@ -1545,22 +1596,27 @@ _writeTag() {
   txt="${1}"
 
   _infobox "Present NFC tag to begin writing..."
+  #_tapto POST write "${txt}" || { _error "Unable to write the NFC Tag"; return 1; }
   "${nfcCommand}" -write "${txt}" || { _error "Unable to write the NFC Tag"; return 1; }
   # Workaround for -write enabling launching games again
-  echo "disable" | socat - "${nfcSocket}"
+  _tapto settings PUT '{"launching":false}'
 
   _msgbox "${txt} \n successfully written to NFC tag"
 }
 
 # Write text string to NFC map (overrides physical NFC Tag contents)
-# Usage: _writeTextToMap [--uid "UID"] <"Text">
+# Usage: _writeTextToMap [--uid "UID" | --matchText "Text"] <"Text">
 _writeTextToMap() {
-  local txt uid oldMapEntry
+  local txt uid oldMapEntry matchText
 
   while [[ "${#}" -gt "0" ]]; do
     case "${1}" in
     --uid)
       uid="${2}"
+      shift 2
+      ;;
+    --matchText)
+      matchText="${2}"
       shift 2
       ;;
     *)
@@ -1570,39 +1626,52 @@ _writeTextToMap() {
     esac
   done
 
+  [[ -f "${map}" ]] || echo "${mapHeader}" > "${map}"
+
   # Check if UID is provided
-  [[ -z "${uid}" ]] && uid="$(_readTag | cut -d ',' -f 2 )"
+  [[ -z "${uid}" ]] && [[ -z "${matchText}" ]] && uid="$(_readTag | jq -r '.uid' )"
 
-  # Check if the map file exists and read the existing entry for the given UID
-  if [[ -f "${map}" ]]; then
-    oldMapEntry=$(grep "^${uid}," "${map}")
-  else
-    echo "${mapHeader}" > "${map}"
-  fi
+  if [[ -n "${uid}" ]]; then
+    # Check if the map file exists and read the existing entry for the given UID
+    [[ -f "${map}" ]] && oldMapEntry="$(grep "^${uid}," "${map}")"
 
-  # If an existing entry is found, ask to replace it
-  if [[ -n "$oldMapEntry" ]] && _yesno "UID:${uid}\nText:${txt}\n\nAdd entry to map? This will replace:\n${oldMapEntry}"; then
-    sed -i "s|^${uid},.*|${uid},,${txt}|g" "${map}"
-  elif _yesno "UID:${uid}\nText:${txt}\n\nAdd entry to map?"; then
-    echo "${uid},,${txt}" >> "${map}"
+    # If an existing entry is found, ask to replace it
+    if [[ -n "${oldMapEntry}" ]] && _yesno "UID:${uid}\nText:${txt}\n\nAdd entry to map? This will replace:\n${oldMapEntry}"; then
+      sed -i "s|^${uid},.*|${uid},,${txt}|g" "${map}"
+    elif _yesno "UID:${uid}\nText:${txt}\n\nAdd entry to map?"; then
+      echo "${uid},,${txt}" >> "${map}"
+    fi
+  elif [[ -n "${matchText}" ]]; then
+    # Check if the map file exists and read the existing entry for the given UID
+    [[ -f "${map}" ]] && oldMapEntry="$(grep "^.*,${matchText//[\[\.*^$/]/\\$&}," "${map}")"
+
+    # If an existing entry is found, ask to replace it
+    if [[ -n "${oldMapEntry}" ]] && _yesno "Match Text:${matchText}\nText:${txt}\n\nAdd entry to map? This will replace:\n${oldMapEntry}"; then
+      sed -i "s|^,${matchText//[\[\.*^$/]/\\$&}.*|,${matchText},${txt}|g" "${map}"
+    elif _yesno "Match Text:${matchText}\nText:${txt}\n\nAdd entry to map?"; then
+      echo ",${matchText},${txt}" >> "${map}"
+    fi
   fi
 }
 
 # Read UID and Text from tag, returns comma separated values below
 # Usage: _readTag
-# Returns: "Unix epoch time","UID","core launch status","text"
+# Returns: json object
 _readTag() {
   local lastScanTime currentScan currentScanTime scanSuccess
-  lastScanTime="$(echo "status" | socat - "${nfcSocket}" | cut -d ',' -f 1)"
+  lastScanTime="$(_tapto status | jq -r '.lastToken.scanTime' | date -f - +%s)"
   _infobox "Scan NFC Tag to continue...\n\nPress any key to go back"
   while true; do
-    currentScan="$(echo "status" | socat - "${nfcSocket}" 2>/dev/null)"
-    currentScanTime="$(cut -d ',' -f 1 <<< "${currentScan}")"
-    [[ "${lastScanTime}" != "${currentScanTime}" ]] && { scanSuccess="true" ; break; }
+    currentScan="$(_tapto status | jq -c '.activeToken')"
+    currentScanTime="$( \
+      jq -r '.scanTime' <<< "${currentScan}" | \
+      date -f - +%s 2>/dev/null || echo 0)"
+    [[ "${currentScanTime}" -gt "${lastScanTime}" ]] && { scanSuccess="true" ; break; }
     sleep 1
     read -t 1 -n 1 -r  && return 1
   done
-  currentScan="$(echo "status" | socat - "${nfcSocket}")"
+  # I hope this next command is reduntant
+  #currentScan="$(_tapto status)"
   if [[ ! "${scanSuccess}" ]]; then
     _yesno "Tag not read" --yes-label "Retry" && _readTag
     return 1
@@ -1617,13 +1686,14 @@ _readTag() {
 _searchMatchText() {
   local nfcTxt
   nfcTxt="${1}"
+  [[ -z "${nfcTxt}" ]] && return
 
   [[ -f "${map}" ]] || return
   [[ $(head -n 1 "${map}") == "${mapHeader}" ]] || return
 
   sed 1d "${map}" | while IFS=, read -r match_uid match_text text; do
     [[ -z "${match_text}" ]] && continue
-    if [[ "${nfcTxt}" == *"${match_text}"* ]]; then
+    if [[ "${nfcTxt}" == "${match_text}" ]] || [[ "${nfcTxt}" =~ ${match_text} ]]; then
       echo "${match_uid},${match_text},${text}"
     fi
   done
@@ -1645,6 +1715,164 @@ _isInArray() {
   done
 
   return 1
+}
+
+_amiibo() {
+  local today apiFreshness apiLastUpdate cacheStale
+
+  today="$(date +"%Y-%m-%d")"
+  cacheStale="false"
+
+  if [[ ! -f "${amiiboAPICache}" ]] || ! jq -e '.amiibo | length > 0' "${amiiboAPICache}" >/dev/null; then
+    cacheStale="true"
+  else
+    apiFreshness="$(date -r "${amiiboAPICache}" +"%Y-%m-%d")"
+  fi
+
+  if [[ "${apiFreshness}" != "${today}" ]]; then
+    if ping -c 1 8.8.8.8 > /dev/null 2>&1 && curl -s -o /dev/null "${amiiboApi}" > /dev/null; then
+      apiLastUpdate="$(date -d "$(curl -s "${amiiboApi}/amiibo/lastupdated" | jq -r '.lastUpdated')" +%s)"
+      [[ "$(date -r "${amiiboAPICache}" +%s)" -lt "${apiLastUpdate}" ]] && cacheStale="true"
+    fi
+  else
+    cacheStale="false"
+  fi
+
+  if "${cacheStale}"; then 
+    curl -s "${amiiboApi}/amiibo/" -o "${amiiboAPICache}.new"
+    if jq -e '.amiibo | length > 0' "${amiiboAPICache}.new" >/dev/null; then
+      mv "${amiiboAPICache}.new" "${amiiboAPICache}"
+    fi
+  else
+    touch "${amiiboAPICache}"
+  fi
+
+  if [[ -f "${amiiboAPICache}" ]]; then
+    cat "${amiiboAPICache}"
+  else
+    return 1
+  fi
+}
+
+_amiiboRegex() {
+  local categories gameSeries characters variation type amiiboSeries amiibos msg selected selectedGameSeries selectedCharacter selectedVariation selectedType selectedAmiiboSeries selectedAmiibo regex
+  [[ -n "${1}" ]] && regex="${1}"
+
+  while true; do
+    categories=(1 "Game Series" 2 "Character" 3 "Variation" 4 "Type: Figure, Card, Yarn, Band" 5 "Amiibo Series" 6 "Specific Amiibo" 7 "Clear all choices" 8 "Cancel")
+    gameSeries=( "00[0-2]" "Super Mario" "0((0[0-2])|9[c-d])" "Mario (all)" "008" "Yoshi's Woolly World" "00c" "Donkey Kong" "010" "The Legend of Zelda" "014" "The Legend of Zelda: Breath of the Wild" "0(1[89a-f]|[2-4][0-9a-f]|5[0-1])" "Animal Crossing" "058" "Star Fox" "05c" "Metroid" "060" "F-Zero" "064" "Pikmin" "06c" "Punch Out" "070" "Wii Fit" "074" "Kid Icarus" "078" "Classic Nintendo" "07c" "Mii" "080" "Splatoon" "09[c-d]" "Mario Sports Superstars" "0((1[89a-f]|[2-4][0-9a-f]|5[0-1])|a[0-2])" "Animal Crossing (all)" "0(a[0-2])" "Animal Crossing New Horizons" "0a4" "ARMS" "(19[0-9a-f]|1[0-9a-d][0-9a-f]|1d[0-4])" "Pokemon" "1f0" "Kirby" "1f4" "BoxBoy!" "210" "Fire Emblem" "224" "Xenoblade Chronicles" "228" "Earthbound" "22c" "Chibi Robo" "320" "Sonic" "324" "Bayonetta" "334" "Pac-man" "338" "Dark Souls" "33c" "Tekken" "348" "Megaman" "34c" "Street fighter" "350" "Monster Hunter" "35c" "Shovel Knight" "360" "Final Fantasy" "364" "Dragon Quest" "374" "Kellogs" "378" "Metal Gear Solid" "37c" "Castlevania" "380" "Power Pros" "384" "Yu-Gi-Oh!" "38c" "Diablo" "3a0" "Persona" "3b4" "Banjo Kazooie" "3c8" "Fatal Fury" "3dc" "Minecraft" "3f0" "Kingdom Hearts")
+    readarray -t characters < <(_amiibo | jq -r '.amiibo[] | .head[:4] + "\n" + .character')
+    variation=("00" 1 "01" 2 "02" 3 "03" 4 "04" 5 "05" 6 "ff" "Skylander")
+    readarray -t type < <(_amiibo | jq -r '.amiibo[] | .head[6:8] + " " + .type' | sort -u | tr ' ' '\n')
+    readarray -t amiiboSeries < <(_amiibo | jq -r '.amiibo[] | .tail[4:6] + " " + .amiiboSeries' | sort -u | sed "s/ /\n/")
+    readarray -t amiibos < <(_amiibo | jq -r '.amiibo[] | .head + .tail + " " + .name' | sed "s/ /\n/")
+
+    [[ -n "${regex}" ]] && msg="Current matching string: ${regex}"
+    selected="$(_menu  --colors \
+      --default-item "${selected}" \
+      -- "${categories[@]}")"
+    case "${selected}" in
+      1)
+        # Game Series
+        msg="Current matching string: ${selectedCharacter:-${underline}${selectedGameSeries:-...}${reset}.}${selectedVariation:-..}${selectedType:-..}....${selectedAmiiboSeries:-..}02"
+        selectedGameSeries="$(_menu --colors \
+          --default-item "${selectedGameSeries}" \
+          -- ... "Any game Series" "${gameSeries[@]}")"
+        if [[ "${selectedGameSeries}" == "..." ]]; then unset selectedGameSeries
+        else
+          unset selectedCharacter
+        fi
+      ;;
+      2)
+        # Character
+        if [[ -n "${regex}" ]] && _yesno "Filter by current choices?\n${regex}"; then
+          readarray -t characters < <( \
+            _amiibo | jq -r '.amiibo[] | .head + .tail + " " + .head[:4] + " " + .character' | grep "^${regex}" | awk '{$1=""; print substr($0,2)}' | sort -u | sed "s/ /\n/")
+        fi
+        msg="Current matching string: ${selectedGameSeries:-...}${underline}.${reset}${selectedVariation:-..}${selectedType:-..}....${selectedAmiiboSeries:-..}02"
+        selectedCharacter="$(_menu --colors \
+          --default-item "${selectedCharacter}" \
+          -- "${selectedGameSeries:-...}." "Any character" "${characters[@]}")"
+        if [[ "${selectedCharacter}" == "...." ]]; then unset selectedCharacter
+        else
+          unset selectedGameSeries
+          readarray -t variation < <( \
+            _amiibo | jq -r '.amiibo[] | .head[:4] + " " + .head[4:6] + " " + if .head[4:6] == "ff" then "Skylander" else "Variation" end' | \
+            grep "^${selectedCharacter}" | awk '{$1=""; print substr($0,2)}' | sort -u | tr ' ' '\n')
+          msg="Current matching string: ${selectedCharacter:-${selectedGameSeries:-...}.}${underline}${selectedVariation:-..}${reset}${selectedType:-..}....${selectedAmiiboSeries:-..}02"
+          selectedVariation="$(_menu --colors \
+            --default-item "${selectedVariation}" \
+            -- .. "Any variation" "${variation[@]}")"
+          [[ "${selectedVariation}" == ".." ]] && unset selectedVariation
+        fi
+      ;;
+      3)
+        # Variation
+        if [[ -n "${regex}" ]] && _yesno "Filter by current choices?\n${regex}"; then
+          readarray -t variation < <( \
+            _amiibo | jq -r '.amiibo[] | .head + .tail + " " + .head[4:6] + " " + .character' | grep "^${regex}" | awk '{$1=""; print substr($0,2)}' | sed "s/ /\n/")
+        fi
+        msg="Current matching string: ${selectedCharacter:-${selectedGameSeries:-...}.}${underline}${selectedVariation:-..}${reset}${selectedType:-..}....${selectedAmiiboSeries:-..}02"
+        selectedVariation="$(_menu --colors \
+          --default-item "${selectedVariation}" \
+          -- .. "Any variation" "${variation[@]}")"
+        [[ "${selectedVariation}" == ".." ]] && unset selectedVariation
+      ;;
+      4)
+        # Type
+        if [[ -n "${regex}" ]] && _yesno "Filter by current choices?\n${regex}"; then
+          readarray -t type < <( \
+            _amiibo | jq -r '.amiibo[] | .head + .tail + " " + .head[6:8] + " " + .type' | grep "^${regex}" | awk '{$1=""; print substr($0,2)}' | sort -u | tr ' ' '\n')
+        fi
+        msg="Current matching string: ${selectedCharacter:-${selectedGameSeries:-...}.}${selectedVariation:-..}${underline}${selectedType:-..}${reset}....${selectedAmiiboSeries:-..}02"
+        selectedType="$(_menu --colors \
+          --default-item "${selectedType}" \
+          -- .. "Any type" "${type[@]}")"
+        [[ "${selectedType}" == ".." ]] && unset selectedType
+      ;;
+      5)
+        # Amiibo Series
+        if [[ -n "${regex}" ]] && _yesno "Filter by current choices?\n${regex}"; then
+          readarray -t amiiboSeries < <( \
+            _amiibo | jq -r '.amiibo[] | .head + .tail + " " + .tail[4:6] + " " + .amiiboSeries' | grep "^${regex}" | awk '{$1=""; print substr($0,2)}' | sort -u | sed "s/ /\n/")
+        fi
+        msg="Current matching string: ${selectedCharacter:-${selectedGameSeries:-...}.}${selectedVariation:-..}${selectedType:-..}....${underline}${selectedAmiiboSeries:-..}${reset}02"
+        selectedAmiiboSeries="$(_menu --colors \
+          --default-item "${selectedAmiiboSeries}" \
+          -- .. "Any series" "${amiiboSeries[@]}")"
+        [[ "${selectedAmiiboSeries}" == ".." ]] && unset selectedAmiiboSeries
+      ;;
+      6)
+        # Amiibo
+        if [[ -n "${regex}" ]] && _yesno "Filter by current choices?\n${regex}"; then
+          readarray -t amiibos < <(_amiibo | jq -r '.amiibo[] | .head + .tail + " " + .character' | grep "^${regex}" | sed "s/ /\n/")
+        fi
+        [[ -n "${regex}" ]] && msg="Current matching string: ${regex}"
+        selectedAmiibo="$(_menu --colors \
+          --default-item "${selectedAmiibo}" \
+          -- "UNSET" "Unset" "${amiibos[@]}")"
+        [[ "${selectedAmiibo}" == "UNSET" ]] && unset selectedAmiibo
+      ;;
+      7)
+        # Clear all
+        unset selectedGameSeries selectedCharacter selectedVariation selectedType selectedAmiiboSeries selectedAmiibo
+      ;;
+      8)
+        # Cancel
+        return
+      ;;
+    esac
+
+    regex="${selectedCharacter:-${selectedGameSeries:-...}.}${selectedVariation:-..}${selectedType:-..}....${selectedAmiiboSeries:-..}02"
+    if [[ -n "${selectedAmiibo}" ]]; then
+      regex="${selectedAmiibo}"
+      unset selectedGameSeries selectedCharacter selectedVariation selectedType selectedAmiiboSeries selectedAmiibo
+    fi
+
+    _yesno "Continue editing?\nCurrent choice:\n${regex}" --no-label "Finish" --cancel-label "Finish" || break
+  done
+
+  echo "${regex}"
 }
 
 _textEditor() {
@@ -1678,6 +1906,26 @@ _textEditor() {
   return "${exitcode}"
 }
 
+# Ask user for a number
+# Usage: _rangebox "text" "min-value" "max-value" "default-value" [--optional-arguments]
+# You can pass additioal arguments to the dialog program
+# Backtitle is already set
+_rangebox() {
+  local msg opts init
+  msg="${1}"
+  if [[ "${2}" =~ ^[0-9]*$ ]]; then minValue="${2}"; else return 1; fi
+  if [[ "${3}" =~ ^[0-9]*$ ]]; then maxValue="${3}"; else return 1; fi
+  if [[ "${4}" =~ ^[0-9]*$ ]]; then defaultValue="${4}"; else return 1; fi
+  shift 4
+  opts=("${@}")
+  dialog \
+    --backtitle "${title}" \
+    "${opts[@]}" --rangebox "${msg}" 22 77 \
+    "${minValue}" "${maxValue}" "${defaultValue}" \
+    3>&1 1>&2 2>&3 >"$(tty)" <"$(tty)"
+  return "${?}"
+}
+
 # Ask user for a string
 # Usage: _inputbox "My message" "Initial text" [--optional-arguments]
 # You can pass additioal arguments to the dialog program
@@ -1697,7 +1945,7 @@ _inputbox() {
 }
 
 # Display a menu
-# Usage: [msg="message"] _menu [--optional-arguments] -- [ tag item ] ...
+# Usage: [msg="message"] _menu [--optional-arguments] -- [ tag item ] ...
 # You can pass additioal arguments to the dialog program
 # Backtitle is already set
 _menu() {
@@ -1837,9 +2085,68 @@ _error() {
   return "${answer}"
 }
 
+# Tapto REST API handler
+# Usage: _tapto [METHOD] [OPTIONS] [ENDPOINT] [DATA]
+# - METHOD: HTTP method (POST, PUT, DELETE, GET, OPTIONS)
+# - OPTIONS: Additional headers such as Content-Type, Accept, Authorization, Link
+# - ENDPOINT: API endpoints such as, status, launch, games, systems, mappings, etc
+# - DATA: Data to be sent with the request
+# Returns the response from the Tapto REST API
+_tapto() {
+  local x h d url response
+
+  while [[ ${#} -gt 0 ]]; do
+    case "${1}" in
+      POST) x=("-X" "POST"); shift ;;
+      PUT) x=("-X" "PUT"); shift ;;
+      DELETE) x=("-X" "DELETE"); shift ;;
+      GET) x=("-X" "GET"); shift ;;
+      OPTIONS) x=("-X" "OPTIONS"); shift ;;
+      "Content-Type") h+=("-H" "Content-Type: ${2}"); shift 2 ;;
+      Accept) h+=("-H" "Accept: ${2}"); shift 2 ;;
+      Authorization) h+=("-H" "Authorization: ${2}"); shift 2 ;;
+      Link) h+=("-H" "Link: ${2}"); shift 2 ;;
+      status) url="status"; shift ;;
+      launch) url="launch"; shift ;;
+      games)
+        url="games?system=${2}"
+        shift 2
+        [[ "${1}" =~ ^(query|maxResults)=.* ]] && { url="${url}&${1%%&*}"; shift ; }
+        [[ "${1}" =~ ^(query|maxResults)=.* ]] && { url="${url}&${1%%&*}"; shift ; }
+        ;;
+      systems) url="systems"; shift ;;
+      mappings)
+	url="mappings";
+	shift
+	[[ "${1}" =~ ^[0-9]+$ ]] && { url="${url}/${1}" ; shift ; }
+	;;
+      history) url="history"; shift ;;
+      settings) url="settings"; shift ;;
+      log) url="settings/log/download"; shift ;;
+      index) url="settings/index/games" x=("-X" "POST"); shift ;;
+      write) url="readers/0/write" x=("-X" "POST"); shift ;;
+      *) d="${1}"; break ;;
+    esac
+  done
+  [[ "${#h[@]}" -eq 0 ]] && h=("-H" "Content-Type: application/json")
+  [[ "${#x[@]}" -eq 0 ]] && x=("-X" "GET")
+  [[ -z "${url}" ]] && url="status"
+
+  if [[ -t 1 ]]; then
+	  response="$(curl -s "${x[@]}" "${h[@]}" -d "${d}" "${taptoAPI}/${url}")"
+	  if jq <<<"${response}" &>/dev/null ; then
+		  jq --color-output <<<"${response}" | less -R -X -F
+          else
+		  less -R -X -F <<<"${response}"
+	  fi
+  else
+    curl -s "${x[@]}" "${h[@]}" -d "${d}" "${taptoAPI}/${url}"
+  fi
+}
+
 _exit() {
   clear
-  "${nfcReadingStatus}" && echo "enable" | socat - "${nfcSocket}"
+  "${nfcReadingStatus}" && _tapto settings PUT '{"launching":true}'
   exit "${1:-0}"
 }
 trap _exit EXIT

@@ -11,8 +11,10 @@ import (
 
 type HistoryReponseEntry struct {
 	Time    time.Time `json:"time"`
+	Type    string    `json:"type"`
 	UID     string    `json:"uid"`
 	Text    string    `json:"text"`
+	Data    string    `json:"data"`
 	Success bool      `json:"success"`
 }
 
@@ -44,8 +46,10 @@ func handleHistory(
 		for i, e := range entries {
 			resp.Entries[i] = HistoryReponseEntry{
 				Time:    e.Time,
+				Type:    e.Type,
 				UID:     e.UID,
 				Text:    e.Text,
+				Data:    e.Data,
 				Success: e.Success,
 			}
 		}

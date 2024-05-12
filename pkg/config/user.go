@@ -111,6 +111,12 @@ func (c *UserConfig) GetExitGame() bool {
 	return c.TapTo.ExitGame
 }
 
+func (c *UserConfig) SetExitGameDelay(exitGameDelay int8) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.TapTo.ExitGameDelay = exitGameDelay
+}
+
 func (c *UserConfig) SetExitGame(exitGame bool) {
 	c.mu.Lock()
 	defer c.mu.Unlock()

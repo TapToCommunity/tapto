@@ -24,6 +24,7 @@ package daemon
 import (
 	"fmt"
 	"os"
+	"regexp"
 	"strings"
 	"time"
 
@@ -64,6 +65,118 @@ func inExitGameBlocklist(cfg *config.UserConfig) bool {
 	return slices.Contains(blocklist, strings.ToLower(mister.GetActiveCoreName()))
 }
 
+func checkMappingUid(m database.Mapping, t state.Token) bool {
+	uid := database.NormalizeUid(t.UID)
+
+	switch {
+	case m.Match == database.MatchTypeExact:
+		return uid == m.Pattern
+	case m.Match == database.MatchTypePartial:
+		return strings.Contains(uid, m.Pattern)
+	case m.Match == database.MatchTypeRegex:
+		re, err := regexp.Compile(m.Pattern)
+		if err != nil {
+			log.Error().Err(err).Msgf("error compiling regex")
+			return false
+		}
+		return re.MatchString(uid)
+	}
+
+	return false
+}
+
+func checkMappingText(m database.Mapping, t state.Token) bool {
+	switch {
+	case m.Match == database.MatchTypeExact:
+		return t.Text == m.Pattern
+	case m.Match == database.MatchTypePartial:
+		return strings.Contains(t.Text, m.Pattern)
+	case m.Match == database.MatchTypeRegex:
+		re, err := regexp.Compile(m.Pattern)
+		if err != nil {
+			log.Error().Err(err).Msgf("error compiling regex")
+			return false
+		}
+		return re.MatchString(t.Text)
+	}
+
+	return false
+}
+
+func checkMappingData(m database.Mapping, t state.Token) bool {
+	switch {
+	case m.Match == database.MatchTypeExact:
+		return t.Data == m.Pattern
+	case m.Match == database.MatchTypePartial:
+		return strings.Contains(t.Data, m.Pattern)
+	case m.Match == database.MatchTypeRegex:
+		re, err := regexp.Compile(m.Pattern)
+		if err != nil {
+			log.Error().Err(err).Msgf("error compiling regex")
+			return false
+		}
+		return re.MatchString(t.Data)
+	}
+
+	return false
+}
+
+func getMapping(db *database.Database, oldDb state.OldDb, token state.Token) (string, bool) {
+	// check db mappings
+	ms, err := db.GetEnabledMappings()
+	if err != nil {
+		log.Error().Err(err).Msgf("error getting db mappings")
+	}
+
+	for _, m := range ms {
+		switch {
+		case m.Type == database.MappingTypeUID:
+			if checkMappingUid(m, token) {
+				log.Info().Msg("launching with db uid match override")
+				return m.Override, true
+			}
+		case m.Type == database.MappingTypeText:
+			if checkMappingText(m, token) {
+				log.Info().Msg("launching with db text match override")
+				return m.Override, true
+			}
+		case m.Type == database.MappingTypeData:
+			if checkMappingData(m, token) {
+				log.Info().Msg("launching with db data match override")
+				return m.Override, true
+			}
+		}
+	}
+
+	// check nfc.csv uids
+	if v, ok := oldDb.Uids[token.UID]; ok {
+		log.Info().Msg("launching with csv uid match override")
+		return v, true
+	}
+
+	// check nfc.csv texts
+	for pattern, cmd := range oldDb.Texts {
+		// check if pattern is a regex
+		re, err := regexp.Compile(pattern)
+
+		// not a regex
+		if err != nil {
+			if pattern, ok := oldDb.Texts[token.Text]; ok {
+				log.Info().Msg("launching with csv text match override")
+				return pattern, true
+			}
+		}
+
+		// regex
+		if re.MatchString(token.Text) {
+			log.Info().Msg("launching with csv regex text match override")
+			return cmd, true
+		}
+	}
+
+	return "", false
+}
+
 func launchToken(
 	cfg *config.UserConfig,
 	token state.Token,
@@ -71,35 +184,16 @@ func launchToken(
 	db *database.Database,
 	kbd input.Keyboard,
 ) error {
-	uidMap, textMap := state.GetDB()
-
 	text := token.Text
-	mapped := false
 
-	if v, ok := uidMap[token.UID]; ok {
-		log.Info().Msg("launching with csv uid match override")
-		text = v
-		mapped = true
-	}
-
-	if v, err := db.GetUidMapping(token.UID); err == nil {
-		if err != nil {
-			log.Error().Err(err).Msgf("error getting db uid mapping")
-		} else if v != "" {
-			log.Info().Msg("launching with db uid match override")
-			text = v
-			mapped = true
-		}
-	}
-
-	if v, ok := textMap[token.Text]; ok {
-		log.Info().Msg("launching with csv text match override")
-		text = v
-		mapped = true
+	mappingText, mapped := getMapping(db, state.GetDB(), token)
+	if mapped {
+		log.Info().Msgf("found mapping: %s", mappingText)
+		text = mappingText
 	}
 
 	if text == "" {
-		return fmt.Errorf("no text NDEF found in card or database")
+		return fmt.Errorf("no text NDEF found in card or mappings")
 	}
 
 	log.Info().Msgf("launching with text: %s", text)
@@ -140,8 +234,10 @@ func processLaunchQueue(
 
 			he := database.HistoryEntry{
 				Time: t.ScanTime,
+				Type: t.Type,
 				UID:  t.UID,
 				Text: t.Text,
+				Data: t.Data,
 			}
 
 			if st.IsLauncherDisabled() {
@@ -198,14 +294,14 @@ func StartDaemon(cfg *config.UserConfig) (func() error, error) {
 		return nil, err
 	}
 
-	uids, texts, err := launcher.LoadMappings()
+	uids, texts, err := launcher.LoadCsvMappings()
 	if err != nil {
 		log.Error().Msgf("error loading mappings: %s", err)
 	} else {
 		st.SetDB(uids, texts)
 	}
 
-	closeMappingsWatcher, err := launcher.StartMappingsWatcher(
+	closeMappingsWatcher, err := launcher.StartCsvMappingsWatcher(
 		st.GetDBLoadTime,
 		st.SetDB,
 	)
