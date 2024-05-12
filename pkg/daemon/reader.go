@@ -314,16 +314,19 @@ func readerPollLoop(
 
 		newScanned, removed, err := pollDevice(cfg, &pnd, activeCard, ttp, pbp)
 
-		// if we removed but we weren't removing already, start the remove countdown
-		if removed && candidateForRemove == false {
-			st.SetCardRemovalTime(time.Now())
-			candidateForRemove = true
-			// if we were removing but we put back the card we had before
-			// then we are ok blocking the exit process
-		} else if candidateForRemove && (newScanned.UID == st.GetCurrentlyLoadedSoftware()) {
-			log.Info().Msgf("Card was removed but inserted back")
-			st.SetCardRemovalTime(time.Time{})
-			candidateForRemove = false
+		if cfg.GetExitGame() {
+			// if we removed but we weren't removing already, start the remove countdown
+			if removed && candidateForRemove == false {
+				log.Info().Msgf("Start countdown for removal")
+				st.SetCardRemovalTime(time.Now())
+				candidateForRemove = true
+				// if we were removing but we put back the card we had before
+				// then we are ok blocking the exit process
+			} else if candidateForRemove && (newScanned.UID == st.GetCurrentlyLoadedSoftware()) {
+				log.Info().Msgf("Card was removed but inserted back")
+				st.SetCardRemovalTime(time.Time{})
+				candidateForRemove = false
+			}
 		}
 
 		if errors.Is(err, nfc.Error(nfc.EIO)) {
@@ -353,6 +356,7 @@ func readerPollLoop(
 		} else if mister.GetActiveCoreName() == mrextConfig.MenuCore {
 			// at any time we are on the current menu we should forget old values
 			candidateForRemove = false
+			st.SetCardRemovalTime(time.Time{})
 			st.SetCurrentlyLoadedSoftware("")
 		}
 
