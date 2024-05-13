@@ -200,9 +200,13 @@ func launchToken(
 	cmds := strings.Split(text, "||")
 
 	for i, cmd := range cmds {
-		err := launcher.LaunchToken(cfg, cfg.GetAllowCommands() || mapped, kbd, cmd, len(cmds), i)
+		err, softwareSwap := launcher.LaunchToken(cfg, cfg.GetAllowCommands() || mapped, kbd, cmd, len(cmds), i)
 		if err != nil {
 			return err
+		}
+		if softwareSwap {
+			log.Info().Msgf("current software launched set to: %s", token.UID)
+			state.SetCurrentlyLoadedSoftware(token.UID)
 		}
 	}
 

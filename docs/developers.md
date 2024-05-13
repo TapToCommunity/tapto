@@ -79,6 +79,10 @@ Some builds may display warnings such as this:
 
 They can be ignored. Some low-level things do not support static linking, but the Docker build environment matches the MiSTer image just to be safe (basically just the glibc major version).
 
+### Testing
+
+When changing the application behavior, in particular the reader loop, some testing is required. This [file](./scanner_behavior.md) contains a list of expected behavior for the application under certain conditions. It is useful to test them to ensure we didn't break any flow.
+
 ## Project Layout
 
 This is an overview of all the major files and folders in the project.
