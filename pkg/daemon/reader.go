@@ -191,6 +191,7 @@ func shouldExit(
 	}
 
 	if hasTimePassed && cfg.GetExitGame() && !inExitGameBlocklist(cfg) {
+		log.Info().Msgf("Exiting game after %.2f seconds have passed with a configured %d seconds delay", time.Since(removalTime).Seconds(), cfg.GetExitGameDelay())
 		return true
 	} else {
 		return false
