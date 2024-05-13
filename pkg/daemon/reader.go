@@ -353,8 +353,8 @@ func readerPollLoop(
 			mister.ExitGame()
 			st.SetCurrentlyLoadedSoftware("")
 			continue
-		} else if mister.GetActiveCoreName() == mrextConfig.MenuCore {
-			// at any time we are on the current menu we should forget old values
+		} else if mister.GetActiveCoreName() == mrextConfig.MenuCore && (candidateForRemove || st.GetCurrentlyLoadedSoftware() != "") {
+			// at any time we are on the current menu we should forget old values if we have anything to clear
 			candidateForRemove = false
 			st.SetCardRemovalTime(time.Time{})
 			st.SetCurrentlyLoadedSoftware("")
