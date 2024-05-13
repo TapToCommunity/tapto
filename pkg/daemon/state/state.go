@@ -78,6 +78,7 @@ func (s *State) SetCurrentlyLoadedSoftware(command string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.currentlyLoadedSoftware = command
+	log.Debug().Msgf("current software launched set to: %s", command)
 }
 
 func (s *State) GetActiveCard() Token {

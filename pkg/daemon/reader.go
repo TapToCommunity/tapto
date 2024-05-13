@@ -210,6 +210,9 @@ func readerPollLoop(
 	pbp := PeriodBetweenPolls
 	var lastError time.Time
 	var candidateForRemove bool
+	// keep track of core switch for menu reset
+	var lastCoreName string = mrextConfig.MenuCore
+
 	playFail := func() {
 		if time.Since(lastError) > 1*time.Second {
 			mister.PlayFail(cfg)
@@ -353,12 +356,15 @@ func readerPollLoop(
 			mister.ExitGame()
 			st.SetCurrentlyLoadedSoftware("")
 			continue
-		} else if mister.GetActiveCoreName() == mrextConfig.MenuCore && (candidateForRemove || st.GetCurrentlyLoadedSoftware() != "") {
+		} else if mister.GetActiveCoreName() == mrextConfig.MenuCore && lastCoreName != mrextConfig.MenuCore {
 			// at any time we are on the current menu we should forget old values if we have anything to clear
 			candidateForRemove = false
 			st.SetCardRemovalTime(time.Time{})
 			st.SetCurrentlyLoadedSoftware("")
+
 		}
+
+		lastCoreName = mister.GetActiveCoreName()
 
 		// From here we didn't exit a game, but we want short circuit and do nothing if the following happens
 
