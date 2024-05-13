@@ -52,8 +52,9 @@ var commandMappings = map[string]func(*cmdEnv) error{
 	"shell": cmdShell,
 	"delay": cmdDelay,
 
-	"mister.ini":  cmdIni,
-	"mister.core": cmdLaunchCore,
+	"mister.ini":    cmdIni,
+	"mister.core":   cmdLaunchCore,
+	"mister.script": cmdMisterScript,
 
 	"http.get":  cmdHttpGet,
 	"http.post": cmdHttpPost,
@@ -170,6 +171,42 @@ func cmdIni(env *cmdEnv) error {
 	}
 
 	return nil
+}
+
+func cmdMisterScript(env *cmdEnv) error {
+	// TODO: escaping arguments
+	// TODO: does this work if game is running?
+
+	if mrextMister.IsScriptRunning() {
+		return fmt.Errorf("script already running")
+	}
+
+	args := strings.Fields(env.args)
+
+	if len(args) == 0 {
+		return fmt.Errorf("no script specified")
+	}
+
+	script := args[0]
+
+	if !strings.HasSuffix(script, ".sh") {
+		return fmt.Errorf("invalid script: %s", script)
+	}
+
+	scriptPath := filepath.Join(mister.ScriptsFolder, script)
+	if _, err := os.Stat(scriptPath); err != nil {
+		return fmt.Errorf("script not found: %s", script)
+	}
+
+	script = scriptPath
+
+	args = args[1:]
+	if len(args) > 0 {
+		scriptArgs := strings.Join(args, " ")
+		script = fmt.Sprintf("%s %s", script, scriptArgs)
+	}
+
+	return mrextMister.RunScript(env.kbd, script)
 }
 
 func cmdHttpGet(env *cmdEnv) error {
