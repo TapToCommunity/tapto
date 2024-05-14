@@ -35,21 +35,21 @@ var NDEF_START = []byte{0x54, 0x02, 0x65, 0x6E}
 func ParseRecordText(blocks []byte) (string, error) {
 	startIndex := bytes.Index(blocks, NDEF_START)
 	if startIndex == -1 {
-		return "", fmt.Errorf("NDEF start not found: %v", blocks)
+		return "", fmt.Errorf("NDEF start not found: %x", blocks)
 	}
 
 	endIndex := bytes.Index(blocks, NDEF_END)
 	if endIndex == -1 {
-		return "", fmt.Errorf("NDEF end not found: %v", blocks)
+		return "", fmt.Errorf("NDEF end not found: %x", blocks)
 	}
 
 	startIndex += 4
 	if startIndex >= endIndex || startIndex+4 >= len(blocks) {
-		return "", fmt.Errorf("start index out of bounds: %d, %v", startIndex, blocks)
+		return "", fmt.Errorf("start index out of bounds: %d, %x", startIndex, blocks)
 	}
 
 	if endIndex <= startIndex || endIndex+1 >= len(blocks) {
-		return "", fmt.Errorf("end index out of bounds: %d, %v", endIndex, blocks)
+		return "", fmt.Errorf("end index out of bounds: %d, %x", endIndex, blocks)
 	}
 
 	tagText := string(blocks[startIndex:endIndex])
