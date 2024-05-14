@@ -87,7 +87,11 @@ func pollDevice(
 	}
 
 	log.Debug().Msgf("record bytes: %s", hex.EncodeToString(record.Bytes))
-	tagText := tokens.ParseRecordText(record.Bytes)
+	tagText, err := tokens.ParseRecordText(record.Bytes)
+	if err != nil {
+		log.Error().Err(err).Msgf("error parsing NDEF record")
+		tagText = ""
+	}
 
 	if tagText == "" {
 		log.Warn().Msg("no text NDEF found")
