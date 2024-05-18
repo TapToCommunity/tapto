@@ -54,6 +54,8 @@ var commandMappings = map[string]func(*cmdEnv) error{
 
 	"mister.ini":  cmdIni,
 	"mister.core": cmdLaunchCore,
+	// "mister.script": cmdMisterScript,
+	"mister.mgl": cmdMisterMgl,
 
 	"http.get":  cmdHttpGet,
 	"http.post": cmdHttpPost,
@@ -168,6 +170,81 @@ func cmdIni(env *cmdEnv) error {
 	if err != nil {
 		return err
 	}
+
+	return nil
+}
+
+func cmdMisterScript(env *cmdEnv) error {
+	// TODO: escaping arguments
+	// TODO: does this work if game is running?
+
+	if mrextMister.IsScriptRunning() {
+		return fmt.Errorf("script already running")
+	}
+
+	args := strings.Fields(env.args)
+
+	if len(args) == 0 {
+		return fmt.Errorf("no script specified")
+	}
+
+	script := args[0]
+
+	if !strings.HasSuffix(script, ".sh") {
+		return fmt.Errorf("invalid script: %s", script)
+	}
+
+	scriptPath := filepath.Join(mister.ScriptsFolder, script)
+	if _, err := os.Stat(scriptPath); err != nil {
+		return fmt.Errorf("script not found: %s", script)
+	}
+
+	script = scriptPath
+
+	args = args[1:]
+	if len(args) > 0 {
+		scriptArgs := strings.Join(args, " ")
+		script = fmt.Sprintf("%s %s", script, scriptArgs)
+	}
+
+	return mrextMister.RunScript(env.kbd, script)
+}
+
+func cmdMisterMgl(env *cmdEnv) error {
+	if env.args == "" {
+		return fmt.Errorf("no mgl specified")
+	}
+
+	tmpFile, err := os.CreateTemp("", "*.mgl")
+	if err != nil {
+		return err
+	}
+
+	_, err = tmpFile.WriteString(env.args)
+	if err != nil {
+		return err
+	}
+
+	err = tmpFile.Close()
+	if err != nil {
+		return err
+	}
+
+	cmd, err := os.OpenFile(mister.CmdInterface, os.O_RDWR, 0)
+	if err != nil {
+		return err
+	}
+	defer cmd.Close()
+
+	_, err = cmd.WriteString(fmt.Sprintf("load_core %s\n", tmpFile.Name()))
+	if err != nil {
+		return err
+	}
+
+	go func() {
+		time.Sleep(5 * time.Second)
+		_ = os.Remove(tmpFile.Name())
+	}()
 
 	return nil
 }

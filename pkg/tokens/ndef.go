@@ -24,6 +24,7 @@ package tokens
 import (
 	"bytes"
 	"encoding/binary"
+	"fmt"
 
 	"github.com/hsanjuan/go-ndef"
 )
@@ -31,17 +32,29 @@ import (
 var NDEF_END = []byte{0xFE}
 var NDEF_START = []byte{0x54, 0x02, 0x65, 0x6E}
 
-func ParseRecordText(blocks []byte) string {
-	// Find the text NDEF record
+func ParseRecordText(blocks []byte) (string, error) {
 	startIndex := bytes.Index(blocks, NDEF_START)
-	endIndex := bytes.Index(blocks, NDEF_END)
-
-	if startIndex != -1 && endIndex != -1 {
-		tagText := string(blocks[startIndex+4 : endIndex])
-		return tagText
+	if startIndex == -1 {
+		return "", fmt.Errorf("NDEF start not found: %x", blocks)
 	}
 
-	return ""
+	endIndex := bytes.Index(blocks, NDEF_END)
+	if endIndex == -1 {
+		return "", fmt.Errorf("NDEF end not found: %x", blocks)
+	}
+
+	startIndex += 4
+	if startIndex >= endIndex || startIndex+4 >= len(blocks) {
+		return "", fmt.Errorf("start index out of bounds: %d, %x", startIndex, blocks)
+	}
+
+	if endIndex <= startIndex || endIndex+1 >= len(blocks) {
+		return "", fmt.Errorf("end index out of bounds: %d, %x", endIndex, blocks)
+	}
+
+	tagText := string(blocks[startIndex:endIndex])
+
+	return tagText, nil
 }
 
 func BuildMessage(text string) ([]byte, error) {
