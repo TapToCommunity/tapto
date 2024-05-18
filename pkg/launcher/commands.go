@@ -230,10 +230,13 @@ func cmdMisterMgl(env *cmdEnv) error {
 		return err
 	}
 
-	err = mrextMister.LaunchGenericFile(
-		mister.UserConfigToMrext(env.cfg),
-		tmpFile.Name(),
-	)
+	cmd, err := os.OpenFile(mister.CmdInterface, os.O_RDWR, 0)
+	if err != nil {
+		return err
+	}
+	defer cmd.Close()
+
+	_, err = cmd.WriteString(fmt.Sprintf("load_core %s\n", tmpFile.Name()))
 	if err != nil {
 		return err
 	}

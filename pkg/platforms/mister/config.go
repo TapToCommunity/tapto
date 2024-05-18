@@ -20,6 +20,7 @@ const (
 	ArcadeDbUrl       = "https://api.github.com/repositories/521644036/contents/ArcadeDatabase_CSV"
 	ArcadeDbFile      = mrextConfig.ScriptsConfigFolder + "/tapto/ArcadeDatabase.csv"
 	ScriptsFolder     = mrextConfig.ScriptsFolder
+	CmdInterface      = "/dev/MiSTer_cmd"
 )
 
 func UserConfigToMrext(cfg *config.UserConfig) *mrextConfig.UserConfig {
