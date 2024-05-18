@@ -52,9 +52,10 @@ var commandMappings = map[string]func(*cmdEnv) error{
 	"shell": cmdShell,
 	"delay": cmdDelay,
 
-	"mister.ini":    cmdIni,
-	"mister.core":   cmdLaunchCore,
-	"mister.script": cmdMisterScript,
+	"mister.ini":  cmdIni,
+	"mister.core": cmdLaunchCore,
+	// "mister.script": cmdMisterScript,
+	"mister.mgl": cmdMisterMgl,
 
 	"http.get":  cmdHttpGet,
 	"http.post": cmdHttpPost,
@@ -207,6 +208,42 @@ func cmdMisterScript(env *cmdEnv) error {
 	}
 
 	return mrextMister.RunScript(env.kbd, script)
+}
+
+func cmdMisterMgl(env *cmdEnv) error {
+	if env.args == "" {
+		return fmt.Errorf("no mgl specified")
+	}
+
+	tmpFile, err := os.CreateTemp("", "*.mgl")
+	if err != nil {
+		return err
+	}
+
+	_, err = tmpFile.WriteString(env.args)
+	if err != nil {
+		return err
+	}
+
+	err = tmpFile.Close()
+	if err != nil {
+		return err
+	}
+
+	err = mrextMister.LaunchGenericFile(
+		mister.UserConfigToMrext(env.cfg),
+		tmpFile.Name(),
+	)
+	if err != nil {
+		return err
+	}
+
+	go func() {
+		time.Sleep(5 * time.Second)
+		_ = os.Remove(tmpFile.Name())
+	}()
+
+	return nil
 }
 
 func cmdHttpGet(env *cmdEnv) error {
