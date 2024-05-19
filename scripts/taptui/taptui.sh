@@ -1358,11 +1358,13 @@ _editMapping() {
     ;;
   Pattern)
     entryLabel="$(_inputbox \
-      "Enter a new label (friendly name)" "${entryLabel}" \
+      "Enter Pattern, or pick Amiibo" "${entryLabel}" \
       --extra-button --extra-label "Amiibo")"
     if [[ "${?}" = "3" ]]; then
       entryLabel="$(_amiiboRegex)" || return
       _tapto PUT mappings "${id}" "{\"match\": \"regex\"}"
+    else
+      _tapto PUT mappings "${id}" "{\"match\": \"exact\"}"
     fi
     _tapto PUT mappings "${id}" "{\"pattern\": \"${entryPattern}\"}"
     ;;
@@ -1869,7 +1871,7 @@ _amiiboRegex() {
       unset selectedGameSeries selectedCharacter selectedVariation selectedType selectedAmiiboSeries selectedAmiibo
     fi
 
-    _yesno "Continue editing?\nCurrent choice:\n${regex}" --no-label "Finish" --cancel-label "Finish" || break
+    height=8 width="$(( ${#regex} + 6 ))" _yesno "Continue editing?\nCurrent choice:\n${regex}" --no-label "Finish" --cancel-label "Finish" || break
   done
 
   echo "${regex}"
@@ -2048,7 +2050,7 @@ _msgbox() {
 # Backtitle is already set
 # returns the exit code from dialog which depends on the user answer
 _yesno() {
-  local msg opts
+  local msg opts height width
   msg="${1}"
   shift
   opts=("${@}")
@@ -2056,7 +2058,7 @@ _yesno() {
     --backtitle "${title}" \
     "${opts[@]}" \
     --yesno "${msg}" \
-    22 77 3>&1 1>&2 2>&3 >"$(tty)" <"$(tty)"
+    "${height:=22}" "${width:=77}" 3>&1 1>&2 2>&3 >"$(tty)" <"$(tty)"
   return "${?}"
 }
 
