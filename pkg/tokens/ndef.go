@@ -43,16 +43,15 @@ func ParseRecordText(blocks []byte) (string, error) {
 		return "", fmt.Errorf("NDEF end not found: %x", blocks)
 	}
 
-	startIndex += 4
 	if startIndex >= endIndex || startIndex+4 >= len(blocks) {
 		return "", fmt.Errorf("start index out of bounds: %d, %x", startIndex, blocks)
 	}
 
-	if endIndex <= startIndex || endIndex+1 >= len(blocks) {
+	if endIndex <= startIndex || endIndex >= len(blocks) {
 		return "", fmt.Errorf("end index out of bounds: %d, %x", endIndex, blocks)
 	}
 
-	tagText := string(blocks[startIndex:endIndex])
+	tagText := string(blocks[startIndex+4 : endIndex])
 
 	return tagText, nil
 }
