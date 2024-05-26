@@ -3,6 +3,7 @@ package api
 import (
 	"errors"
 	"net/http"
+	"time"
 
 	"github.com/go-chi/render"
 	"github.com/rs/zerolog/log"
@@ -34,5 +35,16 @@ func handleReaderWrite(st *state.State) http.HandlerFunc {
 		}
 
 		st.SetWriteRequest(req.Text)
+
+		for st.GetWriteRequest() != "" {
+			time.Sleep(100 * time.Millisecond)
+		}
+
+		if st.GetWriteError() != nil {
+			http.Error(w, st.GetWriteError().Error(), http.StatusInternalServerError)
+			return
+		}
+
+		w.WriteHeader(http.StatusOK)
 	}
 }

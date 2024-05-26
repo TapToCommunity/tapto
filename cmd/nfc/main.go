@@ -22,21 +22,21 @@ along with TapTo.  If not, see <http://www.gnu.org/licenses/>.
 package main
 
 import (
-	"encoding/hex"
+	"bytes"
+	"encoding/json"
 	"flag"
 	"fmt"
+	"io"
+	"net/http"
 	"os"
-	"os/signal"
 	"strings"
-	"syscall"
-	"time"
 
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 
+	"github.com/wizzomafizzo/tapto/pkg/daemon/api"
 	"github.com/wizzomafizzo/tapto/pkg/launcher"
 	"github.com/wizzomafizzo/tapto/pkg/platforms/mister"
-	"github.com/wizzomafizzo/tapto/pkg/tokens"
 	"github.com/wizzomafizzo/tapto/pkg/utils"
 
 	gc "github.com/rthornton128/goncurses"
@@ -45,16 +45,13 @@ import (
 
 	"github.com/wizzomafizzo/tapto/pkg/config"
 	"github.com/wizzomafizzo/tapto/pkg/daemon"
-	"github.com/wizzomafizzo/tapto/pkg/daemon/state"
 
-	"github.com/clausecker/nfc/v2"
 	mrextMister "github.com/wizzomafizzo/mrext/pkg/mister"
 )
 
 // TODO: something like the nfc-list utility so new users with unsupported readers can help identify them
 // TODO: play sound using go library
 // TODO: would it be possible to unlock the OSD with a card?
-// TODO: create a test web nfc reader in separate github repo, hosted on pages
 // TODO: use a tag to signal that that next tag should have the active game written to it
 // TODO: if it exists, use search.db instead of on demand index for random
 
@@ -87,136 +84,49 @@ func addToStartup() error {
 }
 
 func handleWriteCommand(textToWrite string, svc *mister.Service, cfg *config.UserConfig) {
-	// TODO: this is very tightly coupled to the mister service handling, it should
-	//       be made a part of the daemon process itself without killing it
+	log.Info().Msgf("writing text to tag: %s", textToWrite)
 
-	serviceRunning := svc.Running()
-	if serviceRunning {
-		err := svc.Stop()
-		if err != nil {
-			log.Error().Msgf("error stopping service: %s", err)
-			_, _ = fmt.Fprintln(os.Stderr, "Error stopping service:", err)
-			os.Exit(1)
-		}
-
-		tries := 15
-		for {
-			if !svc.Running() {
-				break
-			}
-			time.Sleep(100 * time.Millisecond)
-			tries--
-			if tries <= 0 {
-				log.Error().Msgf("error stopping service: %s", err)
-				_, _ = fmt.Fprintln(os.Stderr, "Error stopping service:", err)
-				os.Exit(1)
-			}
-		}
+	if !svc.Running() {
+		_, _ = fmt.Fprintln(os.Stderr, "TapTo service is not running, please start it before writing.")
+		log.Error().Msg("TapTo service is not running, exiting")
+		os.Exit(1)
 	}
 
-	restartService := func() {
-		if serviceRunning {
-			err := svc.Start()
-			if err != nil {
-				log.Error().Msgf("error starting service: %s", err)
-				_, _ = fmt.Fprintln(os.Stderr, "Error starting service:", err)
-				os.Exit(1)
-			}
-		}
-	}
-
-	sigs := make(chan os.Signal, 1)
-	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
-	cancelled := make(chan bool, 1)
-
-	go func() {
-		<-sigs
-		cancelled <- true
-		restartService()
-		os.Exit(0)
-	}()
-
-	var pnd nfc.Device
-	var err error
-
-	pnd, err = daemon.OpenDeviceWithRetries(cfg, &state.State{}, false)
+	body, err := json.Marshal(api.ReaderWriteRequest{Text: textToWrite})
 	if err != nil {
-		log.Error().Msgf("giving up, exiting: %s")
-		_, _ = fmt.Fprintln(os.Stderr, "Could not open device:", err)
-		restartService()
+		_, _ = fmt.Fprintln(os.Stderr, "Error encoding request:", err)
+		log.Error().Msgf("error encoding request: %s", err)
 		os.Exit(1)
 	}
 
-	defer func(pnd nfc.Device) {
-		err := pnd.Close()
+	resp, err := http.Post(
+		// TODO: don't hardcode port
+		"http://localhost:7497/api/v1/readers/0/write",
+		"application/json",
+		bytes.NewBuffer(body),
+	)
+	if err != nil {
+		_, _ = fmt.Fprintln(os.Stderr, "Error sending request:", err)
+		log.Error().Msgf("error sending request: %s", err)
+		os.Exit(1)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		errBody, err := io.ReadAll(resp.Body)
 		if err != nil {
-			log.Warn().Msgf("error closing device: %s", err)
-		}
-		log.Info().Msg("closed nfc device")
-	}(pnd)
-
-	var count int
-	var target nfc.Target
-	tries := 6 // ~30 seconds
-
-	for tries > 0 {
-		count, target, err = pnd.InitiatorPollTarget(tokens.SupportedCardTypes, daemon.TimesToPoll, daemon.PeriodBetweenPolls)
-
-		if err != nil && err.Error() != "timeout" {
-			log.Error().Msgf("could not poll: %s", err)
-			_, _ = fmt.Fprintln(os.Stderr, "Could not poll:", err)
-			restartService()
+			_, _ = fmt.Fprintln(os.Stderr, "Error reading response:", err)
+			log.Error().Msgf("error reading response: %s", err)
 			os.Exit(1)
 		}
 
-		if count > 0 {
-			break
-		}
-
-		tries--
-	}
-
-	if count == 0 {
-		log.Error().Msgf("could not detect a card")
-		_, _ = fmt.Fprintln(os.Stderr, "Could not detect a card")
-		restartService()
+		_, _ = fmt.Fprintf(os.Stderr, "Error writing to tag: %s\n", strings.TrimSpace(string(errBody)))
+		log.Error().Msgf("error writing to tag: %s", strings.TrimSpace(string(errBody)))
 		os.Exit(1)
 	}
 
-	cardUid := tokens.GetCardUID(target)
-	log.Info().Msgf("found card with UID: %s", cardUid)
-
-	cardType := tokens.GetCardType(target)
-	var bytesWritten []byte
-
-	switch cardType {
-	case tokens.TypeMifare:
-		bytesWritten, err = tokens.WriteMifare(pnd, textToWrite, cardUid)
-		if err != nil {
-			log.Error().Msgf("error writing to card: %s", err)
-			_, _ = fmt.Fprintln(os.Stderr, "Error writing to card:", err)
-			fmt.Println("Mifare cards need to NDEF formatted. If this is a brand new card, please use NFC tools mobile app to write some text (this only needs to be done the first time)")
-			restartService()
-			os.Exit(1)
-		}
-	case tokens.TypeNTAG:
-		bytesWritten, err = tokens.WriteNtag(pnd, textToWrite)
-		if err != nil {
-			log.Error().Msgf("error writing to card: %s", err)
-			_, _ = fmt.Fprintln(os.Stderr, "Error writing to card:", err)
-			restartService()
-			os.Exit(1)
-		}
-	default:
-		log.Error().Msgf("unsupported card type: %s", cardType)
-		restartService()
-		os.Exit(1)
-	}
-
-	log.Info().Msgf("successfully wrote to card: %s", hex.EncodeToString(bytesWritten))
-	_, _ = fmt.Fprintln(os.Stderr, "Successfully wrote to card")
-
-	restartService()
+	_, _ = fmt.Fprintln(os.Stderr, "Successfully wrote to tag.")
+	log.Info().Msg("successfully wrote to tag")
 	os.Exit(0)
 }
 
