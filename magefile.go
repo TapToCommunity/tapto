@@ -62,7 +62,7 @@ var apps = []app{
 		path:         filepath.Join(cwd, "cmd", "nfc"),
 		bin:          "tapto.sh",
 		releaseId:    "mrext/tapto",
-		ldFlags:      "-lnfc -lusb -lcurses",
+		ldFlags:      "-lpcsclite -lnfc -lusb -lcurses",
 		releaseFiles: []string{filepath.Join(cwd, "scripts", "nfcui", "nfcui.sh")},
 	},
 }

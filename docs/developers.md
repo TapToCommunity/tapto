@@ -28,7 +28,7 @@ Most applications use a lot of MiSTer-specific paths and files to function. They
 
 - [Docker](https://www.docker.com/)
 
-  Used for building all the MiSTer binaries. You also need to configure cross-compilation in Docker since ARM images are used for the build process. Podman should also work, but the build scripts use Docker explicitly.
+  Used for building all the MiSTer binaries. You also need to [configure cross-compilation in Docker](https://docs.docker.com/build/building/multi-platform/#building-multi-platform-images) since ARM images are used for the build process. Podman should also work, but the build scripts use Docker explicitly.
   
   On Linux, enable cross-platform builds with something like this: `apt install qemu binfmt-support qemu-user-static`
 
@@ -48,7 +48,7 @@ To start, you can run `go mod download` from the root of the project folder. Thi
 
 All build steps are done with the `mage` command run from the root of the project folder. Run `mage` by itself to see a list of available commands.
 
-Before building MiSTer binaries, you'll also need to build the Docker image it uses. Just run `mage makeArmImage` to add it to your system.
+Before building MiSTer binaries, you'll also need to build the Docker image it uses. Just run `mage makeMisterImage` to add it to your system.
 
 Built binaries will be created in the `bin` directory under its appropriate architecture subdirectory.
 

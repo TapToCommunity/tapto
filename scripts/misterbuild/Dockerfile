@@ -13,21 +13,10 @@ RUN apt-get install -y ca-certificates openssl && \
 RUN apt-get install build-essential git curl wget ncurses-dev -y && \
     apt-get install golang-doc/bullseye-backports golang-go/bullseye-backports golang-src/bullseye-backports golang/bullseye-backports -y
 
-# install libnfc dependencies
-RUN apt-get install -y libusb-dev libtool autoconf automake
-# install custom version of libnfc
-RUN mkdir /internal && cd /internal && \
-    git clone --depth 1 https://github.com/sam1902/libnfc && \
-    cd libnfc && \
-    autoreconf -vis && \
-    ./configure && \
-    make -j "$(nproc)" && \
-    make install
-
 # install pcsc-lite and ccid dependencies
 RUN apt-get install -y flex libusb-1.0-0-dev zlib1g-dev
 # install custom version of pcsc-lite
-RUN cd /internal && \
+RUN mkdir /internal && cd /internal && \
     wget https://pcsclite.apdu.fr/files/pcsc-lite-2.0.0.tar.bz2 && \
     tar xf pcsc-lite-2.0.0.tar.bz2 && \
     cd pcsc-lite-2.0.0 && \
@@ -40,6 +29,17 @@ RUN cd /internal && \
     tar xf ccid-1.5.4.tar.bz2 && \
     cd ccid-1.5.4 && \
     ./configure -enable-static && \
+    make -j "$(nproc)" && \
+    make install
+
+# install libnfc dependencies
+RUN apt-get install -y libusb-dev libtool autoconf automake
+# install custom version of libnfc
+RUN cd /internal && \
+    git clone --depth 1 https://github.com/sam1902/libnfc && \
+    cd libnfc && \
+    autoreconf -vis && \
+    ./configure --with-drivers=all && \
     make -j "$(nproc)" && \
     make install
 
