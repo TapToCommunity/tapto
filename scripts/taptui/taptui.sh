@@ -35,23 +35,9 @@ amiiboAPICache="${sdroot}/Scripts/.config/tapto/amiibo.json"
 [[ -d "${sdroot}" ]] || map="${scriptdir}/nfc.csv"
 [[ -d "${sdroot}" ]] && PATH="${sdroot}/linux:${sdroot}/Scripts:${PATH}"
 mapHeader="match_uid,match_text,text"
-taptoAPI="localhost:7497/api/v1"
-if taptoStatus="$(curl -s "${taptoAPI}/status")"; then
-  nfcUnavailable="false"
-  nfcStatus="true"
-  msg="Service: Enabled"
-  nfcReadingStatus="$(jq -r '.launching' <<< "${taptoStatus}")"
-  nfcReader="$(jq -r '.reader' <<< "${taptoStatus}")"
-  jq -e '.connected' <<< "${nfcReader}" >/dev/null && msg="${msg} | Connected Reader: $( jq -r '.type' <<< "${nfcReader}")"
-  # Disable reading for the duration of the script
-  # we trap the EXIT signal and execute the _exit() function to turn it on again
-  curl -s -X Put -H "Content-Type: application/json" -d '{"launching:false}' "${taptoAPI}/status"
-else
-  nfcUnavailable="true"
-  nfcStatus="false"
-  msg="Service: Unavailable"
-  nfcReadingStatus="false"
-fi
+taptoAPI="${taptoAPI:=localhost:7497/api/v1}"
+remoteConnection="false"
+logFile="/var/log/tapto/tapto.log"
 # Match MiSTer theme
 [[ -f "${sdroot}/Scripts/.dialogrc" ]] && export DIALOGRC="${sdroot}/Scripts/.dialogrc"
 #dialog escape codes, requires --colors
@@ -367,9 +353,61 @@ _depends() {
     _exit 1
   fi
 
-  [[ -x "${nfcCommand}" ]] || _error "${nfcCommand} not found\n\nRead more at ${underline}github.com/wizzomafizzo/tapto${noUnderline}" "1" --colors
+  if ! [[ -x "${nfcCommand}" ]]; then
+    if ! _yesno "${nfcCommand} not found\n\nRead more at ${underline}github.com/wizzomafizzo/tapto${noUnderline}\n\nContinue" --colors --defaultno; then
+      _exit 1
+    fi
+  fi
 
+  _taptoStatus
+
+  # Optional dependency, use ripgrep if available
   [[ -x "$(command -v rg)" ]] && grep() { rg "${@}"; }
+}
+
+_taptoStatus() {
+  if taptoStatus="$(_tapto)"; then
+    nfcStatus="true"
+    msg="Service: Enabled"
+    nfcReadingStatus="$(jq -r '.launching' <<< "${taptoStatus}")"
+    nfcReader="$(jq -r '.reader' <<< "${taptoStatus}")"
+    jq -e '.connected' <<< "${nfcReader}" >/dev/null && msg="${msg} | Connected Reader: $( jq -r '.type' <<< "${nfcReader}")"
+    # Disable reading for the duration of the script
+    # we trap the EXIT signal and execute the _exit() function to turn it on again
+    _tapto PUT settings '{"launching":false}'
+  else
+    nfcStatus="false"
+    msg="Service: Unavailable"
+    nfcReadingStatus="false"
+    while true; do
+      _yesno "Warning! \n\nTapto Service is not running. Enable?" \
+        --cancel-label "Remote Con." --no-label "Remote Con." \
+        --extra-button --extra-label "Exit" \
+        --help-button --help-label "Continue" \
+        --colors
+      case "${?}" in
+        0) # YES button
+          "${nfcCommand}" -service start || { _error "Failed to start service"; continue; }
+          sleep 3
+          "${FUNCNAME[0]}"; return #Relaunch function to update status
+          ;;
+        3|255) # NO button and Ctrl+C
+          _exit
+          ;;
+        1) # Remote Con. button
+          _yesno "Warning! \n\n Experimental feature, continue?" || _exit
+          remoteAddress="$(_inputbox "Enter address of MiSTer device to connect to:" "")"
+          export taptoAPI="${remoteAddress}:7497/api/v1"
+          _tapto &>/dev/null || { _error "Unable to connect to remote: ${remote}"; continue; }
+          remoteConnection="true"
+          "${FUNCNAME[0]}"; return #Relaunch function to update status
+          ;;
+        2) # Continue button
+          break
+          ;;
+      esac
+    done
+  fi
 }
 
 main() {
@@ -558,6 +596,7 @@ _commandPalette() {
       echo "${inputText}"
       ;;
     Pick)
+      "${remoteConnection}" && { fileSelected="$(_gameBrowser)" ; return; }
       fileSelected="$(_fselect "$(_gameLocation)")"
       exitcode="${?}"; [[ "${exitcode}" -ge 1 ]] && return "${exitcode}"
       #[[ ! -f "${fileSelected//.zip\/*/.zip}" ]] && { _error "No file was selected." ; return ; }
@@ -738,6 +777,7 @@ _Settings() {
     "Exit Game"       "Exit Game When Token Is Removed"
     "Exit Blocklist"  "Exit Game Core Blocklist"
     "Exit Delay"      "Exit Game Delay"
+    "Log Exporter"    "View and export logs"
   )
 
   while true; do
@@ -752,6 +792,7 @@ _Settings() {
       "Exit Game")      _exitGameSetting ;;
       "Exit Blocklist") _exitGameBlocklistSetting ;;
       "Exit Delay")     _exitGameDelaySetting ;;
+      "Log Exporter")   _logExporter ;;
     esac
   done
 }
@@ -759,7 +800,7 @@ _Settings() {
 _serviceSetting() {
   local menuOptions selected
 
-  "${nfcUnavailable}" && { _error "TapTo Service Unavailable!\n\nIs TapTo installed?"; return; }
+  "${remoteConnection}" && { _error "Service control is unavailable when connected remotly"; return; }
 
   menuOptions=(
     "Enable"   "Enable TapTo service"  "off"
@@ -772,12 +813,12 @@ _serviceSetting() {
   case "${selected}" in
     Enable)
       "${nfcCommand}" -service start || { _error "Unable to start the TapTo service"; return; }
-      export nfcStatus="true" msg="Service: Enabled"
+      sleep 3 && _taptoStatus
       _msgbox "The TapTo service started"
       ;;
     Disable)
       "${nfcCommand}" -service stop || { _error "Unable to stop the TapTo service"; return; }
-      export nfcStatus="false" msg="Service: Disabled"
+      export nfcStatus="false" msg="Service: Disabled (Menu's may not work)"
       _msgbox "The TapTo service stopped"
       ;;
   esac
@@ -958,6 +999,45 @@ _exitGameDelaySetting() {
       _tapto settings PUT "{\"exitGameDelay\":${delayInSeconds}"
       ;;
   esac
+}
+
+_logExporter() {
+  local renderedLog exitcode link
+  "${remoteConnection}" && { _error "Log management is unavailable when connected remotly"; return; }
+  renderedLog="$(_logRender "${logFile}")"
+  _msgbox "${renderedLog}" --colors \
+  --extra-button --extra-label "Export to file" \
+  --help-button --help-label "Share Link"
+  exitcode="${?}"
+  case "${exitcode}" in
+    3) # Export to File
+      logExport="${sdroot}/tapto.$(date '+%Y-%m-%d_%H-%M-%S').log"
+      cp "${logFile}" "${logExport}"
+      _msgbox "Log saved to the root of the SD card:\n\n${logExport}"
+      ;;
+    2) # Share Link
+      link="$(nc termbin.com 9999 < "${logFile}")"
+      _msgbox "Share the following link:\n\n${link}"
+      ;;
+  esac
+}
+
+_logRender() {
+  local if="${1}"
+  while IFS= read -r line; do
+    echo "$line" | jq -r --arg red "$red" --arg green "$green" --arg yellow "$yellow" --arg reset "$reset" '
+      .time as $time |
+      .time = ( $time | strftime("%Y-%m-%d %H:%M:%S") ) |
+      .level as $level |
+      .color = (
+        if $level == "error" then $red
+        elif $level == "warning" then $yellow
+        elif $level == "info" then $green
+        else "" end
+      ) |
+      "\(.time) [\(.color)\(.level)\($reset)] \(.message)"
+    '
+  done < "${if}"
 }
 
 _About() {
@@ -1386,6 +1466,8 @@ _CSVMappings() {
   local oldMap arrayIndex line lineNumber match_uid match_text text menuOptions selected replacement_match_text replacement_match_uid replacement_text message new_match_uid new_text
   unset replacement_match_uid replacement_text
 
+  "${remoteConnection}" && { _error "Legacy Mapping not supported while remotely connected"; return; }
+
   [[ -e "${map}" ]] || printf "%s\n" "${mapHeader}" >> "${map}" || { _error "Can't initialize mappings database!" ; return 1 ; }
 
   mapfile -t -O 1 -s 1 oldMap < "${map}"
@@ -1594,12 +1676,12 @@ _numberedArray() {
 # Write text string to physical NFC tag
 # Usage: _writeTag "Text"
 _writeTag() {
-  local txt
+  local txt exitcode
   txt="${1}"
 
   _infobox "Present NFC tag to begin writing..."
-  #_tapto POST write "${txt}" || { _error "Unable to write the NFC Tag"; return 1; }
-  "${nfcCommand}" -write "${txt}" || { _error "Unable to write the NFC Tag"; return 1; }
+  _tapto POST wirte '{"text": "'"${txt}"'"}'
+  exitcode="${?}"; [[ "${exitcode}" -ge 1 ]] && { _error "Unable to write the NFC Tag"; return 1; }
   # Workaround for -write enabling launching games again
   _tapto settings PUT '{"launching":false}'
 
@@ -2088,14 +2170,14 @@ _error() {
 }
 
 # Tapto REST API handler
-# Usage: _tapto [METHOD] [OPTIONS] [ENDPOINT] [DATA]
+# Usage: _tapto [METHOD] [OPTIONS] [ENDPOINT] [DATA]
 # - METHOD: HTTP method (POST, PUT, DELETE, GET, OPTIONS)
 # - OPTIONS: Additional headers such as Content-Type, Accept, Authorization, Link
 # - ENDPOINT: API endpoints such as, status, launch, games, systems, mappings, etc
 # - DATA: Data to be sent with the request
 # Returns the response from the Tapto REST API
 _tapto() {
-  local x h d url response
+  local x h d url response exitcode
 
   while [[ ${#} -gt 0 ]]; do
     case "${1}" in
@@ -2118,10 +2200,10 @@ _tapto() {
         ;;
       systems) url="systems"; shift ;;
       mappings)
-	url="mappings";
-	shift
-	[[ "${1}" =~ ^[0-9]+$ ]] && { url="${url}/${1}" ; shift ; }
-	;;
+        url="mappings";
+        shift
+        [[ "${1}" =~ ^[0-9]+$ ]] && { url="${url}/${1}" ; shift ; }
+        ;;
       history) url="history"; shift ;;
       settings) url="settings"; shift ;;
       log) url="settings/log/download"; shift ;;
@@ -2135,20 +2217,26 @@ _tapto() {
   [[ -z "${url}" ]] && url="status"
 
   if [[ -t 1 ]]; then
-	  response="$(curl -s "${x[@]}" "${h[@]}" -d "${d}" "${taptoAPI}/${url}")"
-	  if jq <<<"${response}" &>/dev/null ; then
-		  jq --color-output <<<"${response}" | less -R -X -F
-          else
-		  less -R -X -F <<<"${response}"
-	  fi
+    response="$(curl -s "${x[@]}" "${h[@]}" -d "${d}" "${taptoAPI}/${url}")"
+    exitcode="${?}"
+    if jq <<<"${response}" &>/dev/null ; then
+      jq --color-output <<<"${response}" | less -R -X -F
+    else
+      less -R -X -F <<<"${response}"
+    fi
   else
     curl -s "${x[@]}" "${h[@]}" -d "${d}" "${taptoAPI}/${url}"
+    exitcode="${?}"
   fi
+
+  return "${exitcode}"
 }
+
+[[ "${1}" == "api" ]] && { shift; _tapto "${@}"; exit "${?}"; }
 
 _exit() {
   clear
-  "${nfcReadingStatus}" && _tapto settings PUT '{"launching":true}'
+  "${nfcReadingStatus:-false}" && _tapto settings PUT '{"launching":true}'
   exit "${1:-0}"
 }
 trap _exit EXIT
