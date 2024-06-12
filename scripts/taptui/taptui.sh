@@ -2151,20 +2151,28 @@ _yesno() {
 # Backtitle and title are already set
 # Returns the exit code of the dialog program
 _error() {
-  local msg opts answer exitcode
+  local msg opts answer exitcode logs
   msg="${1}"
   shift
   [[ "${1}" =~ ^[0-9]+$ ]] && exitcode="${1}" && shift
   opts=("${@}")
+  [[ "${FUNCNAME[1]}" != "_logExporter" ]] && logs=( --extra-button --extra-label "Logs" )
 
-  dialog \
-    --backtitle "${title}" \
-    --title "\Z1ERROR:\Zn" \
-    --colors \
-    "${opts[@]}" \
-    --msgbox "${msg}" \
-    22 77 3>&1 1>&2 2>&3 >"$(tty)" <"$(tty)"
-  answer="${?}"
+  while true; do
+    dialog \
+      --backtitle "${title}" \
+      --title "\Z1ERROR:\Zn" \
+      --colors \
+      "${logs[@]}" \
+      "${opts[@]}" \
+      --msgbox "${msg}" \
+      22 77 3>&1 1>&2 2>&3 >"$(tty)" <"$(tty)"
+    answer="${?}"
+    case "${answer}" in
+      3) _logExporter ;;
+      *) break ;;
+    esac
+  done
   [[ -n "${exitcode}" ]] && exit "${exitcode}"
   return "${answer}"
 }
