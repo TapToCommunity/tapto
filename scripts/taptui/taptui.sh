@@ -1005,6 +1005,8 @@ _logExporter() {
   local renderedLog exitcode link
   "${remoteConnection}" && { _error "Log management is unavailable when connected remotly"; return; }
   renderedLog="$(_logRender "${logFile}")"
+  [[ "${?}" -ge 1 ]] && { _error "Unable to load logs"; return; }
+  renderedLog="$(tail -n100 <<<"${renderedLog}")"
   _msgbox "${renderedLog}" --colors \
   --extra-button --extra-label "Export to file" \
   --help-button --help-label "Share Link"
@@ -1023,21 +1025,20 @@ _logExporter() {
 }
 
 _logRender() {
-  local if="${1}"
-  while IFS= read -r line; do
-    echo "$line" | jq -r --arg red "$red" --arg green "$green" --arg yellow "$yellow" --arg reset "$reset" '
-      .time as $time |
-      .time = ( $time | strftime("%Y-%m-%d %H:%M:%S") ) |
-      .level as $level |
-      .color = (
-        if $level == "error" then $red
-        elif $level == "warning" then $yellow
-        elif $level == "info" then $green
-        else "" end
-      ) |
-      "\(.time) [\(.color)\(.level)\($reset)] \(.message)"
-    '
-  done < "${if}"
+  local output if="${1}"
+  output="$(jq -r --arg red "$red" --arg green "$green" --arg yellow "$yellow" --arg reset "$reset" '
+    .time as $time |
+    .time = ( $time | strftime("%Y-%m-%d %H:%M:%S") ) |
+    .level as $level |
+    .color = (
+      if $level == "error" then $red
+      elif $level == "warning" then $yellow
+      elif $level == "info" then $green
+      else "" end
+    ) |
+    "\(.time) [\(.color)\(.level)\($reset)] \(.message)"
+      ' "${if}")"
+  echo "${output}"
 }
 
 _About() {
