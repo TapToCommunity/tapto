@@ -879,13 +879,13 @@ _connectionSetting() {
     "Custom"    "Manually enter a custom connection string"                 "off"
   )
 
-  if [[ -z "$(_tapto setting | jq -r '.connectionString')" ]]; then
+  if [[ -z "$(_tapto settings | jq -r '.connectionString')" ]]; then
     menuOptions[2]="on"
-  elif [[ "$(_tapto setting | jq -r '.connectionString')" = "pn532_uart:/dev/ttyUSB0" ]]; then
+  elif [[ "$(_tapto settings | jq -r '.connectionString')" = "pn532_uart:/dev/ttyUSB0" ]]; then
     menuOptions[5]="on"
-  elif [[ -n "$(_tapto setting | jq -r '.connectionString')" ]]; then
+  elif [[ -n "$(_tapto settings | jq -r '.connectionString')" ]]; then
     menuOptions[8]="on"
-    customString="$(_tapto setting | jq -r '.connectionString')"
+    customString="$(_tapto settings | jq -r '.connectionString')"
     menuOptions[7]="Current custom option: ${customString}"
   fi
 
