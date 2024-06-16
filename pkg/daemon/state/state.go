@@ -34,6 +34,7 @@ type State struct {
 	stopService             bool
 	disableLauncher         bool
 	writeRequest            string
+	writeError              error
 	dbLoadTime              time.Time
 	uidMap                  map[string]string
 	textMap                 map[string]string
@@ -220,4 +221,16 @@ func (s *State) GetWriteRequest() string {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return s.writeRequest
+}
+
+func (s *State) SetWriteError(err error) {
+	s.mu.Lock()
+	s.writeError = err
+	s.mu.Unlock()
+}
+
+func (s *State) GetWriteError() error {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.writeError
 }

@@ -284,6 +284,7 @@ func readerPollLoop(
 
 			if count == 0 {
 				log.Error().Msgf("could not detect a card")
+				st.SetWriteError(errors.New("could not detect a card"))
 				st.SetWriteRequest("")
 				continue
 			}
@@ -299,6 +300,7 @@ func readerPollLoop(
 				bytesWritten, err = tokens.WriteMifare(pnd, writeRequest, cardUid)
 				if err != nil {
 					log.Error().Msgf("error writing to mifare: %s", err)
+					st.SetWriteError(err)
 					st.SetWriteRequest("")
 					continue
 				}
@@ -306,16 +308,19 @@ func readerPollLoop(
 				bytesWritten, err = tokens.WriteNtag(pnd, writeRequest)
 				if err != nil {
 					log.Error().Msgf("error writing to ntag: %s", err)
+					st.SetWriteError(err)
 					st.SetWriteRequest("")
 					continue
 				}
 			default:
 				log.Error().Msgf("unsupported card type: %s", cardType)
+				st.SetWriteError(errors.New("unsupported card type"))
 				st.SetWriteRequest("")
 				continue
 			}
 
 			log.Info().Msgf("successfully wrote to card: %s", hex.EncodeToString(bytesWritten))
+			st.SetWriteError(nil)
 			st.SetWriteRequest("")
 			continue
 		}
