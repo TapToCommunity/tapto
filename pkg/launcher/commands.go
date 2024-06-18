@@ -34,6 +34,7 @@ import (
 
 	"github.com/rs/zerolog/log"
 	"github.com/wizzomafizzo/mrext/pkg/input"
+	"github.com/wizzomafizzo/mrext/pkg/utils"
 
 	"github.com/wizzomafizzo/mrext/pkg/games"
 	mrextMister "github.com/wizzomafizzo/mrext/pkg/mister"
@@ -120,6 +121,38 @@ func cmdRandom(env *cmdEnv) error {
 
 	if env.args == "all" {
 		return mrextMister.LaunchRandomGame(mister.UserConfigToMrext(env.cfg), games.AllSystems())
+	}
+
+	// dirty hack to support launching a folder of mgls
+	if filepath.IsAbs(env.args) {
+		if _, err := os.Stat(env.args); err != nil {
+			return err
+		}
+
+		// get list of mgl files in folder
+		files, err := os.ReadDir(env.args)
+		if err != nil {
+			return err
+		}
+
+		mgls := make([]string, 0, len(files))
+		for _, f := range files {
+			if strings.HasSuffix(strings.ToLower(f.Name()), ".mgl") {
+				mgls = append(mgls, filepath.Join(env.args, f.Name()))
+			}
+		}
+
+		if len(mgls) == 0 {
+			return fmt.Errorf("no mgl files found in folder")
+		}
+
+		// pick a random mgl file
+		mgl, err := utils.RandomElem(mgls)
+		if err != nil {
+			return err
+		}
+
+		return mrextMister.LaunchGenericFile(mister.UserConfigToMrext(env.cfg), mgl)
 	}
 
 	systemIds := strings.Split(env.args, ",")
