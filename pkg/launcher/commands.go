@@ -139,6 +139,8 @@ func cmdRandom(env *cmdEnv) error {
 		for _, f := range files {
 			if strings.HasSuffix(strings.ToLower(f.Name()), ".mgl") {
 				mgls = append(mgls, filepath.Join(env.args, f.Name()))
+			} else if strings.HasSuffix(strings.ToLower(f.Name()), ".mra") {
+				mgls = append(mgls, filepath.Join(env.args, f.Name()))
 			}
 		}
 
