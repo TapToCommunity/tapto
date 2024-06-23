@@ -318,7 +318,7 @@ func StartDaemon(
 	}
 
 	go api.RunApiServer(platform, cfg, st, tq, db, tr)
-	go readerPollLoop(cfg, st, tq, kbd)
+	go readerPollLoop(platform, cfg, st, tq)
 	go processLaunchQueue(cfg, st, tq, db, kbd)
 
 	socket, err := StartSocketServer(st)

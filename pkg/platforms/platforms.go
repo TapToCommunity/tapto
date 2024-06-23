@@ -7,4 +7,9 @@ type Platform interface {
 	ZipsAsFolders() bool
 	ConfigFolder() string
 	NormalizePath(*config.UserConfig, string) string
+	KillSoftware() error
+	IsSoftwareRunning() bool
+	GetActiveLauncher() string
+	PlayFailSound(*config.UserConfig)
+	PlaySuccessSound(*config.UserConfig)
 }

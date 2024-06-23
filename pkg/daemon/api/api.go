@@ -146,7 +146,7 @@ func RunApiServer(
 
 		r.Post("/launch", handleLaunch(st, tq))
 		r.Get("/launch/*", handleLaunchBasic(st, tq))
-		r.Delete("/launch", HandleStopGame())
+		r.Delete("/launch", HandleStopGame(platform))
 
 		// GET /readers/0/read
 		r.Post("/readers/0/write", handleReaderWrite(st))
