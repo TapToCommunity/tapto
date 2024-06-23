@@ -105,7 +105,13 @@ func (p *Platform) SetLauncherEnabled(disabled bool) error {
 }
 
 func (p *Platform) GetActiveLauncher() string {
-	return GetActiveCoreName()
+	core := GetActiveCoreName()
+
+	if core == mrextConfig.MenuCore {
+		return ""
+	}
+
+	return core
 }
 
 func (p *Platform) PlayFailSound(cfg *config.UserConfig) {
