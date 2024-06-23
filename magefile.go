@@ -59,7 +59,7 @@ type app struct {
 var apps = []app{
 	{
 		name:         "tapto",
-		path:         filepath.Join(cwd, "cmd", "nfc"),
+		path:         filepath.Join(cwd, "cmd", "mister"),
 		bin:          "tapto.sh",
 		releaseId:    "mrext/tapto",
 		ldFlags:      "-lnfc -lusb -lcurses",
