@@ -173,7 +173,7 @@ func main() {
 	svc, err := mister.NewService(mister.ServiceArgs{
 		Name: appName,
 		Entry: func() (func() error, error) {
-			return daemon.StartDaemon(cfg)
+			return daemon.StartDaemon(&mister.Platform{}, cfg)
 		},
 	})
 	if err != nil {

@@ -37,6 +37,7 @@ import (
 	"github.com/wizzomafizzo/tapto/pkg/daemon/state"
 	"github.com/wizzomafizzo/tapto/pkg/database"
 	"github.com/wizzomafizzo/tapto/pkg/launcher"
+	"github.com/wizzomafizzo/tapto/pkg/platforms"
 	"github.com/wizzomafizzo/tapto/pkg/platforms/mister"
 )
 
@@ -267,7 +268,10 @@ func processLaunchQueue(
 	}
 }
 
-func StartDaemon(cfg *config.UserConfig) (func() error, error) {
+func StartDaemon(
+	platform platforms.Platform,
+	cfg *config.UserConfig,
+) (func() error, error) {
 	st := &state.State{}
 	tq := state.NewTokenQueue()
 
@@ -313,7 +317,7 @@ func StartDaemon(cfg *config.UserConfig) (func() error, error) {
 		st.DisableLauncher()
 	}
 
-	go api.RunApiServer(cfg, st, tq, db, tr)
+	go api.RunApiServer(platform, cfg, st, tq, db, tr)
 	go readerPollLoop(cfg, st, tq, kbd)
 	go processLaunchQueue(cfg, st, tq, db, kbd)
 

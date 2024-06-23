@@ -12,9 +12,8 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/rs/zerolog/log"
-	"github.com/wizzomafizzo/mrext/pkg/games"
 	"github.com/wizzomafizzo/tapto/pkg/config"
-	"github.com/wizzomafizzo/tapto/pkg/platforms/mister"
+	"github.com/wizzomafizzo/tapto/pkg/platforms"
 	"github.com/wizzomafizzo/tapto/pkg/utils"
 )
 
@@ -29,20 +28,20 @@ func NameKey(systemId string, name string) string {
 }
 
 // Check if the gamesdb exists on disk.
-func DbExists() bool {
-	_, err := os.Stat(mister.GamesDbFile)
+func DbExists(platform platforms.Platform) bool {
+	_, err := os.Stat(filepath.Join(platform.ConfigFolder(), config.GamesDbFilename))
 	return err == nil
 }
 
 // Open the gamesdb with the given options. If the database does not exist it
 // will be created and the buckets will be initialized.
-func open(options *bolt.Options) (*bolt.DB, error) {
-	err := os.MkdirAll(filepath.Dir(mister.GamesDbFile), 0755)
+func open(platform platforms.Platform, options *bolt.Options) (*bolt.DB, error) {
+	err := os.MkdirAll(filepath.Dir(filepath.Join(platform.ConfigFolder(), config.GamesDbFilename)), 0755)
 	if err != nil {
 		return nil, err
 	}
 
-	db, err := bolt.Open(mister.GamesDbFile, 0600, options)
+	db, err := bolt.Open(filepath.Join(platform.ConfigFolder(), config.GamesDbFilename), 0600, options)
 	if err != nil {
 		return nil, err
 	}
@@ -62,8 +61,8 @@ func open(options *bolt.Options) (*bolt.DB, error) {
 }
 
 // Open the gamesdb with default options for generating names index.
-func openNames() (*bolt.DB, error) {
-	return open(&bolt.Options{
+func openNames(platform platforms.Platform) (*bolt.DB, error) {
+	return open(platform, &bolt.Options{
 		NoSync:         true,
 		NoFreelistSync: true,
 	})
@@ -161,8 +160,9 @@ type IndexStatus struct {
 //
 // Returns the total number of files indexed.
 func NewNamesIndex(
+	platform platforms.Platform,
 	cfg *config.UserConfig,
-	systems []games.System,
+	systems []System,
 	update func(IndexStatus),
 ) (int, error) {
 	status := IndexStatus{
@@ -170,7 +170,7 @@ func NewNamesIndex(
 		Step:  1,
 	}
 
-	db, err := openNames()
+	db, err := openNames(platform)
 	if err != nil {
 		return status.Files, fmt.Errorf("error opening gamesdb: %s", err)
 	}
@@ -192,7 +192,7 @@ func NewNamesIndex(
 
 	update(status)
 	systemPaths := make(map[string][]string, 0)
-	for _, v := range games.GetSystemPaths(mister.UserConfigToMrext(cfg), systems) {
+	for _, v := range GetSystemPaths(platform.RootFolders(cfg), systems) {
 		systemPaths[v.System.Id] = append(systemPaths[v.System.Id], v.Path)
 	}
 
@@ -206,7 +206,7 @@ func NewNamesIndex(
 		files := make([]fileInfo, 0)
 
 		for _, path := range systemPaths[k] {
-			pathFiles, err := games.GetFiles(k, path)
+			pathFiles, err := GetFiles(platform, k, path)
 			if err != nil {
 				return status.Files, fmt.Errorf("error getting files: %s", err)
 			}
@@ -261,15 +261,16 @@ type SearchResult struct {
 
 // Iterate all indexed names and return matches to test func against query.
 func searchNamesGeneric(
-	systems []games.System,
+	platform platforms.Platform,
+	systems []System,
 	query string,
 	test func(string, string) bool,
 ) ([]SearchResult, error) {
-	if !DbExists() {
+	if !DbExists(platform) {
 		return nil, fmt.Errorf("gamesdb does not exist")
 	}
 
-	db, err := open(&bolt.Options{ReadOnly: true})
+	db, err := open(platform, &bolt.Options{ReadOnly: true})
 	if err != nil {
 		return nil, err
 	}
@@ -309,22 +310,22 @@ func searchNamesGeneric(
 }
 
 // Return indexed names matching exact query (case insensitive).
-func SearchNamesExact(systems []games.System, query string) ([]SearchResult, error) {
-	return searchNamesGeneric(systems, query, func(query, keyName string) bool {
+func SearchNamesExact(platform platforms.Platform, systems []System, query string) ([]SearchResult, error) {
+	return searchNamesGeneric(platform, systems, query, func(query, keyName string) bool {
 		return strings.EqualFold(query, keyName)
 	})
 }
 
 // Return indexed names partially matching query (case insensitive).
-func SearchNamesPartial(systems []games.System, query string) ([]SearchResult, error) {
-	return searchNamesGeneric(systems, query, func(query, keyName string) bool {
+func SearchNamesPartial(platform platforms.Platform, systems []System, query string) ([]SearchResult, error) {
+	return searchNamesGeneric(platform, systems, query, func(query, keyName string) bool {
 		return strings.Contains(strings.ToLower(keyName), strings.ToLower(query))
 	})
 }
 
 // Return indexed names that include every word in query (case insensitive).
-func SearchNamesWords(systems []games.System, query string) ([]SearchResult, error) {
-	return searchNamesGeneric(systems, query, func(query, keyName string) bool {
+func SearchNamesWords(platform platforms.Platform, systems []System, query string) ([]SearchResult, error) {
+	return searchNamesGeneric(platform, systems, query, func(query, keyName string) bool {
 		qWords := strings.Fields(strings.ToLower(query))
 
 		for _, word := range qWords {
@@ -338,8 +339,8 @@ func SearchNamesWords(systems []games.System, query string) ([]SearchResult, err
 }
 
 // Return indexed names matching query using regular expression.
-func SearchNamesRegexp(systems []games.System, query string) ([]SearchResult, error) {
-	return searchNamesGeneric(systems, query, func(query, keyName string) bool {
+func SearchNamesRegexp(platform platforms.Platform, systems []System, query string) ([]SearchResult, error) {
+	return searchNamesGeneric(platform, systems, query, func(query, keyName string) bool {
 		r, err := regexp.Compile(query)
 		if err != nil {
 			return false
@@ -350,12 +351,12 @@ func SearchNamesRegexp(systems []games.System, query string) ([]SearchResult, er
 }
 
 // Return true if a specific system is indexed in the gamesdb
-func SystemIndexed(system games.System) bool {
-	if !DbExists() {
+func SystemIndexed(platform platforms.Platform, system System) bool {
+	if !DbExists(platform) {
 		return false
 	}
 
-	db, err := open(&bolt.Options{ReadOnly: true})
+	db, err := open(platform, &bolt.Options{ReadOnly: true})
 	if err != nil {
 		return false
 	}
@@ -370,12 +371,12 @@ func SystemIndexed(system games.System) bool {
 }
 
 // Return all systems indexed in the gamesdb
-func IndexedSystems() ([]string, error) {
-	if !DbExists() {
+func IndexedSystems(platform platforms.Platform) ([]string, error) {
+	if !DbExists(platform) {
 		return nil, fmt.Errorf("gamesdb does not exist")
 	}
 
-	db, err := open(&bolt.Options{ReadOnly: true})
+	db, err := open(platform, &bolt.Options{ReadOnly: true})
 	if err != nil {
 		return nil, err
 	}

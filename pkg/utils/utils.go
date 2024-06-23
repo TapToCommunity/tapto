@@ -21,13 +21,16 @@ along with TapTo.  If not, see <http://www.gnu.org/licenses/>.
 package utils
 
 import (
+	"archive/zip"
 	"crypto/md5"
 	"fmt"
 	"io"
 	"net"
 	"net/http"
 	"os"
+	"path/filepath"
 	"sort"
+	"strings"
 	"time"
 )
 
@@ -130,4 +133,24 @@ func GetLocalIp() (net.IP, error) {
 	localAddr := conn.LocalAddr().(*net.UDPAddr)
 
 	return localAddr.IP, nil
+}
+
+func IsZip(path string) bool {
+	return filepath.Ext(strings.ToLower(path)) == ".zip"
+}
+
+// ListZip returns a slice of all filenames in a zip file.
+func ListZip(path string) ([]string, error) {
+	r, err := zip.OpenReader(path)
+	if err != nil {
+		return nil, err
+	}
+	defer r.Close()
+
+	var files []string
+	for _, f := range r.File {
+		files = append(files, f.Name)
+	}
+
+	return files, nil
 }

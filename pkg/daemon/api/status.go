@@ -8,6 +8,7 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/wizzomafizzo/tapto/pkg/config"
 	"github.com/wizzomafizzo/tapto/pkg/daemon/state"
+	"github.com/wizzomafizzo/tapto/pkg/platforms"
 	"github.com/wizzomafizzo/tapto/pkg/platforms/mister"
 )
 
@@ -54,7 +55,12 @@ func (sr *StatusResponse) Render(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
-func newStatus(cfg *config.UserConfig, st *state.State, tr *mister.Tracker) StatusResponse {
+func newStatus(
+	platform platforms.Platform,
+	cfg *config.UserConfig,
+	st *state.State,
+	tr *mister.Tracker,
+) StatusResponse {
 	active := st.GetActiveCard()
 	last := st.GetLastScanned()
 	readerConnected, readerType := st.GetReaderStatus()
@@ -81,7 +87,7 @@ func newStatus(cfg *config.UserConfig, st *state.State, tr *mister.Tracker) Stat
 			ScanTime: last.ScanTime,
 		},
 		GamesIndex: IndexResponse{
-			Exists:      IndexInstance.Exists(),
+			Exists:      IndexInstance.Exists(platform),
 			Indexing:    IndexInstance.Indexing,
 			TotalSteps:  IndexInstance.TotalSteps,
 			CurrentStep: IndexInstance.CurrentStep,
@@ -93,12 +99,13 @@ func newStatus(cfg *config.UserConfig, st *state.State, tr *mister.Tracker) Stat
 			SystemName: tr.ActiveSystemName,
 			Game:       tr.ActiveGameId,
 			GameName:   tr.ActiveGameName,
-			GamePath:   mister.NormalizePath(cfg, tr.ActiveGamePath),
+			GamePath:   platform.NormalizePath(cfg, tr.ActiveGamePath),
 		},
 	}
 }
 
 func handleStatus(
+	platform platforms.Platform,
 	cfg *config.UserConfig,
 	st *state.State,
 	tr *mister.Tracker,
@@ -106,7 +113,7 @@ func handleStatus(
 	return func(w http.ResponseWriter, r *http.Request) {
 		log.Info().Msg("received status request")
 
-		resp := newStatus(cfg, st, tr)
+		resp := newStatus(platform, cfg, st, tr)
 
 		err := render.Render(w, r, &resp)
 		if err != nil {

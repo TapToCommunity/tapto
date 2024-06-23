@@ -5,15 +5,13 @@ import (
 
 	"github.com/go-chi/render"
 	"github.com/rs/zerolog/log"
-	"github.com/wizzomafizzo/mrext/cmd/remote/menu"
-	"github.com/wizzomafizzo/mrext/pkg/games"
 	"github.com/wizzomafizzo/tapto/pkg/database/gamesdb"
+	"github.com/wizzomafizzo/tapto/pkg/platforms"
 )
 
 type System struct {
-	Id       string `json:"id"`
-	Name     string `json:"name"`
-	Category string `json:"category"`
+	Id   string `json:"id"`
+	Name string `json:"name"`
 }
 
 type SystemsResponse struct {
@@ -24,11 +22,11 @@ func (sr *SystemsResponse) Render(w http.ResponseWriter, _ *http.Request) error 
 	return nil
 }
 
-func handleSystems() http.HandlerFunc {
+func handleSystems(platform platforms.Platform) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		log.Info().Msg("received systems request")
 
-		indexed, err := gamesdb.IndexedSystems()
+		indexed, err := gamesdb.IndexedSystems(platform)
 		if err != nil {
 			log.Error().Err(err).Msgf("error getting indexed systems")
 			indexed = []string{}
@@ -40,22 +38,16 @@ func handleSystems() http.HandlerFunc {
 
 		systems := make([]System, 0)
 
-		for _, system := range indexed {
-			id := system
-			sysDef, ok := games.Systems[id]
-			if !ok {
+		for _, id := range indexed {
+			sys, err := gamesdb.GetSystem(id)
+			if err != nil {
+				log.Error().Err(err).Msgf("error getting system: %s", id)
 				continue
 			}
 
-			name, _ := menu.GetNamesTxt(sysDef.Name, "")
-			if name == "" {
-				name = sysDef.Name
-			}
-
 			systems = append(systems, System{
-				Id:       id,
-				Name:     name,
-				Category: sysDef.Category,
+				Id:   sys.Id,
+				Name: sys.Id,
 			})
 		}
 
