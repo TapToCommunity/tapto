@@ -1,12 +1,12 @@
 package state
 
 import (
-	"os"
 	"sync"
 	"time"
 
 	"github.com/rs/zerolog/log"
-	"github.com/wizzomafizzo/tapto/pkg/platforms/mister"
+	"github.com/wizzomafizzo/tapto/pkg/platforms"
+	"github.com/wizzomafizzo/tapto/pkg/tokens"
 )
 
 const (
@@ -15,22 +15,13 @@ const (
 	ReaderTypeUnknown = "Unknown"
 )
 
-type Token struct {
-	Type     string
-	UID      string
-	Text     string
-	Data     string
-	ScanTime time.Time
-	FromApi  bool
-}
-
 type State struct {
 	mu                      sync.RWMutex
 	updateHook              *func(st *State)
 	readerConnected         bool
 	readerType              string
-	activeCard              Token
-	lastScanned             Token
+	activeCard              tokens.Token
+	lastScanned             tokens.Token
 	stopService             bool
 	disableLauncher         bool
 	writeRequest            string
@@ -40,6 +31,7 @@ type State struct {
 	textMap                 map[string]string
 	cardRemovalTime         time.Time
 	currentlyLoadedSoftware string
+	platform                platforms.Platform
 }
 
 func (s *State) SetUpdateHook(hook *func(st *State)) {
@@ -48,7 +40,7 @@ func (s *State) SetUpdateHook(hook *func(st *State)) {
 	s.updateHook = hook
 }
 
-func (s *State) SetActiveCard(card Token) {
+func (s *State) SetActiveCard(card tokens.Token) {
 	s.mu.Lock()
 
 	if s.activeCard == card {
@@ -82,13 +74,13 @@ func (s *State) SetCurrentlyLoadedSoftware(command string) {
 	log.Debug().Msgf("current software launched set to: %s", command)
 }
 
-func (s *State) GetActiveCard() Token {
+func (s *State) GetActiveCard() tokens.Token {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return s.activeCard
 }
 
-func (s *State) GetLastScanned() Token {
+func (s *State) GetLastScanned() tokens.Token {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return s.lastScanned
@@ -124,7 +116,7 @@ func (s *State) ShouldStopService() bool {
 func (s *State) DisableLauncher() {
 	s.mu.Lock()
 	s.disableLauncher = true
-	if _, err := os.Create(mister.DisableLaunchFile); err != nil {
+	if err := s.platform.SetLauncherEnabled(false); err != nil {
 		log.Error().Msgf("cannot create disable launch file: %s", err)
 	}
 	s.mu.Unlock()
@@ -136,7 +128,7 @@ func (s *State) DisableLauncher() {
 func (s *State) EnableLauncher() {
 	s.mu.Lock()
 	s.disableLauncher = false
-	if err := os.Remove(mister.DisableLaunchFile); err != nil {
+	if err := s.platform.SetLauncherEnabled(true); err != nil {
 		log.Error().Msgf("cannot remove disable launch file: %s", err)
 	}
 	s.mu.Unlock()

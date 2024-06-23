@@ -9,7 +9,6 @@ import (
 	"github.com/wizzomafizzo/tapto/pkg/config"
 	"github.com/wizzomafizzo/tapto/pkg/daemon/state"
 	"github.com/wizzomafizzo/tapto/pkg/platforms"
-	"github.com/wizzomafizzo/tapto/pkg/platforms/mister"
 )
 
 type TokenResponse struct {
@@ -56,10 +55,9 @@ func (sr *StatusResponse) Render(w http.ResponseWriter, r *http.Request) error {
 }
 
 func newStatus(
-	platform platforms.Platform,
+	pl platforms.Platform,
 	cfg *config.UserConfig,
 	st *state.State,
-	tr *mister.Tracker,
 ) StatusResponse {
 	active := st.GetActiveCard()
 	last := st.GetLastScanned()
@@ -87,7 +85,7 @@ func newStatus(
 			ScanTime: last.ScanTime,
 		},
 		GamesIndex: IndexResponse{
-			Exists:      IndexInstance.Exists(platform),
+			Exists:      IndexInstance.Exists(pl),
 			Indexing:    IndexInstance.Indexing,
 			TotalSteps:  IndexInstance.TotalSteps,
 			CurrentStep: IndexInstance.CurrentStep,
@@ -95,25 +93,24 @@ func newStatus(
 			TotalFiles:  IndexInstance.TotalFiles,
 		},
 		Playing: PlayingResponse{
-			System:     tr.ActiveSystem,
-			SystemName: tr.ActiveSystemName,
-			Game:       tr.ActiveGameId,
-			GameName:   tr.ActiveGameName,
-			GamePath:   platform.NormalizePath(cfg, tr.ActiveGamePath),
+			System:     pl.ActiveSystem(),
+			SystemName: pl.ActiveSystem(),
+			Game:       pl.ActiveGame(),
+			GameName:   pl.ActiveGameName(),
+			GamePath:   pl.NormalizePath(cfg, pl.ActiveGamePath()),
 		},
 	}
 }
 
 func handleStatus(
-	platform platforms.Platform,
+	pl platforms.Platform,
 	cfg *config.UserConfig,
 	st *state.State,
-	tr *mister.Tracker,
 ) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		log.Info().Msg("received status request")
 
-		resp := newStatus(platform, cfg, st, tr)
+		resp := newStatus(pl, cfg, st)
 
 		err := render.Render(w, r, &resp)
 		if err != nil {

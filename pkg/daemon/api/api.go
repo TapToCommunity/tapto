@@ -18,7 +18,6 @@ import (
 	"github.com/wizzomafizzo/tapto/pkg/daemon/state"
 	"github.com/wizzomafizzo/tapto/pkg/database"
 	"github.com/wizzomafizzo/tapto/pkg/platforms"
-	"github.com/wizzomafizzo/tapto/pkg/platforms/mister"
 	"github.com/wizzomafizzo/tapto/pkg/utils"
 )
 
@@ -28,13 +27,12 @@ const (
 )
 
 func setupWs(
-	platform platforms.Platform,
+	pl platforms.Platform,
 	cfg *config.UserConfig,
 	st *state.State,
-	tr *mister.Tracker,
 ) {
 	send := func() {
-		status, err := json.Marshal(newStatus(platform, cfg, st, tr))
+		status, err := json.Marshal(newStatus(pl, cfg, st))
 		if err != nil {
 			log.Error().Err(err).Msg("error encoding status")
 			return
@@ -53,7 +51,7 @@ func setupWs(
 		log.Debug().Msg("tracker update hook")
 		send()
 	}
-	tr.SetEventHook(&trHook)
+	pl.SetEventHook(&trHook)
 
 	idxHook := func(_ *Index) {
 		log.Debug().Msg("index update hook")
@@ -117,12 +115,11 @@ func LoggerMiddleware(logger *zerolog.Logger) func(next http.Handler) http.Handl
 }
 
 func RunApiServer(
-	platform platforms.Platform,
+	pl platforms.Platform,
 	cfg *config.UserConfig,
 	st *state.State,
 	tq *state.TokenQueue,
 	db *database.Database,
-	tr *mister.Tracker,
 ) {
 	r := chi.NewRouter()
 
@@ -142,17 +139,17 @@ func RunApiServer(
 		r.Use(render.SetContentType(render.ContentTypeJSON))
 		r.Use(middleware.Timeout(60 * time.Second))
 
-		r.Get("/status", handleStatus(platform, cfg, st, tr))
+		r.Get("/status", handleStatus(pl, cfg, st))
 
 		r.Post("/launch", handleLaunch(st, tq))
 		r.Get("/launch/*", handleLaunchBasic(st, tq))
-		r.Delete("/launch", HandleStopGame(platform))
+		r.Delete("/launch", HandleStopGame(pl))
 
 		// GET /readers/0/read
 		r.Post("/readers/0/write", handleReaderWrite(st))
 
-		r.Get("/games", handleGames(platform, cfg))
-		r.Get("/systems", handleSystems(platform))
+		r.Get("/games", handleGames(pl, cfg))
+		r.Get("/systems", handleSystems(pl))
 
 		r.Get("/mappings", handleMappings(db))
 		r.Post("/mappings", handleAddMapping(db))
@@ -164,13 +161,13 @@ func RunApiServer(
 		r.Get("/settings", handleSettings(cfg, st))
 		r.Get("/settings/log/download", handleSettingsDownloadLog())
 		r.Put("/settings", handleSettingsUpdate(cfg, st))
-		r.Post("/settings/index/games", handleIndexGames(platform, cfg))
+		r.Post("/settings/index/games", handleIndexGames(pl, cfg))
 	})
 
-	setupWs(platform, cfg, st, tr)
+	setupWs(pl, cfg, st)
 	r.HandleFunc("/api/v1/ws", websocket.Handle(
 		func() []string {
-			status, err := json.Marshal(newStatus(platform, cfg, st, tr))
+			status, err := json.Marshal(newStatus(pl, cfg, st))
 			if err != nil {
 				log.Error().Err(err).Msg("error encoding status")
 			}

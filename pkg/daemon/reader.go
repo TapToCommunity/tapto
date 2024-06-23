@@ -27,10 +27,10 @@ const (
 func pollDevice(
 	cfg *config.UserConfig,
 	pnd *nfc.Device,
-	activeCard state.Token,
+	activeCard tokens.Token,
 	ttp int,
 	pbp time.Duration,
-) (state.Token, bool, error) {
+) (tokens.Token, bool, error) {
 	removed := false
 
 	count, target, err := pnd.InitiatorPollTarget(tokens.SupportedCardTypes, ttp, pbp)
@@ -45,7 +45,7 @@ func pollDevice(
 	if count <= 0 {
 		if activeCard.UID != "" && time.Since(activeCard.ScanTime) > timeToForgetCard {
 			log.Info().Msg("card removed")
-			activeCard = state.Token{}
+			activeCard = tokens.Token{}
 			removed = true
 		}
 
@@ -97,7 +97,7 @@ func pollDevice(
 		log.Info().Msgf("decoded text NDEF: %s", tagText)
 	}
 
-	card := state.Token{
+	card := tokens.Token{
 		Type:     record.Type,
 		UID:      cardUid,
 		Text:     tagText,
@@ -178,7 +178,7 @@ func shouldExit(
 	st *state.State,
 ) bool {
 	// do not exit from menu, there is nowhere to go anyway
-	if !platform.IsSoftwareRunning() {
+	if !platform.IsLauncherActive() {
 		return false
 	}
 
@@ -193,7 +193,7 @@ func shouldExit(
 		hasTimePassed = int8(time.Since(removalTime).Seconds()) >= cfg.GetExitGameDelay()
 	}
 
-	if hasTimePassed && cfg.GetExitGame() && !inExitGameBlocklist(cfg) {
+	if hasTimePassed && cfg.GetExitGame() && !inExitGameBlocklist(platform, cfg) {
 		log.Info().Msgf("Exiting game after %.2f seconds have passed with a configured %d seconds delay", time.Since(removalTime).Seconds(), cfg.GetExitGameDelay())
 		return true
 	} else {
@@ -362,15 +362,14 @@ func readerPollLoop(
 		if shouldExit(platform, candidateForRemove, cfg, st) {
 			candidateForRemove = false
 			st.SetCardRemovalTime(time.Time{})
-			_ = platform.KillSoftware()
+			_ = platform.KillLauncher()
 			st.SetCurrentlyLoadedSoftware("")
 			continue
-		} else if !platform.IsSoftwareRunning() && lastCoreName != "" { // TODO: and here, can we use instead of MENU?
+		} else if !platform.IsLauncherActive() && lastCoreName != "" { // TODO: and here, can we use instead of MENU?
 			// at any time we are on the current menu we should forget old values if we have anything to clear
 			candidateForRemove = false
 			st.SetCardRemovalTime(time.Time{})
 			st.SetCurrentlyLoadedSoftware("")
-
 		}
 
 		lastCoreName = platform.GetActiveLauncher()

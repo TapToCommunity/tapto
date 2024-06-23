@@ -389,3 +389,58 @@ func IndexedSystems(platform platforms.Platform) ([]string, error) {
 
 	return systems, nil
 }
+
+// Return a random game from specified systems.
+func RandomGame(platform platforms.Platform, systems []System) (SearchResult, error) {
+	if !DbExists(platform) {
+		return SearchResult{}, fmt.Errorf("gamesdb does not exist")
+	}
+
+	db, err := open(platform, &bolt.Options{ReadOnly: true})
+	if err != nil {
+		return SearchResult{}, err
+	}
+	defer db.Close()
+
+	var result SearchResult
+
+	system, err := utils.RandomElem(systems)
+	if err != nil {
+		return result, err
+	}
+
+	possible := make([]SearchResult, 0)
+
+	err = db.View(func(tx *bolt.Tx) error {
+		bn := tx.Bucket([]byte(BucketNames))
+
+		pre := []byte(system.Id + ":")
+		nameIdx := bytes.Index(pre, []byte(":"))
+
+		c := bn.Cursor()
+		for k, v := c.Seek([]byte(pre)); k != nil && bytes.HasPrefix(k, pre); k, v = c.Next() {
+			keyName := string(k[nameIdx+1:])
+			possible = append(possible, SearchResult{
+				SystemId: system.Id,
+				Name:     keyName,
+				Path:     string(v),
+			})
+		}
+
+		return nil
+	})
+	if err != nil {
+		return result, err
+	}
+
+	if len(possible) == 0 {
+		return result, fmt.Errorf("no games found for system: %s", system.Id)
+	}
+
+	result, err = utils.RandomElem(possible)
+	if err != nil {
+		return result, err
+	}
+
+	return result, nil
+}

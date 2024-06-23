@@ -25,6 +25,7 @@ import (
 	"crypto/md5"
 	"fmt"
 	"io"
+	"math/rand"
 	"net"
 	"net/http"
 	"os"
@@ -33,6 +34,8 @@ import (
 	"strings"
 	"time"
 )
+
+var r = rand.New(rand.NewSource(time.Now().UnixNano()))
 
 func GetMd5Hash(path string) (string, error) {
 	file, err := os.Open(path)
@@ -153,4 +156,15 @@ func ListZip(path string) ([]string, error) {
 	}
 
 	return files, nil
+}
+
+// RandomElem picks and returns a random element from a slice.
+func RandomElem[T any](xs []T) (T, error) {
+	var item T
+	if len(xs) == 0 {
+		return item, fmt.Errorf("empty slice")
+	} else {
+		item = xs[r.Intn(len(xs))]
+		return item, nil
+	}
 }

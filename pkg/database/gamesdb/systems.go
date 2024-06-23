@@ -32,6 +32,23 @@ func GetSystem(id string) (*System, error) {
 	}
 }
 
+// LookupSystem case-insensitively looks up system ID definition including aliases.
+func LookupSystem(id string) (*System, error) {
+	for k, v := range Systems {
+		if strings.EqualFold(k, id) {
+			return &v, nil
+		}
+
+		for _, alias := range v.Aliases {
+			if strings.EqualFold(alias, id) {
+				return &v, nil
+			}
+		}
+	}
+
+	return nil, fmt.Errorf("unknown system: %s", id)
+}
+
 // MatchSystemFile returns true if a given file's extension is valid for a system.
 func MatchSystemFile(system System, path string) bool {
 	// ignore dot files
