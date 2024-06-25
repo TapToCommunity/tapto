@@ -10,6 +10,7 @@ import (
 	"github.com/clausecker/nfc/v2"
 	"github.com/rs/zerolog/log"
 	"github.com/wizzomafizzo/tapto/pkg/config"
+	"github.com/wizzomafizzo/tapto/pkg/readers/libnfc/tags"
 	"github.com/wizzomafizzo/tapto/pkg/tokens"
 )
 
@@ -176,7 +177,7 @@ func (r *Reader) pollDevice(
 ) (*tokens.Token, bool, error) {
 	removed := false
 
-	count, target, err := pnd.InitiatorPollTarget(tokens.SupportedCardTypes, ttp, pbp)
+	count, target, err := pnd.InitiatorPollTarget(tags.SupportedCardTypes, ttp, pbp)
 	if err != nil && !errors.Is(err, nfc.Error(nfc.ETIMEOUT)) {
 		return nil, removed, err
 	}
@@ -195,7 +196,7 @@ func (r *Reader) pollDevice(
 		return activeToken, removed, nil
 	}
 
-	tagUid := tokens.GetTagUID(target)
+	tagUid := tags.GetTagUID(target)
 	if tagUid == "" {
 		log.Warn().Msgf("unable to detect token UID: %s", target.String())
 	}
@@ -207,19 +208,19 @@ func (r *Reader) pollDevice(
 
 	log.Info().Msgf("found token UID: %s", tagUid)
 
-	var record tokens.TagData
-	cardType := tokens.GetTagType(target)
+	var record tags.TagData
+	cardType := tags.GetTagType(target)
 
 	if cardType == tokens.TypeNTAG {
 		log.Info().Msg("NTAG detected")
-		record, err = tokens.ReadNtag(*pnd)
+		record, err = tags.ReadNtag(*pnd)
 		if err != nil {
 			return activeToken, removed, fmt.Errorf("error reading ntag: %s", err)
 		}
 		cardType = tokens.TypeNTAG
 	} else if cardType == tokens.TypeMifare {
 		log.Info().Msg("MIFARE detected")
-		record, err = tokens.ReadMifare(*pnd, tagUid)
+		record, err = tags.ReadMifare(*pnd, tagUid)
 		if err != nil {
 			log.Error().Msgf("error reading mifare: %s", err)
 		}
@@ -227,7 +228,7 @@ func (r *Reader) pollDevice(
 	}
 
 	log.Debug().Msgf("record bytes: %s", hex.EncodeToString(record.Bytes))
-	tagText, err := tokens.ParseRecordText(record.Bytes)
+	tagText, err := tags.ParseRecordText(record.Bytes)
 	if err != nil {
 		log.Error().Err(err).Msgf("error parsing NDEF record")
 		tagText = ""
@@ -260,7 +261,7 @@ func (r *Reader) writeTag() {
 
 	for tries > 0 {
 		count, target, err = r.pnd.InitiatorPollTarget(
-			tokens.SupportedCardTypes,
+			tags.SupportedCardTypes,
 			timesToPoll,
 			periodBetweenPolls,
 		)
@@ -283,15 +284,15 @@ func (r *Reader) writeTag() {
 		return
 	}
 
-	cardUid := tokens.GetTagUID(target)
+	cardUid := tags.GetTagUID(target)
 	log.Info().Msgf("found card with UID: %s", cardUid)
 
-	cardType := tokens.GetTagType(target)
+	cardType := tags.GetTagType(target)
 	var bytesWritten []byte
 
 	switch cardType {
 	case tokens.TypeMifare:
-		bytesWritten, err = tokens.WriteMifare(*r.pnd, r.writeRequest, cardUid)
+		bytesWritten, err = tags.WriteMifare(*r.pnd, r.writeRequest, cardUid)
 		if err != nil {
 			log.Error().Msgf("error writing to mifare: %s", err)
 			r.writeError = err
@@ -299,7 +300,7 @@ func (r *Reader) writeTag() {
 			return
 		}
 	case tokens.TypeNTAG:
-		bytesWritten, err = tokens.WriteNtag(*r.pnd, r.writeRequest)
+		bytesWritten, err = tags.WriteNtag(*r.pnd, r.writeRequest)
 		if err != nil {
 			log.Error().Msgf("error writing to ntag: %s", err)
 			r.writeError = err

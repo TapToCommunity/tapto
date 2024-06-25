@@ -19,22 +19,19 @@ You should have received a copy of the GNU General Public License
 along with TapTo.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-package tokens
+package tags
 
 import (
 	"encoding/hex"
 	"fmt"
 
 	"github.com/clausecker/nfc/v2"
+	"github.com/wizzomafizzo/tapto/pkg/tokens"
 )
 
 const (
-	TypeNTAG           = "NTAG"
-	TypeMifare         = "MIFARE"
-	TypeAmiibo         = "Amiibo"
-	TypeLegoDimensions = "LegoDimensions"
-	WRITE_COMMAND      = byte(0xA2)
-	READ_COMMAND       = byte(0x30)
+	WRITE_COMMAND = byte(0xA2)
+	READ_COMMAND  = byte(0x30)
 )
 
 var SupportedCardTypes = []nfc.Modulation{
@@ -78,11 +75,11 @@ func GetTagType(target nfc.Target) string {
 		var card = target.(*nfc.ISO14443aTarget)
 		if card.Atqa == [2]byte{0x00, 0x04} && card.Sak == 0x08 {
 			// https://www.nxp.com/docs/en/application-note/AN10833.pdf page 9
-			return TypeMifare
+			return tokens.TypeMifare
 		}
 		if card.Atqa == [2]byte{0x00, 0x44} && card.Sak == 0x00 {
 			// https://www.nxp.com/docs/en/data-sheet/NTAG213_215_216.pdf page 33
-			return TypeNTAG
+			return tokens.TypeNTAG
 		}
 	}
 	return ""

@@ -18,7 +18,7 @@ You should have received a copy of the GNU General Public License
 along with TapTo.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-package tokens
+package tags
 
 import (
 	"bytes"
@@ -28,6 +28,7 @@ import (
 
 	"github.com/clausecker/nfc/v2"
 	"github.com/rs/zerolog/log"
+	"github.com/wizzomafizzo/tapto/pkg/tokens"
 )
 
 const (
@@ -70,7 +71,7 @@ func ReadNtag(pnd nfc.Device) (TagData, error) {
 		amiibo = amiibo[:8]
 		log.Info().Msg("Amiibo identifier:" + hex.EncodeToString(amiibo))
 		return TagData{
-			Type:  TypeAmiibo,
+			Type:  tokens.TypeAmiibo,
 			Bytes: amiibo,
 		}, nil
 	}
@@ -87,7 +88,7 @@ func ReadNtag(pnd nfc.Device) (TagData, error) {
 		if byte(currentBlock) == 0x04 && bytes.Equal(blocks[0:14], LEGO_DIMENSIONS_MATCHER) {
 			log.Info().Msg("found Lego Dimensions tag")
 			return TagData{
-				Type:  TypeLegoDimensions,
+				Type:  tokens.TypeLegoDimensions,
 				Bytes: []byte{},
 			}, nil
 		}
@@ -105,7 +106,7 @@ func ReadNtag(pnd nfc.Device) (TagData, error) {
 	}
 
 	return TagData{
-		Type:  TypeNTAG,
+		Type:  tokens.TypeNTAG,
 		Bytes: allBlocks,
 	}, nil
 }
