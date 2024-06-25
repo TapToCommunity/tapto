@@ -1,37 +1,14 @@
 package daemon
 
 import (
-	"errors"
 	"time"
 
-	"github.com/clausecker/nfc/v2"
 	"github.com/rs/zerolog/log"
 	"github.com/wizzomafizzo/tapto/pkg/config"
 	"github.com/wizzomafizzo/tapto/pkg/daemon/state"
 	"github.com/wizzomafizzo/tapto/pkg/platforms"
 	"github.com/wizzomafizzo/tapto/pkg/readers/libnfc"
-	"github.com/wizzomafizzo/tapto/pkg/utils"
 )
-
-func detectConnectionString(quiet bool) string {
-	if !quiet {
-		log.Info().Msg("probing for serial devices")
-	}
-	devices, _ := utils.GetLinuxSerialDeviceList()
-
-	for _, device := range devices {
-		connectionString := "pn532_uart:" + device
-		pnd, err := nfc.Open(connectionString)
-		log.Info().Msgf("trying %s", connectionString)
-		if err == nil {
-			log.Info().Msgf("success using serial: %s", connectionString)
-			pnd.Close()
-			return connectionString
-		}
-	}
-
-	return ""
-}
 
 func shouldExit(
 	pl platforms.Platform,
@@ -92,13 +69,15 @@ func readerLoop(
 		if reader == nil || !reader.Connected() {
 			log.Info().Msg("reader not connected, attempting connection....")
 
-			var connectionString = cfg.GetConnectionString()
-			if connectionString == "" && cfg.GetProbeDevice() == true {
-				connectionString = detectConnectionString(false)
+			reader = libnfc.NewReader(cfg)
+
+			device := reader.Detect(nil)
+			if device == "" {
+				log.Error().Msg("no reader detected")
+				continue
 			}
 
-			reader = libnfc.NewReader(cfg)
-			err = reader.Open(connectionString)
+			err = reader.Open(device)
 			if err != nil {
 				log.Error().Msgf("error opening device: %s", err)
 				continue
@@ -137,20 +116,8 @@ func readerLoop(
 			}
 		}
 
-		if errors.Is(err, nfc.Error(nfc.EIO)) {
-			log.Error().Msgf("error during poll: %s", err)
-			log.Error().Msg("fatal IO error, device was possibly unplugged")
-
-			err = reader.Close()
-			if err != nil {
-				log.Warn().Msgf("error closing device: %s", err)
-			}
-
-			playFail()
-			lastError = time.Now()
-			continue
-		} else if err != nil {
-			log.Error().Msgf("error during poll: %s", err)
+		if err != nil {
+			log.Error().Msgf("error during read: %s", err)
 			playFail()
 			lastError = time.Now()
 			continue

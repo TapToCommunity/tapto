@@ -12,6 +12,7 @@ import (
 	"github.com/wizzomafizzo/tapto/pkg/config"
 	"github.com/wizzomafizzo/tapto/pkg/readers/libnfc/tags"
 	"github.com/wizzomafizzo/tapto/pkg/tokens"
+	"github.com/wizzomafizzo/tapto/pkg/utils"
 )
 
 const (
@@ -64,7 +65,17 @@ func (r *Reader) Open(device string) error {
 			}
 
 			card, removed, err := r.pollDevice(r.pnd, r.activeToken, timesToPoll, periodBetweenPolls)
-			if err != nil {
+			if errors.Is(err, nfc.Error(nfc.EIO)) {
+				log.Error().Msgf("error during poll: %s", err)
+				log.Error().Msg("fatal IO error, device was possibly unplugged")
+
+				err = r.Close()
+				if err != nil {
+					log.Warn().Msgf("error closing device: %s", err)
+				}
+
+				continue
+			} else if err != nil {
 				log.Error().Msgf("error polling device: %s", err)
 				continue
 			}
@@ -89,6 +100,28 @@ func (r *Reader) Close() error {
 	r.writeError = nil
 	r.history = nil
 	return r.pnd.Close()
+}
+
+func (r *Reader) Detect(connected []string) string {
+	connStr := r.cfg.GetConnectionString()
+	if connStr != "" {
+		return connStr
+	}
+
+	if !r.cfg.GetProbeDevice() {
+		return ""
+	}
+
+	device := detectConnectionString(false)
+	if device == "" {
+		return ""
+	}
+
+	if utils.Contains(connected, device) {
+		return ""
+	}
+
+	return device
 }
 
 func (r *Reader) Device() string {
@@ -132,6 +165,26 @@ func (r *Reader) Write(text string) error {
 	}
 
 	return r.writeError
+}
+
+func detectConnectionString(quiet bool) string {
+	if !quiet {
+		log.Info().Msg("probing for serial devices")
+	}
+	devices, _ := utils.GetLinuxSerialDeviceList()
+
+	for _, device := range devices {
+		connectionString := "pn532_uart:" + device
+		pnd, err := nfc.Open(connectionString)
+		log.Info().Msgf("trying %s", connectionString)
+		if err == nil {
+			log.Info().Msgf("success using serial: %s", connectionString)
+			pnd.Close()
+			return connectionString
+		}
+	}
+
+	return ""
 }
 
 func openDeviceWithRetries(device string, quiet bool) (nfc.Device, error) {

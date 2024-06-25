@@ -6,9 +6,14 @@ import (
 
 type Reader interface {
 	// Open any necessary connections to the device and start polling.
+	// Takes a device connection string.
 	Open(string) error
 	// Close any open connections to the device and stop polling.
 	Close() error
+	// Detect attempts to search for a connected device and returns the device
+	// connection string. If no device is found, an empty string is returned.
+	// Takes a list of currently connected device strings.
+	Detect([]string) string
 	// Device returns the device connection string.
 	Device() string
 	// Connected returns true if the device is connected and active.
