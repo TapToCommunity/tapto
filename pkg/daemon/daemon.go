@@ -295,7 +295,7 @@ func StartDaemon(
 	}
 
 	go api.RunApiServer(platform, cfg, st, tq, db)
-	go readerPollLoop(platform, cfg, st, tq)
+	go readerLoop(platform, cfg, st, tq)
 	go processLaunchQueue(platform, cfg, st, tq, db)
 
 	socket, err := StartSocketServer(st)
@@ -304,9 +304,11 @@ func StartDaemon(
 	}
 
 	return func() error {
-		err := socket.Close()
-		if err != nil {
-			log.Warn().Msgf("error closing socket: %s", err)
+		if socket != nil {
+			err := socket.Close()
+			if err != nil {
+				log.Warn().Msgf("error closing socket: %s", err)
+			}
 		}
 
 		tq.Close()

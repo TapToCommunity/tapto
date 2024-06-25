@@ -6,32 +6,24 @@ import (
 
 	"github.com/rs/zerolog/log"
 	"github.com/wizzomafizzo/tapto/pkg/platforms"
+	"github.com/wizzomafizzo/tapto/pkg/readers"
 	"github.com/wizzomafizzo/tapto/pkg/tokens"
-)
-
-const (
-	ReaderTypePN532   = "PN532"
-	ReaderTypeACR122U = "ACR122U"
-	ReaderTypeUnknown = "Unknown"
 )
 
 type State struct {
 	mu                      sync.RWMutex
 	updateHook              *func(st *State)
-	readerConnected         bool
-	readerType              string
 	activeCard              tokens.Token
 	lastScanned             tokens.Token
 	stopService             bool
 	disableLauncher         bool
-	writeRequest            string
-	writeError              error
 	dbLoadTime              time.Time
 	uidMap                  map[string]string
 	textMap                 map[string]string
 	cardRemovalTime         time.Time
 	currentlyLoadedSoftware string
 	platform                platforms.Platform
+	reader                  readers.Reader
 }
 
 func (s *State) SetUpdateHook(hook *func(st *State)) {
@@ -174,55 +166,14 @@ func (s *State) SetDB(uidMap map[string]string, textMap map[string]string) {
 	}
 }
 
-func (s *State) SetReaderConnected(rt string) {
+func (s *State) SetReader(reader readers.Reader) {
 	s.mu.Lock()
-	s.readerConnected = true
-	s.readerType = rt
+	s.reader = reader
 	s.mu.Unlock()
-	if s.updateHook != nil {
-		(*s.updateHook)(s)
-	}
 }
 
-func (s *State) SetReaderDisconnected() {
-	s.mu.Lock()
-	s.readerConnected = false
-	s.readerType = ""
-	s.mu.Unlock()
-	if s.updateHook != nil {
-		(*s.updateHook)(s)
-	}
-}
-
-func (s *State) GetReaderStatus() (bool, string) {
+func (s *State) GetReader() readers.Reader {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	return s.readerConnected, s.readerType
-}
-
-func (s *State) SetWriteRequest(req string) {
-	s.mu.Lock()
-	s.writeRequest = req
-	s.mu.Unlock()
-	if s.updateHook != nil {
-		(*s.updateHook)(s)
-	}
-}
-
-func (s *State) GetWriteRequest() string {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	return s.writeRequest
-}
-
-func (s *State) SetWriteError(err error) {
-	s.mu.Lock()
-	s.writeError = err
-	s.mu.Unlock()
-}
-
-func (s *State) GetWriteError() error {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	return s.writeError
+	return s.reader
 }

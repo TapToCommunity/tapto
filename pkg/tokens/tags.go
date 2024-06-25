@@ -46,7 +46,7 @@ type TagData struct {
 	Bytes []byte
 }
 
-func GetCardUID(target nfc.Target) string {
+func GetTagUID(target nfc.Target) string {
 	var uid string
 	switch target.Modulation() {
 	case nfc.Modulation{Type: nfc.ISO14443a, BaudRate: nfc.Nbr106}:
@@ -72,7 +72,7 @@ func comm(pnd nfc.Device, tx []byte, replySize int) ([]byte, error) {
 	return rx, nil
 }
 
-func GetCardType(target nfc.Target) string {
+func GetTagType(target nfc.Target) string {
 	switch target.Modulation() {
 	case nfc.Modulation{Type: nfc.ISO14443a, BaudRate: nfc.Nbr106}:
 		var card = target.(*nfc.ISO14443aTarget)

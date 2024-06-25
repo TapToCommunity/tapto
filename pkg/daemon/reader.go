@@ -1,10 +1,7 @@
 package daemon
 
 import (
-	"encoding/hex"
 	"errors"
-	"fmt"
-	"strings"
 	"time"
 
 	"github.com/clausecker/nfc/v2"
@@ -12,101 +9,9 @@ import (
 	"github.com/wizzomafizzo/tapto/pkg/config"
 	"github.com/wizzomafizzo/tapto/pkg/daemon/state"
 	"github.com/wizzomafizzo/tapto/pkg/platforms"
-	"github.com/wizzomafizzo/tapto/pkg/tokens"
+	"github.com/wizzomafizzo/tapto/pkg/readers/libnfc"
 	"github.com/wizzomafizzo/tapto/pkg/utils"
 )
-
-const (
-	timeToForgetCard   = 500 * time.Millisecond
-	connectMaxTries    = 10
-	TimesToPoll        = 1
-	PeriodBetweenPolls = 250 * time.Millisecond
-	periodBetweenLoop  = 250 * time.Millisecond
-)
-
-func pollDevice(
-	cfg *config.UserConfig,
-	pnd *nfc.Device,
-	activeCard tokens.Token,
-	ttp int,
-	pbp time.Duration,
-) (tokens.Token, bool, error) {
-	removed := false
-
-	count, target, err := pnd.InitiatorPollTarget(tokens.SupportedCardTypes, ttp, pbp)
-	if err != nil && !errors.Is(err, nfc.Error(nfc.ETIMEOUT)) {
-		return activeCard, removed, err
-	}
-
-	if count > 1 {
-		log.Info().Msg("More than one card on the reader")
-	}
-
-	if count <= 0 {
-		if activeCard.UID != "" && time.Since(activeCard.ScanTime) > timeToForgetCard {
-			log.Info().Msg("card removed")
-			activeCard = tokens.Token{}
-			removed = true
-		}
-
-		return activeCard, removed, nil
-	}
-
-	cardUid := tokens.GetCardUID(target)
-	if cardUid == "" {
-		log.Warn().Msgf("unable to detect token UID: %s", target.String())
-	}
-
-	if cardUid == activeCard.UID {
-		return activeCard, removed, nil
-	}
-
-	log.Info().Msgf("found token UID: %s", cardUid)
-
-	var record tokens.TagData
-	cardType := tokens.GetCardType(target)
-
-	if cardType == tokens.TypeNTAG {
-		log.Info().Msg("NTAG detected")
-		record, err = tokens.ReadNtag(*pnd)
-		if err != nil {
-			return activeCard, removed, fmt.Errorf("error reading ntag: %s", err)
-		}
-		cardType = tokens.TypeNTAG
-	}
-
-	if cardType == tokens.TypeMifare {
-		log.Info().Msg("Mifare detected")
-		record, err = tokens.ReadMifare(*pnd, cardUid)
-		if err != nil {
-			log.Error().Msgf("error reading mifare: %s", err)
-		}
-		cardType = tokens.TypeMifare
-	}
-
-	log.Debug().Msgf("record bytes: %s", hex.EncodeToString(record.Bytes))
-	tagText, err := tokens.ParseRecordText(record.Bytes)
-	if err != nil {
-		log.Error().Err(err).Msgf("error parsing NDEF record")
-		tagText = ""
-	}
-
-	if tagText == "" {
-		log.Warn().Msg("no text NDEF found")
-	} else {
-		log.Info().Msgf("decoded text NDEF: %s", tagText)
-	}
-
-	card := tokens.Token{
-		Type:     record.Type,
-		UID:      cardUid,
-		Text:     tagText,
-		Data:     hex.EncodeToString(record.Bytes),
-		ScanTime: time.Now(),
-	}
-
-	return card, removed, nil
-}
 
 func detectConnectionString(quiet bool) string {
 	if !quiet {
@@ -128,57 +33,14 @@ func detectConnectionString(quiet bool) string {
 	return ""
 }
 
-func OpenDeviceWithRetries(cfg *config.UserConfig, st *state.State, quiet bool) (nfc.Device, error) {
-	var connectionString = cfg.GetConnectionString()
-	if connectionString == "" && cfg.GetProbeDevice() == true {
-		connectionString = detectConnectionString(quiet)
-	}
-
-	if !quiet {
-		log.Info().Msgf("connecting to device: %s", connectionString)
-	}
-
-	tries := 0
-	for {
-		pnd, err := nfc.Open(connectionString)
-		if err == nil {
-			log.Info().Msgf("successful connect after %d tries", tries)
-
-			connProto := strings.SplitN(strings.ToLower(connectionString), ":", 2)[0]
-			log.Info().Msgf("connection protocol: %s", connProto)
-			deviceName := pnd.String()
-			log.Info().Msgf("device name: %s", deviceName)
-
-			if connProto == "pn532_uart" {
-				st.SetReaderConnected(state.ReaderTypePN532)
-			} else if strings.Contains(deviceName, "ACR122U") {
-				st.SetReaderConnected(state.ReaderTypeACR122U)
-			} else {
-				st.SetReaderConnected(state.ReaderTypeUnknown)
-			}
-
-			return pnd, err
-		}
-
-		if tries >= connectMaxTries {
-			if !quiet {
-				log.Error().Msgf("could not open device after %d tries: %s", connectMaxTries, err)
-			}
-			return pnd, err
-		}
-
-		tries++
-	}
-}
-
 func shouldExit(
-	platform platforms.Platform,
+	pl platforms.Platform,
 	candidateForRemove bool,
 	cfg *config.UserConfig,
 	st *state.State,
 ) bool {
 	// do not exit from menu, there is nowhere to go anyway
-	if !platform.IsLauncherActive() {
+	if !pl.IsLauncherActive() {
 		return false
 	}
 
@@ -193,7 +55,7 @@ func shouldExit(
 		hasTimePassed = int8(time.Since(removalTime).Seconds()) >= cfg.GetExitGameDelay()
 	}
 
-	if hasTimePassed && cfg.GetExitGame() && !inExitGameBlocklist(platform, cfg) {
+	if hasTimePassed && cfg.GetExitGame() && !inExitGameBlocklist(pl, cfg) {
 		log.Info().Msgf("Exiting game after %.2f seconds have passed with a configured %d seconds delay", time.Since(removalTime).Seconds(), cfg.GetExitGameDelay())
 		return true
 	} else {
@@ -201,21 +63,18 @@ func shouldExit(
 	}
 }
 
-func readerPollLoop(
+func readerLoop(
 	platform platforms.Platform,
 	cfg *config.UserConfig,
 	st *state.State,
 	tq *state.TokenQueue,
 ) {
-	var pnd nfc.Device
 	var err error
-
-	ttp := TimesToPoll
-	pbp := PeriodBetweenPolls
 	var lastError time.Time
 	var candidateForRemove bool
+
 	// keep track of core switch for menu reset
-	var lastCoreName string = "" // TODO: is this ok instead of hardcoding MENU?
+	var lastCoreName string = ""
 
 	playFail := func() {
 		if time.Since(lastError) > 1*time.Second {
@@ -223,108 +82,45 @@ func readerPollLoop(
 		}
 	}
 
-	log.Debug().Msgf("polling for %d times with %s delay", ttp, pbp)
-
 	for {
 		if st.ShouldStopService() {
 			break
 		}
 
-		time.Sleep(periodBetweenLoop)
+		reader := st.GetReader()
 
-		if connected, _ := st.GetReaderStatus(); !connected {
-			quiet := time.Since(lastError) < 1*time.Second
+		if reader == nil || !reader.Connected() {
+			log.Info().Msg("reader not connected, attempting connection....")
 
-			// TODO: keep track of reconnect attempts?
-			if !quiet {
-				log.Info().Msg("reader not connected, attempting connection....")
+			var connectionString = cfg.GetConnectionString()
+			if connectionString == "" && cfg.GetProbeDevice() == true {
+				connectionString = detectConnectionString(false)
 			}
 
-			pnd, err = OpenDeviceWithRetries(cfg, st, quiet)
+			reader = libnfc.NewReader(cfg)
+			err = reader.Open(connectionString)
 			if err != nil {
-				lastError = time.Now()
+				log.Error().Msgf("error opening device: %s", err)
 				continue
 			}
 
-			if err := pnd.InitiatorInit(); err != nil {
-				st.SetReaderDisconnected()
-				log.Error().Msgf("could not init initiator: %s", err)
-				continue
-			}
-
-			log.Info().Msgf("opened connection: %s %s", pnd, pnd.Connection())
+			st.SetReader(reader)
+			continue
 		}
 
 		// activeCard is the card that sat on the scanner at the previous poll loop.
 		// is not the card representing the current loaded core
 		activeCard := st.GetActiveCard()
-		writeRequest := st.GetWriteRequest()
 
-		if writeRequest != "" {
-			log.Info().Msgf("write request: %s", writeRequest)
-
-			var count int
-			var target nfc.Target
-			tries := 4 * 30 // ~30 seconds
-
-			for tries > 0 {
-				count, target, err = pnd.InitiatorPollTarget(tokens.SupportedCardTypes, ttp, pbp)
-
-				if err != nil && err.Error() != "timeout" {
-					log.Error().Msgf("could not poll: %s", err)
-				}
-
-				if count > 0 {
-					break
-				}
-
-				tries--
-			}
-
-			if count == 0 {
-				log.Error().Msgf("could not detect a card")
-				st.SetWriteError(errors.New("could not detect a card"))
-				st.SetWriteRequest("")
-				continue
-			}
-
-			cardUid := tokens.GetCardUID(target)
-			log.Info().Msgf("found card with UID: %s", cardUid)
-
-			cardType := tokens.GetCardType(target)
-			var bytesWritten []byte
-
-			switch cardType {
-			case tokens.TypeMifare:
-				bytesWritten, err = tokens.WriteMifare(pnd, writeRequest, cardUid)
-				if err != nil {
-					log.Error().Msgf("error writing to mifare: %s", err)
-					st.SetWriteError(err)
-					st.SetWriteRequest("")
-					continue
-				}
-			case tokens.TypeNTAG:
-				bytesWritten, err = tokens.WriteNtag(pnd, writeRequest)
-				if err != nil {
-					log.Error().Msgf("error writing to ntag: %s", err)
-					st.SetWriteError(err)
-					st.SetWriteRequest("")
-					continue
-				}
-			default:
-				log.Error().Msgf("unsupported card type: %s", cardType)
-				st.SetWriteError(errors.New("unsupported card type"))
-				st.SetWriteRequest("")
-				continue
-			}
-
-			log.Info().Msgf("successfully wrote to card: %s", hex.EncodeToString(bytesWritten))
-			st.SetWriteError(nil)
-			st.SetWriteRequest("")
+		newScanned, err := reader.Read()
+		if err != nil {
+			log.Error().Msgf("error reading card: %s", err)
+			playFail()
+			lastError = time.Now()
 			continue
 		}
 
-		newScanned, removed, err := pollDevice(cfg, &pnd, activeCard, ttp, pbp)
+		removed := newScanned == nil // TODO: is this right?
 
 		if cfg.GetExitGame() {
 			// if we removed but we weren't removing already, start the remove countdown
@@ -342,9 +138,14 @@ func readerPollLoop(
 		}
 
 		if errors.Is(err, nfc.Error(nfc.EIO)) {
-			st.SetReaderDisconnected()
 			log.Error().Msgf("error during poll: %s", err)
 			log.Error().Msg("fatal IO error, device was possibly unplugged")
+
+			err = reader.Close()
+			if err != nil {
+				log.Warn().Msgf("error closing device: %s", err)
+			}
+
 			playFail()
 			lastError = time.Now()
 			continue
@@ -357,7 +158,9 @@ func readerPollLoop(
 
 		// this will update the state for the activeCard
 		// the local variable activeCard is still the previous one and will be updated next loop
-		st.SetActiveCard(newScanned)
+		if newScanned != nil {
+			st.SetActiveCard(*newScanned)
+		}
 
 		if shouldExit(platform, candidateForRemove, cfg, st) {
 			candidateForRemove = false
@@ -365,7 +168,7 @@ func readerPollLoop(
 			_ = platform.KillLauncher()
 			st.SetCurrentlyLoadedSoftware("")
 			continue
-		} else if !platform.IsLauncherActive() && lastCoreName != "" { // TODO: and here, can we use instead of MENU?
+		} else if !platform.IsLauncherActive() && lastCoreName != "" {
 			// at any time we are on the current menu we should forget old values if we have anything to clear
 			candidateForRemove = false
 			st.SetCardRemovalTime(time.Time{})
@@ -381,7 +184,7 @@ func readerPollLoop(
 		// this will avoid card left on the reader to trigger the command multiple times per second
 		// in order to tap a card fast, so insert a coin multiple times, you have to get on and off from the reader with the card
 
-		if newScanned.UID == "" || activeCard.UID == newScanned.UID {
+		if newScanned == nil || activeCard.UID == newScanned.UID {
 			continue
 		}
 
@@ -407,11 +210,16 @@ func readerPollLoop(
 		// we are about to exec a command, we reset timers, we evaluate next loop if we need to start exiting again
 		st.SetCardRemovalTime(time.Time{})
 		candidateForRemove = false
-		tq.Enqueue(newScanned)
+
+		if newScanned != nil {
+			tq.Enqueue(*newScanned)
+		}
+
+		// time.Sleep(100 * time.Millisecond)
 	}
 
-	st.SetReaderDisconnected()
-	err = pnd.Close()
+	reader := st.GetReader()
+	err = reader.Close()
 	if err != nil {
 		log.Warn().Msgf("error closing device: %s", err)
 	}
