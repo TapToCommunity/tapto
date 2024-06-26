@@ -2,6 +2,7 @@ package daemon
 
 import (
 	"crypto/sha256"
+	"errors"
 	"time"
 
 	"github.com/rs/zerolog/log"
@@ -51,6 +52,38 @@ func tokenHash(t tokens.Token) string {
 	return string(h.Sum(nil))
 }
 
+func connectReaders(
+	cfg *config.UserConfig,
+	st *state.State,
+	iq chan<- readers.Scan,
+) error {
+	reader := st.GetReader()
+
+	if reader == nil || !reader.Connected() {
+		log.Info().Msg("reader not connected, attempting connection....")
+
+		// reader = libnfc.NewReader(cfg)
+		reader = file.NewReader(cfg)
+
+		device := cfg.GetConnectionString()
+		if device == "" {
+			device := reader.Detect(nil)
+			if device == "" {
+				return errors.New("no reader detected")
+			}
+		}
+
+		err := reader.Open(device, iq)
+		if err != nil {
+			return err
+		}
+
+		st.SetReader(reader)
+	}
+
+	return nil
+}
+
 func readerManager(
 	pl platforms.Platform,
 	cfg *config.UserConfig,
@@ -69,7 +102,11 @@ func readerManager(
 	var loadedSoftware string
 
 	// keep track of core switch for menu reset
-	var lastCoreName string = ""
+	var lastLauncherName string = ""
+
+	// activeCard is the card that sat on the scanner at the previous poll loop.
+	// is not the card representing the current loaded core
+	var newScanned *tokens.Token
 
 	playFail := func() {
 		if time.Since(lastError) > 1*time.Second {
@@ -78,36 +115,12 @@ func readerManager(
 	}
 
 	for !st.ShouldStopService() {
-		reader := st.GetReader()
-
-		if reader == nil || !reader.Connected() {
-			log.Info().Msg("reader not connected, attempting connection....")
-
-			// reader = libnfc.NewReader(cfg)
-			reader = file.NewReader(cfg)
-
-			device := cfg.GetConnectionString()
-			if device == "" {
-				device := reader.Detect(nil)
-				if device == "" {
-					log.Error().Msg("no reader detected")
-					continue
-				}
-			}
-
-			err = reader.Open(device, iq)
-			if err != nil {
-				log.Error().Msgf("error opening device: %s", err)
-				continue
-			}
-
-			st.SetReader(reader)
+		err := connectReaders(cfg, st, iq)
+		if err != nil {
+			log.Error().Msgf("error connecting readers: %s", err)
+			time.Sleep(1 * time.Second)
 			continue
 		}
-
-		// activeCard is the card that sat on the scanner at the previous poll loop.
-		// is not the card representing the current loaded core
-		var newScanned *tokens.Token
 
 		select {
 		case t := <-iq:
@@ -120,16 +133,15 @@ func readerManager(
 			}
 			newScanned = t.Token
 		case softwareToken := <-lsq:
+			log.Debug().Msgf("set software token: %v", softwareToken)
 			loadedSoftware = tokenHash(softwareToken)
 			continue
 		}
 
-		removed := newScanned == nil // TODO: is this right?
-
 		if cfg.GetExitGame() {
 			// if we removed but we weren't removing already, start the remove countdown
-			if removed && candidateForRemove == false {
-				log.Info().Msgf("Start countdown for removal")
+			if newScanned == nil && candidateForRemove == false {
+				log.Info().Msgf("start countdown for removal")
 				cardRemovalTime = time.Now()
 				candidateForRemove = true
 				// if we were removing but we put back the card we had before
@@ -142,42 +154,52 @@ func readerManager(
 		}
 
 		// this will update the state for the activeCard
-		// the local variable activeCard is still the previous one and will be updated next loop
+		// the local variable activeCard is still the previous one and will
+		// be updated next loop
 		if newScanned != nil {
-			log.Info().Msgf("new card scanned: %s", newScanned.UID)
+			log.Info().Msgf("new card scanned: %v", newScanned)
 			st.SetActiveCard(*newScanned)
 		}
 
 		if shouldExit(pl, candidateForRemove, cfg, st, cardRemovalTime) {
+			log.Debug().Msg("should exit, killing launcher...")
 			candidateForRemove = false
 			cardRemovalTime = time.Time{}
 			_ = pl.KillLauncher()
 			loadedSoftware = ""
 			continue
-		} else if !pl.IsLauncherActive() && lastCoreName != "" {
-			// at any time we are on the current menu we should forget old values if we have anything to clear
+		} else if !pl.IsLauncherActive() && lastLauncherName != "" {
+			// at any time we are on the current menu we should forget old
+			// values if we have anything to clear
+			log.Debug().Msg("not in launcher, clearing old values")
 			candidateForRemove = false
 			cardRemovalTime = time.Time{}
 			loadedSoftware = ""
 		}
 
-		lastCoreName = pl.GetActiveLauncher()
+		lastLauncherName = pl.GetActiveLauncher()
 
-		// From here we didn't exit a game, but we want short circuit and do nothing if the following happens
+		// From here we didn't exit a game, but we want short circuit and
+		// do nothing if the following happens
 
-		// in any case if the new scanned card has no UID we never want to go on with launching anything
-		// if the card is the same as the one we have scanned before ( activeCard.UID == newScanned.UID) we don't relaunch
-		// this will avoid card left on the reader to trigger the command multiple times per second
-		// in order to tap a card fast, so insert a coin multiple times, you have to get on and off from the reader with the card
+		// in any case if the new scanned card has no UID we never want to go
+		// on with launching anything
+		// if the card is the same as the one we have scanned before
+		// ( activeCard.UID == newScanned.UID) we don't relaunch
+		// this will avoid card left on the reader to trigger the command
+		// multiple times per second
+		// in order to tap a card fast, so insert a coin multiple times, you
+		// have to get on and off from the reader with the card
 
-		if tokenHash(st.GetActiveCard()) == tokenHash(*newScanned) {
-			continue
-		}
+		// if tokenHash(st.GetActiveCard()) == tokenHash(*newScanned) {
+		// 	log.Debug().Msgf("same card scanned again: %s", tokenHash(*newScanned))
+		// 	continue
+		// }
 
 		// if the card has the same ID of the currently loaded software it means we re-read a card that was already there
 		// this could happen in combination with exit_game_delay and tapping for coins or other commands not meant to interrupt
 		// a game. In that case when we put back the same software card, we don't want to reboot, only to keep running it
-		if loadedSoftware == tokenHash(*newScanned) {
+		if newScanned != nil && loadedSoftware == tokenHash(*newScanned) {
 			// keeping a separate if to have specific logging
 			log.Info().Msgf("token with UID %s has been skipped because is the currently loaded software", tokenHash(*newScanned))
 			candidateForRemove = false
@@ -198,6 +220,8 @@ func readerManager(
 
 		if newScanned != nil {
 			lq.Enqueue(*newScanned)
+		} else {
+			log.Warn().Msg("newScanned is nil before processing, this shouldn't happen")
 		}
 	}
 
