@@ -11,19 +11,17 @@ import (
 )
 
 type State struct {
-	mu                      sync.RWMutex
-	updateHook              *func(st *State)
-	activeCard              tokens.Token
-	lastScanned             tokens.Token
-	stopService             bool
-	disableLauncher         bool
-	dbLoadTime              time.Time
-	uidMap                  map[string]string
-	textMap                 map[string]string
-	cardRemovalTime         time.Time
-	currentlyLoadedSoftware string
-	platform                platforms.Platform
-	reader                  readers.Reader
+	mu              sync.RWMutex
+	updateHook      *func(st *State)
+	activeCard      tokens.Token
+	lastScanned     tokens.Token
+	stopService     bool
+	disableLauncher bool
+	dbLoadTime      time.Time
+	uidMap          map[string]string
+	textMap         map[string]string
+	platform        platforms.Platform
+	reader          readers.Reader
 }
 
 func (s *State) SetUpdateHook(hook *func(st *State)) {
@@ -53,19 +51,6 @@ func (s *State) SetActiveCard(card tokens.Token) {
 	}
 }
 
-func (s *State) SetCardRemovalTime(removalTime time.Time) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	s.cardRemovalTime = removalTime
-}
-
-func (s *State) SetCurrentlyLoadedSoftware(command string) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	s.currentlyLoadedSoftware = command
-	log.Debug().Msgf("current software launched set to: %s", command)
-}
-
 func (s *State) GetActiveCard() tokens.Token {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -76,18 +61,6 @@ func (s *State) GetLastScanned() tokens.Token {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return s.lastScanned
-}
-
-func (s *State) GetCardRemovalTime() time.Time {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	return s.cardRemovalTime
-}
-
-func (s *State) GetCurrentlyLoadedSoftware() string {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	return s.currentlyLoadedSoftware
 }
 
 func (s *State) StopService() {

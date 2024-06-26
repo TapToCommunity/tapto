@@ -33,7 +33,7 @@ type Reader struct {
 	cfg          *config.UserConfig
 	conn         string
 	pnd          *nfc.Device
-	activeToken  *tokens.Token
+	token        *tokens.Token
 	writeRequest string
 	writeError   error
 	polling      bool
@@ -64,7 +64,7 @@ func (r *Reader) Open(device string) error {
 				continue
 			}
 
-			card, removed, err := r.pollDevice(r.pnd, r.activeToken, timesToPoll, periodBetweenPolls)
+			card, removed, err := r.pollDevice(r.pnd, r.token, timesToPoll, periodBetweenPolls)
 			if errors.Is(err, nfc.Error(nfc.EIO)) {
 				log.Error().Msgf("error during poll: %s", err)
 				log.Error().Msg("fatal IO error, device was possibly unplugged")
@@ -81,9 +81,9 @@ func (r *Reader) Open(device string) error {
 			}
 
 			if removed {
-				r.activeToken = nil
+				r.token = nil
 			} else if card != nil {
-				r.activeToken = card
+				r.token = card
 			}
 
 			time.Sleep(periodBetweenLoop)
@@ -95,11 +95,18 @@ func (r *Reader) Open(device string) error {
 
 func (r *Reader) Close() error {
 	r.polling = false
-	r.activeToken = nil
+	r.token = nil
 	r.writeRequest = ""
 	r.writeError = nil
 	r.history = nil
 	return r.pnd.Close()
+}
+
+func (r *Reader) Ids() []string {
+	return []string{
+		"pn532_uart",
+		"acr122_usb",
+	}
 }
 
 func (r *Reader) Detect(connected []string) string {
@@ -154,7 +161,7 @@ func (r *Reader) History() []tokens.Token {
 }
 
 func (r *Reader) Read() (*tokens.Token, error) {
-	return r.activeToken, nil
+	return r.token, nil
 }
 
 func (r *Reader) Write(text string) error {

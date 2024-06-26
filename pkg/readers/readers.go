@@ -4,10 +4,18 @@ import (
 	"github.com/wizzomafizzo/tapto/pkg/tokens"
 )
 
+type Scan struct {
+	Source string
+	Token  *tokens.Token
+	Error  error
+}
+
 type Reader interface {
+	// Ids returns the device string prefixes supported by this reader.
+	Ids() []string
 	// Open any necessary connections to the device and start polling.
-	// Takes a device connection string.
-	Open(string) error
+	// Takes a device connection string and a channel to send tokens to.
+	Open(string, chan<- Scan) error
 	// Close any open connections to the device and stop polling.
 	Close() error
 	// Detect attempts to search for a connected device and returns the device
@@ -20,10 +28,7 @@ type Reader interface {
 	Connected() bool
 	// Info returns a string with information about the connected device.
 	Info() string
-	// History returns a list of tokens that have been read by the device.
-	History() []tokens.Token
-	// Read returns the active token being read by the device. Non-blocking.
-	Read() (*tokens.Token, error)
-	// Write sends a string to the device, if supported. Blocking.
+	// Write sends a string to the device to be written to a token, if
+	// that device supporting writing. Blocks until completion or timeout.
 	Write(string) error
 }

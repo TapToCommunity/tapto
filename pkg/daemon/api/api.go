@@ -18,6 +18,7 @@ import (
 	"github.com/wizzomafizzo/tapto/pkg/daemon/state"
 	"github.com/wizzomafizzo/tapto/pkg/database"
 	"github.com/wizzomafizzo/tapto/pkg/platforms"
+	"github.com/wizzomafizzo/tapto/pkg/tokens"
 	"github.com/wizzomafizzo/tapto/pkg/utils"
 )
 
@@ -118,7 +119,7 @@ func RunApiServer(
 	pl platforms.Platform,
 	cfg *config.UserConfig,
 	st *state.State,
-	tq *state.TokenQueue,
+	tq *tokens.TokenQueue,
 	db *database.Database,
 ) {
 	r := chi.NewRouter()
