@@ -33,11 +33,19 @@ func handleReaderWrite(st *state.State) http.HandlerFunc {
 			return
 		}
 
-		reader := st.GetReader()
+		rs := st.ListReaders()
+		if len(rs) == 0 {
+			log.Error().Msg("no readers connected")
+			http.Error(w, "no readers connected", http.StatusServiceUnavailable)
+			return
+		}
 
-		if reader == nil {
-			log.Error().Msg("no reader connected")
-			http.Error(w, "no reader connected", http.StatusServiceUnavailable)
+		// TODO: this just picks one at random for now
+
+		reader, ok := st.GetReader(rs[0])
+		if !ok || reader == nil {
+			log.Error().Msg("reader not connected: " + rs[0])
+			http.Error(w, "reader not connected", http.StatusServiceUnavailable)
 			return
 		}
 

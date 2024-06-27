@@ -21,7 +21,14 @@ type State struct {
 	uidMap          map[string]string
 	textMap         map[string]string
 	platform        platforms.Platform
-	reader          readers.Reader
+	readers         map[string]readers.Reader
+}
+
+func NewState(platform platforms.Platform) *State {
+	return &State{
+		platform: platform,
+		readers:  make(map[string]readers.Reader),
+	}
 }
 
 func (s *State) SetUpdateHook(hook *func(st *State)) {
@@ -139,14 +146,55 @@ func (s *State) SetDB(uidMap map[string]string, textMap map[string]string) {
 	}
 }
 
-func (s *State) SetReader(reader readers.Reader) {
-	s.mu.Lock()
-	s.reader = reader
-	s.mu.Unlock()
-}
-
-func (s *State) GetReader() readers.Reader {
+func (s *State) GetReader(device string) (readers.Reader, bool) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	return s.reader
+	r, ok := s.readers[device]
+	return r, ok
+}
+
+func (s *State) SetReader(device string, reader readers.Reader) {
+	s.mu.Lock()
+
+	r, ok := s.readers[device]
+	if ok {
+		err := r.Close()
+		if err != nil {
+			log.Warn().Err(err).Msg("error closing reader")
+		}
+	}
+
+	s.readers[device] = reader
+	s.mu.Unlock()
+	if s.updateHook != nil {
+		(*s.updateHook)(s)
+	}
+}
+
+func (s *State) RemoveReader(device string) {
+	s.mu.Lock()
+	r, ok := s.readers[device]
+	if ok && r != nil {
+		err := r.Close()
+		if err != nil {
+			log.Warn().Err(err).Msg("error closing reader")
+		}
+	}
+	delete(s.readers, device)
+	s.mu.Unlock()
+	if s.updateHook != nil {
+		(*s.updateHook)(s)
+	}
+}
+
+func (s *State) ListReaders() []string {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	var readers []string
+	for k := range s.readers {
+		readers = append(readers, k)
+	}
+
+	return readers
 }

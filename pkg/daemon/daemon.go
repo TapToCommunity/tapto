@@ -262,7 +262,7 @@ func StartDaemon(
 	platform platforms.Platform,
 	cfg *config.UserConfig,
 ) (func() error, error) {
-	st := &state.State{}
+	st := state.NewState(platform)
 	tq := tokens.NewTokenQueue()
 	lsq := make(chan *tokens.Token)
 

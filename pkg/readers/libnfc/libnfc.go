@@ -124,20 +124,14 @@ func (r *Reader) Ids() []string {
 }
 
 func (r *Reader) Detect(connected []string) string {
-	connStr := r.cfg.GetConnectionString()
-	if connStr != "" {
-		log.Info().Msgf("using connection string: %s", connStr)
-		return connStr
-	}
-
 	if !r.cfg.GetProbeDevice() {
 		log.Debug().Msg("device probing disabled")
 		return ""
 	}
 
-	device := detectSerialReaders()
+	device := detectSerialReaders(connected)
 	if device == "" {
-		log.Info().Msg("no serial nfc reader detected")
+		// log.Debug().Msg("no serial nfc reader detected")
 		return ""
 	}
 
@@ -186,8 +180,8 @@ func (r *Reader) Write(text string) error {
 	return r.writeError
 }
 
-func detectSerialReaders() string {
-	log.Info().Msg("probing for serial devices")
+func detectSerialReaders(connected []string) string {
+	// log.Debug().Msg("probing for serial devices")
 	devices, err := utils.GetLinuxSerialDeviceList()
 	if err != nil {
 		log.Error().Msgf("error getting serial devices: %s", err)
@@ -196,6 +190,11 @@ func detectSerialReaders() string {
 
 	for _, device := range devices {
 		connectionString := "pn532_uart:" + device
+
+		if utils.Contains(connected, connectionString) {
+			continue
+		}
+
 		pnd, err := nfc.Open(connectionString)
 		log.Info().Msgf("trying %s", connectionString)
 		if err == nil {

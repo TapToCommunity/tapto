@@ -2,6 +2,7 @@ package daemon
 
 import (
 	"errors"
+	"strings"
 	"time"
 
 	"github.com/rs/zerolog/log"
@@ -9,8 +10,9 @@ import (
 	"github.com/wizzomafizzo/tapto/pkg/daemon/state"
 	"github.com/wizzomafizzo/tapto/pkg/platforms"
 	"github.com/wizzomafizzo/tapto/pkg/readers"
+	"github.com/wizzomafizzo/tapto/pkg/utils"
 
-	//"github.com/wizzomafizzo/tapto/pkg/readers/file"
+	"github.com/wizzomafizzo/tapto/pkg/readers/file"
 	"github.com/wizzomafizzo/tapto/pkg/readers/libnfc"
 	"github.com/wizzomafizzo/tapto/pkg/tokens"
 )
@@ -53,29 +55,67 @@ func connectReaders(
 	st *state.State,
 	iq chan<- readers.Scan,
 ) error {
-	reader := st.GetReader()
+	rs := st.ListReaders()
+	var toConnect []string
 
-	if reader == nil || !reader.Connected() {
-		log.Info().Msg("reader not connected, attempting connection....")
+	userDevice := cfg.GetConnectionString()
+	if userDevice != "" && !utils.Contains(rs, userDevice) {
+		log.Debug().Msgf("user device not connected, adding: %s", userDevice)
+		toConnect = append(toConnect, userDevice)
+	}
 
-		reader = libnfc.NewReader(cfg)
-		// reader = file.NewReader(cfg)
+	for _, device := range toConnect {
+		if _, ok := st.GetReader(device); !ok {
+			ps := strings.SplitN(device, ":", 2)
+			if len(ps) != 2 {
+				return errors.New("invalid device string")
+			}
 
-		device := cfg.GetConnectionString()
-		if device == "" {
-			log.Debug().Msg("no device specified, attempting to detect...")
-			device = reader.Detect(nil)
-			if device == "" {
-				return errors.New("no reader detected")
+			rt := ps[0]
+
+			if rt == "file" {
+				r := file.NewReader(cfg)
+				err := r.Open(device, iq)
+				if err != nil {
+					log.Error().Msgf("error opening file reader: %s", err)
+					continue
+				} else {
+					st.SetReader(device, r)
+					log.Info().Msgf("opened file reader: %s", device)
+				}
+			} else {
+				r := libnfc.NewReader(cfg)
+				err := r.Open(device, iq)
+				if err != nil {
+					log.Error().Msgf("error opening libnfc reader: %s", err)
+					continue
+				} else {
+					st.SetReader(device, r)
+					log.Info().Msgf("opened libnfc reader: %s", device)
+				}
 			}
 		}
+	}
 
-		err := reader.Open(device, iq)
+	lr := libnfc.NewReader(cfg)
+	detectDevice := lr.Detect(st.ListReaders())
+	if detectDevice != "" {
+		log.Info().Msgf("detected new reader: %s", detectDevice)
+		err := lr.Open(detectDevice, iq)
 		if err != nil {
-			return err
+			log.Error().Msgf("error opening detected reader: %s", err)
 		}
+		st.SetReader(detectDevice, lr)
+	}
 
-		st.SetReader(reader)
+	if !utils.Contains(rs, "") {
+		lrany := libnfc.NewReader(cfg)
+		err := lrany.Open("", iq)
+		if err != nil {
+			log.Debug().Msgf("error opening auto-detect reader: %s", err)
+		} else {
+			st.SetReader("", lrany)
+		}
 	}
 
 	return nil
@@ -143,12 +183,18 @@ func readerManager(
 			case <-stopService:
 				return
 			case <-readerTicker.C:
-				reader := st.GetReader()
-				if reader == nil || !reader.Connected() {
-					err := connectReaders(cfg, st, inputQueue)
-					if err != nil {
-						log.Error().Msgf("error connecting readers: %s", err)
+				readers := st.ListReaders()
+				for _, device := range readers {
+					r, ok := st.GetReader(device)
+					if ok && r != nil && !r.Connected() {
+						log.Info().Msgf("pruning disconnected reader: %s", device)
+						st.RemoveReader(device)
 					}
+				}
+
+				err := connectReaders(cfg, st, inputQueue)
+				if err != nil {
+					log.Error().Msgf("error connecting readers: %s", err)
 				}
 			}
 		}
@@ -219,11 +265,14 @@ func readerManager(
 
 	// daemon shutdown
 	stopService <- true
-	reader := st.GetReader()
-	if reader != nil {
-		err = reader.Close()
-		if err != nil {
-			log.Warn().Msgf("error closing device: %s", err)
+	readers := st.ListReaders()
+	for _, device := range readers {
+		r, ok := st.GetReader(device)
+		if ok && r != nil {
+			err := r.Close()
+			if err != nil {
+				log.Warn().Msg("error closing reader")
+			}
 		}
 	}
 }

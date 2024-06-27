@@ -78,10 +78,14 @@ func StartSocketServer(st *state.State) (net.Listener, error) {
 				case "connection":
 					connected, rt := false, ""
 
-					reader := st.GetReader()
-					if reader != nil {
-						connected = reader.Connected()
-						rt = reader.Info()
+					rs := st.ListReaders()
+					if len(rs) > 0 {
+						// TODO: picking one at random for now
+						reader, ok := st.GetReader(rs[0])
+						if ok && reader != nil {
+							connected = reader.Connected()
+							rt = reader.Info()
+						}
 					}
 
 					payload = fmt.Sprintf("%t,%s", connected, rt)
