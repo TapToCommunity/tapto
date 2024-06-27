@@ -1,7 +1,6 @@
 package daemon
 
 import (
-	"crypto/sha256"
 	"errors"
 	"time"
 
@@ -17,40 +16,36 @@ import (
 )
 
 func shouldExit(
-	pl platforms.Platform,
-	candidateForRemove bool,
 	cfg *config.UserConfig,
+	pl platforms.Platform,
 	st *state.State,
-	removalTime time.Time,
 ) bool {
+	if !cfg.GetExitGame() {
+		return false
+	}
+
 	// do not exit from menu, there is nowhere to go anyway
 	if pl.GetActiveLauncher() == "" {
 		return false
 	}
 
-	// candidateForRemove is true from the moment in which we remove a card
-	if !candidateForRemove || st.GetLastScanned().FromApi || st.IsLauncherDisabled() {
+	if st.GetLastScanned().FromApi || st.IsLauncherDisabled() {
 		return false
 	}
 
-	var hasTimePassed bool = false
-	if !removalTime.IsZero() {
-		hasTimePassed = int8(time.Since(removalTime).Seconds()) >= cfg.GetExitGameDelay()
-	}
-
-	if hasTimePassed && cfg.GetExitGame() && !inExitGameBlocklist(pl, cfg) {
-		log.Info().Msgf("exiting game after %.2f seconds have passed with a configured %d seconds delay", time.Since(removalTime).Seconds(), cfg.GetExitGameDelay())
-		return true
-	} else {
+	if inExitGameBlocklist(pl, cfg) {
 		return false
 	}
+
+	return true
 }
 
-func tokenHash(t tokens.Token) string {
-	h := sha256.New()
-	h.Write([]byte(t.UID))
-	h.Write([]byte(t.Text))
-	return string(h.Sum(nil))
+func cmpTokens(a, b *tokens.Token) bool {
+	if a == nil || b == nil {
+		return false
+	}
+
+	return a.UID == b.UID && a.Text == b.Text
 }
 
 func connectReaders(
@@ -91,13 +86,16 @@ func readerManager(
 	cfg *config.UserConfig,
 	st *state.State,
 	launchQueue *tokens.TokenQueue,
-	softwareQueue <-chan tokens.Token,
+	softwareQueue chan *tokens.Token,
 ) {
 	// reader token input queue
 	inputQueue := make(chan readers.Scan)
 
 	var err error
 	var lastError time.Time
+	var prevToken *tokens.Token
+	var softwareToken *tokens.Token
+	var exitTimer *time.Timer
 
 	playFail := func() {
 		if time.Since(lastError) > 1*time.Second {
@@ -105,7 +103,37 @@ func readerManager(
 		}
 	}
 
-	// manage reader connections and exit game behaviour
+	startTimedExit := func() {
+		if exitTimer != nil {
+			stopped := exitTimer.Stop()
+			if stopped {
+				log.Info().Msg("cancelling previous exit timer")
+			}
+		}
+
+		timerLen := time.Second * time.Duration(cfg.GetExitGameDelay())
+		log.Debug().Msgf("exit timer set to: %s seconds", timerLen)
+		exitTimer = time.NewTimer(timerLen)
+
+		go func() {
+			<-exitTimer.C
+
+			if pl.GetActiveLauncher() == "" {
+				log.Debug().Msg("no active launcher, not exiting")
+				return
+			}
+
+			log.Info().Msg("exiting software")
+			err := pl.KillLauncher()
+			if err != nil {
+				log.Warn().Msgf("error killing launcher: %s", err)
+			}
+
+			softwareQueue <- nil
+		}()
+	}
+
+	// manage reader connections
 	go func() {
 		for !st.ShouldStopService() {
 			reader := st.GetReader()
@@ -116,22 +144,7 @@ func readerManager(
 				}
 			}
 
-			if shouldExit(pl, st.IsRemovalCandidate(), cfg, st, st.GetRemovalTime()) {
-				log.Debug().Msg("should exit, killing launcher...")
-				st.SetRemovalCandidate(false)
-				st.SetRemovalTime(time.Time{})
-				_ = pl.KillLauncher()
-				st.SetLoadedSoftware("")
-			} else if pl.GetActiveLauncher() == "" {
-				// at any time we are on the current menu we should forget old
-				// values if we have anything to clear
-				//log.Debug().Msg("not in launcher, clearing old values")
-				st.SetRemovalCandidate(false)
-				st.SetRemovalTime(time.Time{})
-				st.SetLoadedSoftware("")
-			}
-
-			time.Sleep(500 * time.Millisecond)
+			time.Sleep(1 * time.Second)
 		}
 	}()
 
@@ -150,64 +163,51 @@ func readerManager(
 				continue
 			}
 			scan = t.Token
-		case softwareToken := <-softwareQueue:
+		case st := <-softwareQueue:
 			// a token has been launched that starts software
-			log.Debug().Msgf("set software token: %v", softwareToken)
-			st.SetLoadedSoftware(tokenHash(softwareToken))
-			continue
-		}
+			log.Debug().Msgf("new software token: %v", st)
 
-		if cfg.GetExitGame() {
-			log.Debug().Msgf("exit game section")
-
-			if scan == nil && st.IsRemovalCandidate() == false {
-				// if we removed but we weren't removing already, start the
-				// remove countdown
-				log.Info().Msgf("start countdown for removal")
-				st.SetRemovalTime(time.Now())
-				st.SetRemovalCandidate(true)
-			} else if scan != nil && st.IsRemovalCandidate() && tokenHash(*scan) == st.GetLoadedSoftware() {
-				// if we were removing but we put back the card we had before
-				// then we are ok blocking the exit process
-				log.Info().Msgf("token was removed but reinserted")
-				st.SetRemovalCandidate(false)
-				st.SetRemovalTime(time.Time{})
+			if exitTimer != nil && !cmpTokens(st, softwareToken) {
+				if stopped := exitTimer.Stop(); stopped {
+					log.Info().Msg("different software token inserted, cancelling exit")
+				}
 			}
+
+			softwareToken = st
+			continue
 		}
 
-		// this will update the state for the activeCard
-		// the local variable activeCard is still the previous one and will
-		// be updated next loop
+		if cmpTokens(scan, prevToken) {
+			log.Debug().Msg("ignoring duplicate scan")
+			continue
+		}
+
+		prevToken = scan
+
 		if scan != nil {
-			log.Info().Msgf("new card scanned: %v", scan)
-			st.SetActiveCard(*scan)
-		}
+			log.Info().Msgf("new token scanned: %v", scan)
+			if !st.IsLauncherDisabled() {
+				if exitTimer != nil {
+					stopped := exitTimer.Stop()
+					if stopped && cmpTokens(scan, softwareToken) {
+						log.Info().Msg("same token reinserted, cancelling exit")
+						continue
+					} else if stopped {
+						log.Info().Msg("new token inserted, restarting exit timer")
+						startTimedExit()
+					}
+				}
 
-		// if the card has the same ID of the currently loaded software it
-		// means we re-read a card that was already there
-		// this could happen in combination with exit_game_delay and
-		// tapping for coins or other commands not meant to interrupt
-		// a game. In that case when we put back the same software card,
-		// we don't want to reboot, only to keep running it
-		if scan != nil && cfg.GetExitGame() && st.GetLoadedSoftware() == tokenHash(*scan) {
-			// keeping a separate if to have specific logging
-			log.Info().Msgf("token is same software: %s", tokenHash(*scan))
-			st.SetRemovalCandidate(false)
-			continue
-		}
-
-		if st.IsLauncherDisabled() || scan == nil {
-			log.Debug().Msg("no active token")
-			continue
+				log.Info().Msgf("sending token: %v", scan)
+				pl.PlaySuccessSound(cfg)
+				launchQueue.Enqueue(*scan)
+			}
 		} else {
-			log.Info().Msgf(
-				"sending token %v: , current software: %s, activeCard: %v",
-				scan,
-				st.GetLoadedSoftware(),
-				st.GetActiveCard(),
-			)
-			pl.PlaySuccessSound(cfg)
-			launchQueue.Enqueue(*scan)
+			log.Info().Msg("token was removed")
+			st.SetActiveCard(tokens.Token{})
+			if shouldExit(cfg, pl, st) {
+				startTimedExit()
+			}
 		}
 	}
 

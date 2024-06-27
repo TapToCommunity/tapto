@@ -165,7 +165,7 @@ func launchToken(
 	token tokens.Token,
 	state *state.State,
 	db *database.Database,
-	lsq chan<- tokens.Token,
+	lsq chan<- *tokens.Token,
 ) error {
 	text := token.Text
 
@@ -196,7 +196,7 @@ func launchToken(
 		}
 		if softwareSwap {
 			log.Info().Msgf("current software launched set to: %s", token.UID)
-			lsq <- token
+			lsq <- &token
 		}
 	}
 
@@ -209,7 +209,7 @@ func processLaunchQueue(
 	st *state.State,
 	tq *tokens.TokenQueue,
 	db *database.Database,
-	lsq chan<- tokens.Token,
+	lsq chan<- *tokens.Token,
 ) {
 	for {
 		select {
@@ -264,7 +264,7 @@ func StartDaemon(
 ) (func() error, error) {
 	st := &state.State{}
 	tq := tokens.NewTokenQueue()
-	lsq := make(chan tokens.Token)
+	lsq := make(chan *tokens.Token)
 
 	db, err := database.Open()
 	if err != nil {
