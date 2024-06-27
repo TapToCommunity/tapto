@@ -86,16 +86,12 @@ func (p *Platform) KillLauncher() error {
 	return nil
 }
 
-func (p *Platform) IsLauncherActive() bool {
-	return GetActiveCoreName() != mrextConfig.MenuCore
-}
-
-func (p *Platform) IsLauncherDisabled() bool {
+func (p *Platform) LaunchingEnabled() bool {
 	_, err := os.Stat(DisableLaunchFile)
-	return err == nil
+	return err != nil
 }
 
-func (p *Platform) SetLauncherEnabled(disabled bool) error {
+func (p *Platform) SetLaunching(disabled bool) error {
 	if disabled {
 		return os.Remove(DisableLaunchFile)
 	} else {

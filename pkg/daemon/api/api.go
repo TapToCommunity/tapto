@@ -92,7 +92,7 @@ func LoggerMiddleware(logger *zerolog.Logger) func(next http.Handler) http.Handl
 				}
 
 				// log end request
-				log.Info().
+				log.Debug().
 					Str("type", "access").
 					Timestamp().
 					Fields(map[string]interface{}{

@@ -11,17 +11,20 @@ import (
 )
 
 type State struct {
-	mu              sync.RWMutex
-	updateHook      *func(st *State)
-	activeCard      tokens.Token
-	lastScanned     tokens.Token
-	stopService     bool
-	disableLauncher bool
-	dbLoadTime      time.Time
-	uidMap          map[string]string
-	textMap         map[string]string
-	platform        platforms.Platform
-	reader          readers.Reader
+	mu               sync.RWMutex
+	updateHook       *func(st *State)
+	activeCard       tokens.Token
+	lastScanned      tokens.Token
+	stopService      bool
+	disableLauncher  bool
+	dbLoadTime       time.Time
+	uidMap           map[string]string
+	textMap          map[string]string
+	platform         platforms.Platform
+	reader           readers.Reader
+	removalCandidate bool
+	removalTime      time.Time
+	loadedSoftware   string
 }
 
 func (s *State) SetUpdateHook(hook *func(st *State)) {
@@ -81,7 +84,7 @@ func (s *State) ShouldStopService() bool {
 func (s *State) DisableLauncher() {
 	s.mu.Lock()
 	s.disableLauncher = true
-	if err := s.platform.SetLauncherEnabled(false); err != nil {
+	if err := s.platform.SetLaunching(false); err != nil {
 		log.Error().Msgf("cannot create disable launch file: %s", err)
 	}
 	s.mu.Unlock()
@@ -93,7 +96,7 @@ func (s *State) DisableLauncher() {
 func (s *State) EnableLauncher() {
 	s.mu.Lock()
 	s.disableLauncher = false
-	if err := s.platform.SetLauncherEnabled(true); err != nil {
+	if err := s.platform.SetLaunching(true); err != nil {
 		log.Error().Msgf("cannot remove disable launch file: %s", err)
 	}
 	s.mu.Unlock()
@@ -149,4 +152,40 @@ func (s *State) GetReader() readers.Reader {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return s.reader
+}
+
+func (s *State) SetRemovalCandidate(candidate bool) {
+	s.mu.Lock()
+	s.removalCandidate = candidate
+	s.mu.Unlock()
+}
+
+func (s *State) IsRemovalCandidate() bool {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.removalCandidate
+}
+
+func (s *State) SetRemovalTime(t time.Time) {
+	s.mu.Lock()
+	s.removalTime = t
+	s.mu.Unlock()
+}
+
+func (s *State) GetRemovalTime() time.Time {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.removalTime
+}
+
+func (s *State) SetLoadedSoftware(software string) {
+	s.mu.Lock()
+	s.loadedSoftware = software
+	s.mu.Unlock()
+}
+
+func (s *State) GetLoadedSoftware() string {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.loadedSoftware
 }

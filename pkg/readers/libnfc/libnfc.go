@@ -91,7 +91,6 @@ func (r *Reader) Open(device string, iq chan<- readers.Scan) error {
 				r.prevToken = nil
 			} else if token != nil {
 				if r.prevToken != nil && token.UID == r.prevToken.UID {
-					log.Debug().Msg("same token detected, ignoring")
 					continue
 				}
 

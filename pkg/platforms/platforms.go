@@ -26,9 +26,8 @@ type Platform interface {
 	ConfigFolder() string
 	NormalizePath(*config.UserConfig, string) string
 	KillLauncher() error
-	IsLauncherActive() bool
-	IsLauncherDisabled() bool
-	SetLauncherEnabled(bool) error
+	LaunchingEnabled() bool
+	SetLaunching(bool) error
 	GetActiveLauncher() string
 	PlayFailSound(*config.UserConfig)
 	PlaySuccessSound(*config.UserConfig)

@@ -293,7 +293,7 @@ func StartDaemon(
 		log.Error().Msgf("error starting mappings watcher: %s", err)
 	}
 
-	if platform.IsLauncherDisabled() {
+	if !platform.LaunchingEnabled() {
 		st.DisableLauncher()
 	}
 
