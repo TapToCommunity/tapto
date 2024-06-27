@@ -88,14 +88,17 @@ func readerManager(
 	launchQueue *tokens.TokenQueue,
 	softwareQueue chan *tokens.Token,
 ) {
-	// reader token input queue
 	inputQueue := make(chan readers.Scan)
 
 	var err error
 	var lastError time.Time
+
 	var prevToken *tokens.Token
 	var softwareToken *tokens.Token
 	var exitTimer *time.Timer
+
+	readerTicker := time.NewTicker(1 * time.Second)
+	stopService := make(chan bool)
 
 	playFail := func() {
 		if time.Since(lastError) > 1*time.Second {
@@ -135,16 +138,19 @@ func readerManager(
 
 	// manage reader connections
 	go func() {
-		for !st.ShouldStopService() {
-			reader := st.GetReader()
-			if reader == nil || !reader.Connected() {
-				err := connectReaders(cfg, st, inputQueue)
-				if err != nil {
-					log.Error().Msgf("error connecting readers: %s", err)
+		for {
+			select {
+			case <-stopService:
+				return
+			case <-readerTicker.C:
+				reader := st.GetReader()
+				if reader == nil || !reader.Connected() {
+					err := connectReaders(cfg, st, inputQueue)
+					if err != nil {
+						log.Error().Msgf("error connecting readers: %s", err)
+					}
 				}
 			}
-
-			time.Sleep(1 * time.Second)
 		}
 	}()
 
@@ -212,6 +218,7 @@ func readerManager(
 	}
 
 	// daemon shutdown
+	stopService <- true
 	reader := st.GetReader()
 	if reader != nil {
 		err = reader.Close()
