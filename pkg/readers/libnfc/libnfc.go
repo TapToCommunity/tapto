@@ -10,6 +10,7 @@ import (
 	"github.com/clausecker/nfc/v2"
 	"github.com/rs/zerolog/log"
 	"github.com/wizzomafizzo/tapto/pkg/config"
+	"github.com/wizzomafizzo/tapto/pkg/readers"
 	"github.com/wizzomafizzo/tapto/pkg/readers/libnfc/tags"
 	"github.com/wizzomafizzo/tapto/pkg/tokens"
 	"github.com/wizzomafizzo/tapto/pkg/utils"
@@ -33,11 +34,10 @@ type Reader struct {
 	cfg          *config.UserConfig
 	conn         string
 	pnd          *nfc.Device
-	token        *tokens.Token
 	writeRequest string
 	writeError   error
 	polling      bool
-	history      []tokens.Token
+	prevToken    *tokens.Token
 }
 
 func NewReader(cfg *config.UserConfig) *Reader {
@@ -46,8 +46,10 @@ func NewReader(cfg *config.UserConfig) *Reader {
 	}
 }
 
-func (r *Reader) Open(device string) error {
-	pnd, err := openDeviceWithRetries(device, false)
+func (r *Reader) Open(device string, iq chan<- readers.Scan) error {
+	log.Info().Msg("opening libnfc reader: " + device)
+
+	pnd, err := openDeviceWithRetries(device)
 	if err != nil {
 		return err
 	}
@@ -55,7 +57,7 @@ func (r *Reader) Open(device string) error {
 	r.conn = device
 	r.pnd = &pnd
 	r.polling = true
-	r.history = make([]tokens.Token, 0)
+	r.prevToken = nil
 
 	go func() {
 		for r.polling {
@@ -64,7 +66,7 @@ func (r *Reader) Open(device string) error {
 				continue
 			}
 
-			card, removed, err := r.pollDevice(r.pnd, r.token, timesToPoll, periodBetweenPolls)
+			token, removed, err := r.pollDevice(r.pnd, r.prevToken, timesToPoll, periodBetweenPolls)
 			if errors.Is(err, nfc.Error(nfc.EIO)) {
 				log.Error().Msgf("error during poll: %s", err)
 				log.Error().Msg("fatal IO error, device was possibly unplugged")
@@ -81,9 +83,24 @@ func (r *Reader) Open(device string) error {
 			}
 
 			if removed {
-				r.token = nil
-			} else if card != nil {
-				r.token = card
+				log.Info().Msg("token removed, sending to input queue")
+				iq <- readers.Scan{
+					Source: r.conn,
+					Token:  nil,
+				}
+				r.prevToken = nil
+			} else if token != nil {
+				if r.prevToken != nil && token.UID == r.prevToken.UID {
+					log.Debug().Msg("same token detected, ignoring")
+					continue
+				}
+
+				log.Info().Msg("new token detected, sending to input queue")
+				iq <- readers.Scan{
+					Source: r.conn,
+					Token:  token,
+				}
+				r.prevToken = token
 			}
 
 			time.Sleep(periodBetweenLoop)
@@ -95,10 +112,8 @@ func (r *Reader) Open(device string) error {
 
 func (r *Reader) Close() error {
 	r.polling = false
-	r.token = nil
 	r.writeRequest = ""
 	r.writeError = nil
-	r.history = nil
 	return r.pnd.Close()
 }
 
@@ -112,21 +127,27 @@ func (r *Reader) Ids() []string {
 func (r *Reader) Detect(connected []string) string {
 	connStr := r.cfg.GetConnectionString()
 	if connStr != "" {
+		log.Info().Msgf("using connection string: %s", connStr)
 		return connStr
 	}
 
 	if !r.cfg.GetProbeDevice() {
+		log.Debug().Msg("device probing disabled")
 		return ""
 	}
 
-	device := detectConnectionString(false)
+	device := detectSerialReaders()
 	if device == "" {
+		log.Info().Msg("no serial nfc reader detected")
 		return ""
 	}
 
 	if utils.Contains(connected, device) {
+		log.Info().Msgf("already connected to: %s", device)
 		return ""
 	}
+
+	log.Info().Msgf("detected nfc reader: %s", device)
 
 	return device
 }
@@ -156,14 +177,6 @@ func (r *Reader) Info() string {
 	}
 }
 
-func (r *Reader) History() []tokens.Token {
-	return r.history
-}
-
-func (r *Reader) Read() (*tokens.Token, error) {
-	return r.token, nil
-}
-
 func (r *Reader) Write(text string) error {
 	r.writeRequest = text
 
@@ -174,11 +187,13 @@ func (r *Reader) Write(text string) error {
 	return r.writeError
 }
 
-func detectConnectionString(quiet bool) string {
-	if !quiet {
-		log.Info().Msg("probing for serial devices")
+func detectSerialReaders() string {
+	log.Info().Msg("probing for serial devices")
+	devices, err := utils.GetLinuxSerialDeviceList()
+	if err != nil {
+		log.Error().Msgf("error getting serial devices: %s", err)
+		return ""
 	}
-	devices, _ := utils.GetLinuxSerialDeviceList()
 
 	for _, device := range devices {
 		connectionString := "pn532_uart:" + device
@@ -194,10 +209,8 @@ func detectConnectionString(quiet bool) string {
 	return ""
 }
 
-func openDeviceWithRetries(device string, quiet bool) (nfc.Device, error) {
-	if !quiet {
-		log.Info().Msgf("connecting to device: %s", device)
-	}
+func openDeviceWithRetries(device string) (nfc.Device, error) {
+	log.Info().Msgf("connecting to device: %s", device)
 
 	tries := 0
 	for {
@@ -219,9 +232,7 @@ func openDeviceWithRetries(device string, quiet bool) (nfc.Device, error) {
 		}
 
 		if tries >= connectMaxTries {
-			if !quiet {
-				log.Error().Msgf("could not open device after %d tries: %s", connectMaxTries, err)
-			}
+			log.Error().Msgf("could not open device after %d tries: %s", connectMaxTries, err)
 			return pnd, err
 		}
 

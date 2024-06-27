@@ -10,9 +10,10 @@ import (
 	"github.com/wizzomafizzo/tapto/pkg/daemon/state"
 	"github.com/wizzomafizzo/tapto/pkg/platforms"
 	"github.com/wizzomafizzo/tapto/pkg/readers"
-	"github.com/wizzomafizzo/tapto/pkg/readers/file"
+
+	//"github.com/wizzomafizzo/tapto/pkg/readers/file"
+	"github.com/wizzomafizzo/tapto/pkg/readers/libnfc"
 	"github.com/wizzomafizzo/tapto/pkg/tokens"
-	// "github.com/wizzomafizzo/tapto/pkg/readers/libnfc"
 )
 
 func shouldExit(
@@ -62,12 +63,13 @@ func connectReaders(
 	if reader == nil || !reader.Connected() {
 		log.Info().Msg("reader not connected, attempting connection....")
 
-		// reader = libnfc.NewReader(cfg)
-		reader = file.NewReader(cfg)
+		reader = libnfc.NewReader(cfg)
+		// reader = file.NewReader(cfg)
 
 		device := cfg.GetConnectionString()
 		if device == "" {
-			device := reader.Detect(nil)
+			log.Debug().Msg("no device specified, attempting to detect...")
+			device = reader.Detect(nil)
 			if device == "" {
 				return errors.New("no reader detected")
 			}
@@ -212,7 +214,7 @@ func readerManager(
 			pl.PlaySuccessSound(cfg)
 		}
 
-		log.Info().Msgf("about to process token %s: \n current software: %s \n activeCard: %s \n", newScanned.UID, loadedSoftware, st.GetActiveCard())
+		log.Info().Msgf("about to process token %s: \n current software: %s \n activeCard: %s \n", newScanned, loadedSoftware, st.GetActiveCard())
 
 		// we are about to exec a command, we reset timers, we evaluate next loop if we need to start exiting again
 		cardRemovalTime = time.Time{}
@@ -221,7 +223,7 @@ func readerManager(
 		if newScanned != nil {
 			lq.Enqueue(*newScanned)
 		} else {
-			log.Warn().Msg("newScanned is nil before processing, this shouldn't happen")
+			log.Debug().Msg("no active token")
 		}
 	}
 
