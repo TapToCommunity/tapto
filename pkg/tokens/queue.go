@@ -1,16 +1,14 @@
 package tokens
 
-import "github.com/wizzomafizzo/tapto/pkg/tokens"
-
 type TokenQueue struct {
-	Tokens chan tokens.Token
+	Tokens chan Token
 }
 
-func (q *TokenQueue) Enqueue(t tokens.Token) {
+func (q *TokenQueue) Enqueue(t Token) {
 	q.Tokens <- t
 }
 
-func (q *TokenQueue) Dequeue() tokens.Token {
+func (q *TokenQueue) Dequeue() Token {
 	return <-q.Tokens
 }
 
@@ -20,6 +18,6 @@ func (q *TokenQueue) Close() {
 
 func NewTokenQueue() *TokenQueue {
 	return &TokenQueue{
-		Tokens: make(chan tokens.Token),
+		Tokens: make(chan Token),
 	}
 }
