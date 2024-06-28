@@ -47,8 +47,6 @@ func NewReader(cfg *config.UserConfig) *Reader {
 }
 
 func (r *Reader) Open(device string, iq chan<- readers.Scan) error {
-	log.Info().Msg("opening libnfc reader: " + device)
-
 	pnd, err := openDeviceWithRetries(device)
 	if err != nil {
 		return err
@@ -113,7 +111,12 @@ func (r *Reader) Close() error {
 	r.polling = false
 	r.writeRequest = ""
 	r.writeError = nil
-	return r.pnd.Close()
+
+	if r.pnd == nil {
+		return nil
+	} else {
+		return r.pnd.Close()
+	}
 }
 
 func (r *Reader) Ids() []string {
@@ -158,6 +161,10 @@ func (r *Reader) Info() string {
 		return ""
 	}
 
+	// TODO: this conversation stuff is only necessary in the legacy socket
+	// output. it should be moved to there and make Info output the full
+	// libnfc device string
+
 	connProto := strings.SplitN(strings.ToLower(r.conn), ":", 2)[0]
 	deviceName := r.pnd.String()
 
@@ -181,7 +188,6 @@ func (r *Reader) Write(text string) error {
 }
 
 func detectSerialReaders(connected []string) string {
-	// log.Debug().Msg("probing for serial devices")
 	devices, err := utils.GetLinuxSerialDeviceList()
 	if err != nil {
 		log.Error().Msgf("error getting serial devices: %s", err)
@@ -196,9 +202,7 @@ func detectSerialReaders(connected []string) string {
 		}
 
 		pnd, err := nfc.Open(connectionString)
-		log.Info().Msgf("trying %s", connectionString)
 		if err == nil {
-			log.Info().Msgf("success using serial: %s", connectionString)
 			pnd.Close()
 			return connectionString
 		}
@@ -208,13 +212,11 @@ func detectSerialReaders(connected []string) string {
 }
 
 func openDeviceWithRetries(device string) (nfc.Device, error) {
-	log.Info().Msgf("connecting to device: %s", device)
-
 	tries := 0
 	for {
 		pnd, err := nfc.Open(device)
 		if err == nil {
-			log.Info().Msgf("successful connect after %d tries", tries)
+			log.Info().Msgf("successful connect, after %d tries", tries)
 
 			connProto := strings.SplitN(strings.ToLower(device), ":", 2)[0]
 			log.Info().Msgf("connection protocol: %s", connProto)
@@ -230,7 +232,7 @@ func openDeviceWithRetries(device string) (nfc.Device, error) {
 		}
 
 		if tries >= connectMaxTries {
-			log.Error().Msgf("could not open device after %d tries: %s", connectMaxTries, err)
+			// log.Debug().Msgf("could not open device after %d tries: %s", connectMaxTries, err)
 			return pnd, err
 		}
 

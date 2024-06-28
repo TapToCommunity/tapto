@@ -97,24 +97,33 @@ func connectReaders(
 		}
 	}
 
-	lr := libnfc.NewReader(cfg)
-	detectDevice := lr.Detect(st.ListReaders())
+	lrDetect := libnfc.NewReader(cfg)
+	detectDevice := lrDetect.Detect(st.ListReaders())
 	if detectDevice != "" {
-		log.Info().Msgf("detected new reader: %s", detectDevice)
-		err := lr.Open(detectDevice, iq)
+		// log.Info().Msgf("detected new reader: %s", detectDevice)
+		err := lrDetect.Open(detectDevice, iq)
 		if err != nil {
 			log.Error().Msgf("error opening detected reader: %s", err)
 		}
-		st.SetReader(detectDevice, lr)
+
+		if lrDetect != nil {
+			if lrDetect.Connected() {
+				st.SetReader(detectDevice, lrDetect)
+			} else {
+				_ = lrDetect.Close()
+			}
+		}
 	}
 
 	if !utils.Contains(rs, "") {
-		lrany := libnfc.NewReader(cfg)
-		err := lrany.Open("", iq)
-		if err != nil {
-			log.Debug().Msgf("error opening auto-detect reader: %s", err)
-		} else {
-			st.SetReader("", lrany)
+		lrAny := libnfc.NewReader(cfg)
+		err := lrAny.Open("", iq)
+		if err == nil {
+			if lrAny != nil && lrAny.Connected() {
+				st.SetReader("", lrAny)
+			} else if lrAny != nil {
+				_ = lrAny.Close()
+			}
 		}
 	}
 
@@ -187,7 +196,7 @@ func readerManager(
 				for _, device := range readers {
 					r, ok := st.GetReader(device)
 					if ok && r != nil && !r.Connected() {
-						log.Info().Msgf("pruning disconnected reader: %s", device)
+						log.Debug().Msgf("pruning disconnected reader: %s", device)
 						st.RemoveReader(device)
 					}
 				}
