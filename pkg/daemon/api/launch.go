@@ -31,7 +31,7 @@ func (lr *LaunchRequest) Bind(r *http.Request) error {
 
 func handleLaunch(
 	st *state.State,
-	tq *state.TokenQueue,
+	tq *tokens.TokenQueue,
 ) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		log.Info().Msg("received launch request")
@@ -63,7 +63,7 @@ func handleLaunch(
 
 func handleLaunchBasic(
 	st *state.State,
-	tq *state.TokenQueue,
+	tq *tokens.TokenQueue,
 ) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		log.Info().Msg("received basic launch request")

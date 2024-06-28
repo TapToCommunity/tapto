@@ -18,7 +18,7 @@ You should have received a copy of the GNU General Public License
 along with TapTo.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-package tokens
+package tags
 
 import (
 	"bytes"
@@ -27,6 +27,7 @@ import (
 	"fmt"
 
 	"github.com/clausecker/nfc/v2"
+	"github.com/wizzomafizzo/tapto/pkg/tokens"
 	"golang.org/x/exp/slices"
 )
 
@@ -90,7 +91,7 @@ func ReadMifare(pnd nfc.Device, cardUid string) (TagData, error) {
 	}
 
 	return TagData{
-		Type:  TypeMifare,
+		Type:  tokens.TypeMifare,
 		Bytes: allBlocks,
 	}, nil
 }

@@ -6,32 +6,29 @@ import (
 
 	"github.com/rs/zerolog/log"
 	"github.com/wizzomafizzo/tapto/pkg/platforms"
+	"github.com/wizzomafizzo/tapto/pkg/readers"
 	"github.com/wizzomafizzo/tapto/pkg/tokens"
 )
 
-const (
-	ReaderTypePN532   = "PN532"
-	ReaderTypeACR122U = "ACR122U"
-	ReaderTypeUnknown = "Unknown"
-)
-
 type State struct {
-	mu                      sync.RWMutex
-	updateHook              *func(st *State)
-	readerConnected         bool
-	readerType              string
-	activeCard              tokens.Token
-	lastScanned             tokens.Token
-	stopService             bool
-	disableLauncher         bool
-	writeRequest            string
-	writeError              error
-	dbLoadTime              time.Time
-	uidMap                  map[string]string
-	textMap                 map[string]string
-	cardRemovalTime         time.Time
-	currentlyLoadedSoftware string
-	platform                platforms.Platform
+	mu              sync.RWMutex
+	updateHook      *func(st *State)
+	activeCard      tokens.Token
+	lastScanned     tokens.Token
+	stopService     bool
+	disableLauncher bool
+	dbLoadTime      time.Time
+	uidMap          map[string]string
+	textMap         map[string]string
+	platform        platforms.Platform
+	readers         map[string]readers.Reader
+}
+
+func NewState(platform platforms.Platform) *State {
+	return &State{
+		platform: platform,
+		readers:  make(map[string]readers.Reader),
+	}
 }
 
 func (s *State) SetUpdateHook(hook *func(st *State)) {
@@ -61,19 +58,6 @@ func (s *State) SetActiveCard(card tokens.Token) {
 	}
 }
 
-func (s *State) SetCardRemovalTime(removalTime time.Time) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	s.cardRemovalTime = removalTime
-}
-
-func (s *State) SetCurrentlyLoadedSoftware(command string) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	s.currentlyLoadedSoftware = command
-	log.Debug().Msgf("current software launched set to: %s", command)
-}
-
 func (s *State) GetActiveCard() tokens.Token {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -84,18 +68,6 @@ func (s *State) GetLastScanned() tokens.Token {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return s.lastScanned
-}
-
-func (s *State) GetCardRemovalTime() time.Time {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	return s.cardRemovalTime
-}
-
-func (s *State) GetCurrentlyLoadedSoftware() string {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	return s.currentlyLoadedSoftware
 }
 
 func (s *State) StopService() {
@@ -116,7 +88,7 @@ func (s *State) ShouldStopService() bool {
 func (s *State) DisableLauncher() {
 	s.mu.Lock()
 	s.disableLauncher = true
-	if err := s.platform.SetLauncherEnabled(false); err != nil {
+	if err := s.platform.SetLaunching(false); err != nil {
 		log.Error().Msgf("cannot create disable launch file: %s", err)
 	}
 	s.mu.Unlock()
@@ -128,7 +100,7 @@ func (s *State) DisableLauncher() {
 func (s *State) EnableLauncher() {
 	s.mu.Lock()
 	s.disableLauncher = false
-	if err := s.platform.SetLauncherEnabled(true); err != nil {
+	if err := s.platform.SetLaunching(true); err != nil {
 		log.Error().Msgf("cannot remove disable launch file: %s", err)
 	}
 	s.mu.Unlock()
@@ -174,55 +146,55 @@ func (s *State) SetDB(uidMap map[string]string, textMap map[string]string) {
 	}
 }
 
-func (s *State) SetReaderConnected(rt string) {
+func (s *State) GetReader(device string) (readers.Reader, bool) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	r, ok := s.readers[device]
+	return r, ok
+}
+
+func (s *State) SetReader(device string, reader readers.Reader) {
 	s.mu.Lock()
-	s.readerConnected = true
-	s.readerType = rt
+
+	r, ok := s.readers[device]
+	if ok {
+		err := r.Close()
+		if err != nil {
+			log.Warn().Err(err).Msg("error closing reader")
+		}
+	}
+
+	s.readers[device] = reader
 	s.mu.Unlock()
 	if s.updateHook != nil {
 		(*s.updateHook)(s)
 	}
 }
 
-func (s *State) SetReaderDisconnected() {
+func (s *State) RemoveReader(device string) {
 	s.mu.Lock()
-	s.readerConnected = false
-	s.readerType = ""
+	r, ok := s.readers[device]
+	if ok && r != nil {
+		err := r.Close()
+		if err != nil {
+			log.Warn().Err(err).Msg("error closing reader")
+		}
+	}
+	delete(s.readers, device)
 	s.mu.Unlock()
 	if s.updateHook != nil {
 		(*s.updateHook)(s)
 	}
 }
 
-func (s *State) GetReaderStatus() (bool, string) {
+func (s *State) ListReaders() []string {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	return s.readerConnected, s.readerType
-}
 
-func (s *State) SetWriteRequest(req string) {
-	s.mu.Lock()
-	s.writeRequest = req
-	s.mu.Unlock()
-	if s.updateHook != nil {
-		(*s.updateHook)(s)
+	var readers []string
+	for k := range s.readers {
+		readers = append(readers, k)
 	}
-}
 
-func (s *State) GetWriteRequest() string {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	return s.writeRequest
-}
-
-func (s *State) SetWriteError(err error) {
-	s.mu.Lock()
-	s.writeError = err
-	s.mu.Unlock()
-}
-
-func (s *State) GetWriteError() error {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	return s.writeError
+	return readers
 }

@@ -61,7 +61,19 @@ func newStatus(
 ) StatusResponse {
 	active := st.GetActiveCard()
 	last := st.GetLastScanned()
-	readerConnected, readerType := st.GetReaderStatus()
+
+	readerConnected, readerType := false, ""
+
+	rs := st.ListReaders()
+	if len(rs) > 0 {
+		// TODO: listing all readers will break API compatibility
+		reader, ok := st.GetReader(rs[0])
+		if ok && reader != nil {
+			readerConnected = reader.Connected()
+			readerType = reader.Info()
+		}
+	}
+
 	launcherDisabled := st.IsLauncherDisabled()
 
 	return StatusResponse{

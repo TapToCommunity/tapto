@@ -68,6 +68,11 @@ func GetFileSize(path string) (int64, error) {
 
 func GetLinuxSerialDeviceList() ([]string, error) {
 	path := "/dev/serial/by-id/"
+
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		return nil, nil
+	}
+
 	f, err := os.Open(path)
 	if err != nil {
 		return nil, err

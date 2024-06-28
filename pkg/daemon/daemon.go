@@ -165,6 +165,7 @@ func launchToken(
 	token tokens.Token,
 	state *state.State,
 	db *database.Database,
+	lsq chan<- *tokens.Token,
 ) error {
 	text := token.Text
 
@@ -195,7 +196,7 @@ func launchToken(
 		}
 		if softwareSwap {
 			log.Info().Msgf("current software launched set to: %s", token.UID)
-			state.SetCurrentlyLoadedSoftware(token.UID)
+			lsq <- &token
 		}
 	}
 
@@ -206,8 +207,9 @@ func processLaunchQueue(
 	platform platforms.Platform,
 	cfg *config.UserConfig,
 	st *state.State,
-	tq *state.TokenQueue,
+	tq *tokens.TokenQueue,
 	db *database.Database,
+	lsq chan<- *tokens.Token,
 ) {
 	for {
 		select {
@@ -237,7 +239,7 @@ func processLaunchQueue(
 				continue
 			}
 
-			err = launchToken(platform, cfg, t, st, db)
+			err = launchToken(platform, cfg, t, st, db, lsq)
 			if err != nil {
 				log.Error().Err(err).Msgf("error launching token")
 			}
@@ -247,7 +249,7 @@ func processLaunchQueue(
 			if err != nil {
 				log.Error().Err(err).Msgf("error adding history")
 			}
-		case <-time.After(1 * time.Second):
+		case <-time.After(100 * time.Millisecond):
 			if st.ShouldStopService() {
 				tq.Close()
 				return
@@ -260,8 +262,9 @@ func StartDaemon(
 	platform platforms.Platform,
 	cfg *config.UserConfig,
 ) (func() error, error) {
-	st := &state.State{}
-	tq := state.NewTokenQueue()
+	st := state.NewState(platform)
+	tq := tokens.NewTokenQueue()
+	lsq := make(chan *tokens.Token)
 
 	db, err := database.Open()
 	if err != nil {
@@ -290,13 +293,13 @@ func StartDaemon(
 		log.Error().Msgf("error starting mappings watcher: %s", err)
 	}
 
-	if platform.IsLauncherDisabled() {
+	if !platform.LaunchingEnabled() {
 		st.DisableLauncher()
 	}
 
 	go api.RunApiServer(platform, cfg, st, tq, db)
-	go readerPollLoop(platform, cfg, st, tq)
-	go processLaunchQueue(platform, cfg, st, tq, db)
+	go readerManager(platform, cfg, st, tq, lsq)
+	go processLaunchQueue(platform, cfg, st, tq, db, lsq)
 
 	socket, err := StartSocketServer(st)
 	if err != nil {
@@ -304,9 +307,11 @@ func StartDaemon(
 	}
 
 	return func() error {
-		err := socket.Close()
-		if err != nil {
-			log.Warn().Msgf("error closing socket: %s", err)
+		if socket != nil {
+			err := socket.Close()
+			if err != nil {
+				log.Warn().Msgf("error closing socket: %s", err)
+			}
 		}
 
 		tq.Close()

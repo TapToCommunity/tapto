@@ -10,3 +10,10 @@ type Token struct {
 	ScanTime time.Time
 	FromApi  bool
 }
+
+const (
+	TypeNTAG           = "NTAG"
+	TypeMifare         = "MIFARE"
+	TypeAmiibo         = "Amiibo"
+	TypeLegoDimensions = "LegoDimensions"
+)

@@ -3,7 +3,6 @@ package api
 import (
 	"errors"
 	"net/http"
-	"time"
 
 	"github.com/go-chi/render"
 	"github.com/rs/zerolog/log"
@@ -34,14 +33,26 @@ func handleReaderWrite(st *state.State) http.HandlerFunc {
 			return
 		}
 
-		st.SetWriteRequest(req.Text)
-
-		for st.GetWriteRequest() != "" {
-			time.Sleep(100 * time.Millisecond)
+		rs := st.ListReaders()
+		if len(rs) == 0 {
+			log.Error().Msg("no readers connected")
+			http.Error(w, "no readers connected", http.StatusServiceUnavailable)
+			return
 		}
 
-		if st.GetWriteError() != nil {
-			http.Error(w, st.GetWriteError().Error(), http.StatusInternalServerError)
+		// TODO: this just picks one at random for now
+
+		reader, ok := st.GetReader(rs[0])
+		if !ok || reader == nil {
+			log.Error().Msg("reader not connected: " + rs[0])
+			http.Error(w, "reader not connected", http.StatusServiceUnavailable)
+			return
+		}
+
+		err = reader.Write(req.Text)
+		if err != nil {
+			log.Error().Err(err).Msg("error writing to reader")
+			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 

@@ -19,22 +19,19 @@ You should have received a copy of the GNU General Public License
 along with TapTo.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-package tokens
+package tags
 
 import (
 	"encoding/hex"
 	"fmt"
 
 	"github.com/clausecker/nfc/v2"
+	"github.com/wizzomafizzo/tapto/pkg/tokens"
 )
 
 const (
-	TypeNTAG           = "NTAG"
-	TypeMifare         = "MIFARE"
-	TypeAmiibo         = "Amiibo"
-	TypeLegoDimensions = "LegoDimensions"
-	WRITE_COMMAND      = byte(0xA2)
-	READ_COMMAND       = byte(0x30)
+	WRITE_COMMAND = byte(0xA2)
+	READ_COMMAND  = byte(0x30)
 )
 
 var SupportedCardTypes = []nfc.Modulation{
@@ -46,7 +43,7 @@ type TagData struct {
 	Bytes []byte
 }
 
-func GetCardUID(target nfc.Target) string {
+func GetTagUID(target nfc.Target) string {
 	var uid string
 	switch target.Modulation() {
 	case nfc.Modulation{Type: nfc.ISO14443a, BaudRate: nfc.Nbr106}:
@@ -72,17 +69,17 @@ func comm(pnd nfc.Device, tx []byte, replySize int) ([]byte, error) {
 	return rx, nil
 }
 
-func GetCardType(target nfc.Target) string {
+func GetTagType(target nfc.Target) string {
 	switch target.Modulation() {
 	case nfc.Modulation{Type: nfc.ISO14443a, BaudRate: nfc.Nbr106}:
 		var card = target.(*nfc.ISO14443aTarget)
 		if card.Atqa == [2]byte{0x00, 0x04} && card.Sak == 0x08 {
 			// https://www.nxp.com/docs/en/application-note/AN10833.pdf page 9
-			return TypeMifare
+			return tokens.TypeMifare
 		}
 		if card.Atqa == [2]byte{0x00, 0x44} && card.Sak == 0x00 {
 			// https://www.nxp.com/docs/en/data-sheet/NTAG213_215_216.pdf page 33
-			return TypeNTAG
+			return tokens.TypeNTAG
 		}
 	}
 	return ""

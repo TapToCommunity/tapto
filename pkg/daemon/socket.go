@@ -76,7 +76,18 @@ func StartSocketServer(st *state.State) (net.Listener, error) {
 					st.EnableLauncher()
 					log.Info().Msg("launcher enabled")
 				case "connection":
-					connected, rt := st.GetReaderStatus()
+					connected, rt := false, ""
+
+					rs := st.ListReaders()
+					if len(rs) > 0 {
+						// TODO: picking one at random for now
+						reader, ok := st.GetReader(rs[0])
+						if ok && reader != nil {
+							connected = reader.Connected()
+							rt = reader.Info()
+						}
+					}
+
 					payload = fmt.Sprintf("%t,%s", connected, rt)
 				default:
 					log.Warn().Msgf("unknown command: %s", strings.TrimRight(string(buf[:n]), "\n"))
