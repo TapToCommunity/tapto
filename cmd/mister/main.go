@@ -41,7 +41,6 @@ import (
 
 	gc "github.com/rthornton128/goncurses"
 	"github.com/wizzomafizzo/mrext/pkg/curses"
-	"github.com/wizzomafizzo/mrext/pkg/input"
 
 	"github.com/wizzomafizzo/tapto/pkg/config"
 	"github.com/wizzomafizzo/tapto/pkg/daemon"
@@ -173,7 +172,7 @@ func main() {
 	svc, err := mister.NewService(mister.ServiceArgs{
 		Name: appName,
 		Entry: func() (func() error, error) {
-			return daemon.StartDaemon(cfg)
+			return daemon.StartDaemon(&mister.Platform{}, cfg)
 		},
 	})
 	if err != nil {
@@ -187,17 +186,10 @@ func main() {
 	}
 
 	if *launchOpt != "" {
-		kbd, err := input.NewKeyboard()
-		if err != nil {
-			log.Error().Msgf("error creating keyboard: %s", err)
-			fmt.Println("Error creating keyboard:", err)
-			os.Exit(1)
-		}
-
 		// TODO: this is doubling up on the split logic in daemon
 		cmds := strings.Split(*launchOpt, "||")
 		for i, cmd := range cmds {
-			err, _ := launcher.LaunchToken(cfg, true, kbd, cmd, len(cmds), i)
+			err, _ := launcher.LaunchToken(&mister.Platform{}, cfg, true, cmd, len(cmds), i)
 			if err != nil {
 				log.Error().Msgf("error launching token: %s", err)
 				fmt.Println("Error launching token:", err)

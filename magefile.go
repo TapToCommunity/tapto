@@ -41,8 +41,8 @@ var (
 	// docker mister arm build
 	misterBuild          = filepath.Join(cwd, "scripts", "mister", "build")
 	misterBuildImageName = "tapto/mister-build"
-	misterBuildCache     = filepath.Join(os.TempDir(), "tapto-mister-buildcache")
-	misterModCache       = filepath.Join(os.TempDir(), "tapto-mister-modcache")
+	misterBuildCache     = filepath.Join(cwd, ".tapto-mister-buildcache")
+	misterModCache       = filepath.Join(cwd, ".tapto-mister-modcache")
 )
 
 type app struct {
@@ -59,7 +59,7 @@ type app struct {
 var apps = []app{
 	{
 		name:         "tapto",
-		path:         filepath.Join(cwd, "cmd", "nfc"),
+		path:         filepath.Join(cwd, "cmd", "mister"),
 		bin:          "tapto.sh",
 		releaseId:    "mrext/tapto",
 		ldFlags:      "-lnfc -lusb -lcurses",
@@ -123,7 +123,7 @@ func Build(appName string) {
 
 func MakeMisterImage() {
 	if runtime.GOOS != "linux" {
-		_ = sh.RunV("docker", "build", "--platform", "linux/arm/v7", "-t", misterBuildImageName, misterBuild)
+		_ = sh.RunV("docker", "build", "--no-cache", "--platform", "linux/arm/v7", "-t", misterBuildImageName, misterBuild)
 	} else {
 		_ = sh.RunV("sudo", "docker", "build", "--platform", "linux/arm/v7", "-t", misterBuildImageName, misterBuild)
 	}
@@ -155,6 +155,8 @@ func Mister(appName string) {
 		"build",
 		appName,
 	}
+
+	fmt.Println(args)
 
 	if runtime.GOOS == "linux" {
 		args = append([]string{"sudo"}, args...)

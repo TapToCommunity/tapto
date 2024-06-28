@@ -9,11 +9,9 @@ import (
 
 	"github.com/clausecker/nfc/v2"
 	"github.com/rs/zerolog/log"
-	mrextConfig "github.com/wizzomafizzo/mrext/pkg/config"
-	"github.com/wizzomafizzo/mrext/pkg/input"
 	"github.com/wizzomafizzo/tapto/pkg/config"
 	"github.com/wizzomafizzo/tapto/pkg/daemon/state"
-	"github.com/wizzomafizzo/tapto/pkg/platforms/mister"
+	"github.com/wizzomafizzo/tapto/pkg/platforms"
 	"github.com/wizzomafizzo/tapto/pkg/tokens"
 	"github.com/wizzomafizzo/tapto/pkg/utils"
 )
@@ -29,10 +27,10 @@ const (
 func pollDevice(
 	cfg *config.UserConfig,
 	pnd *nfc.Device,
-	activeCard state.Token,
+	activeCard tokens.Token,
 	ttp int,
 	pbp time.Duration,
-) (state.Token, bool, error) {
+) (tokens.Token, bool, error) {
 	removed := false
 
 	count, target, err := pnd.InitiatorPollTarget(tokens.SupportedCardTypes, ttp, pbp)
@@ -47,7 +45,7 @@ func pollDevice(
 	if count <= 0 {
 		if activeCard.UID != "" && time.Since(activeCard.ScanTime) > timeToForgetCard {
 			log.Info().Msg("card removed")
-			activeCard = state.Token{}
+			activeCard = tokens.Token{}
 			removed = true
 		}
 
@@ -99,7 +97,7 @@ func pollDevice(
 		log.Info().Msgf("decoded text NDEF: %s", tagText)
 	}
 
-	card := state.Token{
+	card := tokens.Token{
 		Type:     record.Type,
 		UID:      cardUid,
 		Text:     tagText,
@@ -174,12 +172,13 @@ func OpenDeviceWithRetries(cfg *config.UserConfig, st *state.State, quiet bool) 
 }
 
 func shouldExit(
+	platform platforms.Platform,
 	candidateForRemove bool,
 	cfg *config.UserConfig,
 	st *state.State,
 ) bool {
 	// do not exit from menu, there is nowhere to go anyway
-	if mister.GetActiveCoreName() == mrextConfig.MenuCore {
+	if !platform.IsLauncherActive() {
 		return false
 	}
 
@@ -194,7 +193,7 @@ func shouldExit(
 		hasTimePassed = int8(time.Since(removalTime).Seconds()) >= cfg.GetExitGameDelay()
 	}
 
-	if hasTimePassed && cfg.GetExitGame() && !inExitGameBlocklist(cfg) {
+	if hasTimePassed && cfg.GetExitGame() && !inExitGameBlocklist(platform, cfg) {
 		log.Info().Msgf("Exiting game after %.2f seconds have passed with a configured %d seconds delay", time.Since(removalTime).Seconds(), cfg.GetExitGameDelay())
 		return true
 	} else {
@@ -203,10 +202,10 @@ func shouldExit(
 }
 
 func readerPollLoop(
+	platform platforms.Platform,
 	cfg *config.UserConfig,
 	st *state.State,
 	tq *state.TokenQueue,
-	kbd input.Keyboard,
 ) {
 	var pnd nfc.Device
 	var err error
@@ -216,11 +215,11 @@ func readerPollLoop(
 	var lastError time.Time
 	var candidateForRemove bool
 	// keep track of core switch for menu reset
-	var lastCoreName string = mrextConfig.MenuCore
+	var lastCoreName string = "" // TODO: is this ok instead of hardcoding MENU?
 
 	playFail := func() {
 		if time.Since(lastError) > 1*time.Second {
-			mister.PlayFail(cfg)
+			platform.PlayFailSound(cfg)
 		}
 	}
 
@@ -360,21 +359,20 @@ func readerPollLoop(
 		// the local variable activeCard is still the previous one and will be updated next loop
 		st.SetActiveCard(newScanned)
 
-		if shouldExit(candidateForRemove, cfg, st) {
+		if shouldExit(platform, candidateForRemove, cfg, st) {
 			candidateForRemove = false
 			st.SetCardRemovalTime(time.Time{})
-			mister.ExitGame()
+			_ = platform.KillLauncher()
 			st.SetCurrentlyLoadedSoftware("")
 			continue
-		} else if mister.GetActiveCoreName() == mrextConfig.MenuCore && lastCoreName != mrextConfig.MenuCore {
+		} else if !platform.IsLauncherActive() && lastCoreName != "" { // TODO: and here, can we use instead of MENU?
 			// at any time we are on the current menu we should forget old values if we have anything to clear
 			candidateForRemove = false
 			st.SetCardRemovalTime(time.Time{})
 			st.SetCurrentlyLoadedSoftware("")
-
 		}
 
-		lastCoreName = mister.GetActiveCoreName()
+		lastCoreName = platform.GetActiveLauncher()
 
 		// From here we didn't exit a game, but we want short circuit and do nothing if the following happens
 
@@ -398,7 +396,7 @@ func readerPollLoop(
 		}
 
 		// should we play success if launcher is disabled?
-		mister.PlaySuccess(cfg)
+		platform.PlaySuccessSound(cfg)
 
 		if st.IsLauncherDisabled() {
 			continue

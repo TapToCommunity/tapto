@@ -23,7 +23,6 @@ package daemon
 
 import (
 	"fmt"
-	"os"
 	"regexp"
 	"strings"
 	"time"
@@ -31,41 +30,24 @@ import (
 	"golang.org/x/exp/slices"
 
 	"github.com/rs/zerolog/log"
-	"github.com/wizzomafizzo/mrext/pkg/input"
 	"github.com/wizzomafizzo/tapto/pkg/config"
 	"github.com/wizzomafizzo/tapto/pkg/daemon/api"
 	"github.com/wizzomafizzo/tapto/pkg/daemon/state"
 	"github.com/wizzomafizzo/tapto/pkg/database"
 	"github.com/wizzomafizzo/tapto/pkg/launcher"
-	"github.com/wizzomafizzo/tapto/pkg/platforms/mister"
+	"github.com/wizzomafizzo/tapto/pkg/platforms"
+	"github.com/wizzomafizzo/tapto/pkg/tokens"
 )
 
-func writeScanResult(card state.Token) error {
-	f, err := os.Create(mister.TokenReadFile)
-	if err != nil {
-		return fmt.Errorf("unable to create scan result file %s: %s", mister.TokenReadFile, err)
-	}
-	defer func(f *os.File) {
-		_ = f.Close()
-	}(f)
-
-	_, err = f.WriteString(fmt.Sprintf("%s,%s", card.UID, card.Text))
-	if err != nil {
-		return fmt.Errorf("unable to write scan result file %s: %s", mister.TokenReadFile, err)
-	}
-
-	return nil
-}
-
-func inExitGameBlocklist(cfg *config.UserConfig) bool {
+func inExitGameBlocklist(platform platforms.Platform, cfg *config.UserConfig) bool {
 	var blocklist []string
 	for _, v := range cfg.GetExitGameBlocklist() {
 		blocklist = append(blocklist, strings.ToLower(v))
 	}
-	return slices.Contains(blocklist, strings.ToLower(mister.GetActiveCoreName()))
+	return slices.Contains(blocklist, strings.ToLower(platform.GetActiveLauncher()))
 }
 
-func checkMappingUid(m database.Mapping, t state.Token) bool {
+func checkMappingUid(m database.Mapping, t tokens.Token) bool {
 	uid := database.NormalizeUid(t.UID)
 
 	switch {
@@ -85,7 +67,7 @@ func checkMappingUid(m database.Mapping, t state.Token) bool {
 	return false
 }
 
-func checkMappingText(m database.Mapping, t state.Token) bool {
+func checkMappingText(m database.Mapping, t tokens.Token) bool {
 	switch {
 	case m.Match == database.MatchTypeExact:
 		return t.Text == m.Pattern
@@ -103,7 +85,7 @@ func checkMappingText(m database.Mapping, t state.Token) bool {
 	return false
 }
 
-func checkMappingData(m database.Mapping, t state.Token) bool {
+func checkMappingData(m database.Mapping, t tokens.Token) bool {
 	switch {
 	case m.Match == database.MatchTypeExact:
 		return t.Data == m.Pattern
@@ -121,7 +103,7 @@ func checkMappingData(m database.Mapping, t state.Token) bool {
 	return false
 }
 
-func getMapping(db *database.Database, oldDb state.OldDb, token state.Token) (string, bool) {
+func getMapping(db *database.Database, oldDb state.OldDb, token tokens.Token) (string, bool) {
 	// check db mappings
 	ms, err := db.GetEnabledMappings()
 	if err != nil {
@@ -178,11 +160,11 @@ func getMapping(db *database.Database, oldDb state.OldDb, token state.Token) (st
 }
 
 func launchToken(
+	platform platforms.Platform,
 	cfg *config.UserConfig,
-	token state.Token,
+	token tokens.Token,
 	state *state.State,
 	db *database.Database,
-	kbd input.Keyboard,
 ) error {
 	text := token.Text
 
@@ -200,7 +182,14 @@ func launchToken(
 	cmds := strings.Split(text, "||")
 
 	for i, cmd := range cmds {
-		err, softwareSwap := launcher.LaunchToken(cfg, cfg.GetAllowCommands() || mapped, kbd, cmd, len(cmds), i)
+		err, softwareSwap := launcher.LaunchToken(
+			platform,
+			cfg,
+			cfg.GetAllowCommands() || mapped,
+			cmd,
+			len(cmds),
+			i,
+		)
 		if err != nil {
 			return err
 		}
@@ -214,11 +203,11 @@ func launchToken(
 }
 
 func processLaunchQueue(
+	platform platforms.Platform,
 	cfg *config.UserConfig,
 	st *state.State,
 	tq *state.TokenQueue,
 	db *database.Database,
-	kbd input.Keyboard,
 ) {
 	for {
 		select {
@@ -227,7 +216,7 @@ func processLaunchQueue(
 
 			st.SetActiveCard(t)
 
-			err := writeScanResult(t)
+			err := platform.AfterScanHook(t)
 			if err != nil {
 				log.Error().Err(err).Msgf("error writing tmp scan result")
 			}
@@ -248,7 +237,7 @@ func processLaunchQueue(
 				continue
 			}
 
-			err = launchToken(cfg, t, st, db, kbd)
+			err = launchToken(platform, cfg, t, st, db)
 			if err != nil {
 				log.Error().Err(err).Msgf("error launching token")
 			}
@@ -267,7 +256,10 @@ func processLaunchQueue(
 	}
 }
 
-func StartDaemon(cfg *config.UserConfig) (func() error, error) {
+func StartDaemon(
+	platform platforms.Platform,
+	cfg *config.UserConfig,
+) (func() error, error) {
 	st := &state.State{}
 	tq := state.NewTokenQueue()
 
@@ -277,20 +269,9 @@ func StartDaemon(cfg *config.UserConfig) (func() error, error) {
 		return nil, err
 	}
 
-	// TODO: this is platform specific
-	kbd, err := input.NewKeyboard()
+	err = platform.Setup(cfg)
 	if err != nil {
-		log.Error().Msgf("failed to initialize keyboard: %s", err)
-		return nil, err
-	}
-
-	// TODO: this is platform specific
-	tr, stopTr, err := mister.StartTracker(*mister.UserConfigToMrext(cfg))
-
-	// TODO: this is platform specific
-	err = mister.Setup(tr)
-	if err != nil {
-		log.Error().Msgf("error setting up mister platform: %s", err)
+		log.Error().Msgf("error setting up platform: %s", err)
 		return nil, err
 	}
 
@@ -309,13 +290,13 @@ func StartDaemon(cfg *config.UserConfig) (func() error, error) {
 		log.Error().Msgf("error starting mappings watcher: %s", err)
 	}
 
-	if _, err := os.Stat(mister.DisableLaunchFile); err == nil {
+	if platform.IsLauncherDisabled() {
 		st.DisableLauncher()
 	}
 
-	go api.RunApiServer(cfg, st, tq, db, tr)
-	go readerPollLoop(cfg, st, tq, kbd)
-	go processLaunchQueue(cfg, st, tq, db, kbd)
+	go api.RunApiServer(platform, cfg, st, tq, db)
+	go readerPollLoop(platform, cfg, st, tq)
+	go processLaunchQueue(platform, cfg, st, tq, db)
 
 	socket, err := StartSocketServer(st)
 	if err != nil {
@@ -332,9 +313,9 @@ func StartDaemon(cfg *config.UserConfig) (func() error, error) {
 
 		st.StopService()
 
-		err = stopTr()
+		err = platform.Stop()
 		if err != nil {
-			log.Warn().Msgf("error stopping tracker: %s", err)
+			log.Warn().Msgf("error stopping platform: %s", err)
 		}
 
 		if closeMappingsWatcher != nil {

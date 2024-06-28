@@ -8,8 +8,9 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
 	"github.com/rs/zerolog/log"
-	"github.com/wizzomafizzo/mrext/pkg/mister"
 	"github.com/wizzomafizzo/tapto/pkg/daemon/state"
+	"github.com/wizzomafizzo/tapto/pkg/platforms"
+	"github.com/wizzomafizzo/tapto/pkg/tokens"
 )
 
 type LaunchRequestMetadata struct {
@@ -46,7 +47,7 @@ func handleLaunch(
 		log.Info().Fields(req).Msgf("launching token")
 		// TODO: how do we report back errors?
 
-		t := state.Token{
+		t := tokens.Token{
 			UID:      req.UID,
 			Text:     req.Text,
 			ScanTime: time.Now(),
@@ -77,11 +78,11 @@ func handleLaunchBasic(
 
 		log.Info().Msgf("launching basic token: %s", text)
 
-		t := state.Token{
+		t := tokens.Token{
 			UID:      "__api__",
 			Text:     text,
 			ScanTime: time.Now(),
-			FromApi: true,
+			FromApi:  true,
 		}
 
 		st.SetActiveCard(t)
@@ -89,11 +90,11 @@ func handleLaunchBasic(
 	}
 }
 
-func HandleStopGame() http.HandlerFunc {
+func HandleStopGame(platform platforms.Platform) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		log.Info().Msg("received stop game request")
-		
-		err := mister.LaunchMenu()
+
+		err := platform.KillLauncher()
 		if err != nil {
 			log.Error().Msgf("error launching menu: %s", err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)

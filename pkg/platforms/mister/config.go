@@ -15,10 +15,11 @@ const (
 	PidFile           = TempFolder + "/tapto.pid"
 	MappingsFile      = "/media/fat/nfc.csv"
 	TokenReadFile     = "/tmp/TOKENREAD"
-	DbFile            = mrextConfig.ScriptsConfigFolder + "/tapto/tapto.db"
-	GamesDbFile       = mrextConfig.ScriptsConfigFolder + "/tapto/games.db"
+	ConfigFolder      = mrextConfig.ScriptsConfigFolder + "/tapto"
+	DbFile            = ConfigFolder + "/tapto.db"
+	GamesDbFile       = ConfigFolder + "/games.db"
 	ArcadeDbUrl       = "https://api.github.com/repositories/521644036/contents/ArcadeDatabase_CSV"
-	ArcadeDbFile      = mrextConfig.ScriptsConfigFolder + "/tapto/ArcadeDatabase.csv"
+	ArcadeDbFile      = ConfigFolder + "//ArcadeDatabase.csv"
 	ScriptsFolder     = mrextConfig.ScriptsFolder
 	CmdInterface      = "/dev/MiSTer_cmd"
 )

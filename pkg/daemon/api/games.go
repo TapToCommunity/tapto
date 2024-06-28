@@ -2,15 +2,14 @@ package api
 
 import (
 	"net/http"
-	"sync"
 	"strconv"
+	"sync"
 
 	"github.com/go-chi/render"
 	"github.com/rs/zerolog/log"
-	"github.com/wizzomafizzo/mrext/pkg/games"
 	"github.com/wizzomafizzo/tapto/pkg/config"
 	"github.com/wizzomafizzo/tapto/pkg/database/gamesdb"
-	"github.com/wizzomafizzo/tapto/pkg/platforms/mister"
+	"github.com/wizzomafizzo/tapto/pkg/platforms"
 )
 
 const defaultMaxResults = 250
@@ -25,8 +24,8 @@ type Index struct {
 	TotalFiles  int
 }
 
-func (s *Index) Exists() bool {
-	return gamesdb.DbExists()
+func (s *Index) Exists(platform platforms.Platform) bool {
+	return gamesdb.DbExists(platform)
 }
 
 func (s *Index) SetEventHook(hook *func(st *Index)) {
@@ -35,7 +34,7 @@ func (s *Index) SetEventHook(hook *func(st *Index)) {
 	s.eventHook = hook
 }
 
-func (s *Index) GenerateIndex(cfg *config.UserConfig) {
+func (s *Index) GenerateIndex(platform platforms.Platform, cfg *config.UserConfig) {
 	if s.Indexing {
 		return
 	}
@@ -52,7 +51,7 @@ func (s *Index) GenerateIndex(cfg *config.UserConfig) {
 	go func() {
 		defer s.mu.Unlock()
 
-		_, err := gamesdb.NewNamesIndex(cfg, games.AllSystems(), func(status gamesdb.IndexStatus) {
+		_, err := gamesdb.NewNamesIndex(platform, cfg, gamesdb.AllSystems(), func(status gamesdb.IndexStatus) {
 			s.TotalSteps = status.Total
 			s.CurrentStep = status.Step
 			s.TotalFiles = status.Files
@@ -61,11 +60,11 @@ func (s *Index) GenerateIndex(cfg *config.UserConfig) {
 			} else if status.Step == status.Total {
 				s.CurrentDesc = "Writing database"
 			} else {
-				system, err := games.GetSystem(status.SystemId)
+				system, err := gamesdb.GetSystem(status.SystemId)
 				if err != nil {
 					s.CurrentDesc = status.SystemId
 				} else {
-					s.CurrentDesc = system.Name
+					s.CurrentDesc = system.Id
 				}
 			}
 			log.Info().Msgf("indexing status: %s", s.CurrentDesc)
@@ -96,12 +95,13 @@ func NewIndex() *Index {
 var IndexInstance = NewIndex()
 
 func handleIndexGames(
+	platform platforms.Platform,
 	cfg *config.UserConfig,
 ) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		log.Info().Msg("received index games request")
 
-		IndexInstance.GenerateIndex(cfg)
+		IndexInstance.GenerateIndex(platform, cfg)
 	}
 }
 
@@ -120,7 +120,7 @@ func (sr *SearchResults) Render(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
-func handleGames(cfg *config.UserConfig) http.HandlerFunc {
+func handleGames(platform platforms.Platform, cfg *config.UserConfig) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		log.Info().Msg("received games request")
 
@@ -148,15 +148,15 @@ func handleGames(cfg *config.UserConfig) http.HandlerFunc {
 		var err error
 
 		if system == "all" || system == "" {
-			search, err = gamesdb.SearchNamesWords(games.AllSystems(), query)
+			search, err = gamesdb.SearchNamesWords(platform, gamesdb.AllSystems(), query)
 		} else {
-			system, errSys := games.GetSystem(system)
+			system, errSys := gamesdb.GetSystem(system)
 			if errSys != nil {
 				http.Error(w, errSys.Error(), http.StatusBadRequest)
 				log.Error().Err(errSys).Msg("error getting system")
 				return
 			}
-			search, err = gamesdb.SearchNamesWords([]games.System{*system}, query)
+			search, err = gamesdb.SearchNamesWords(platform, []gamesdb.System{*system}, query)
 		}
 
 		if err != nil {
@@ -166,19 +166,18 @@ func handleGames(cfg *config.UserConfig) http.HandlerFunc {
 		}
 
 		for _, result := range search {
-			system, err := games.GetSystem(result.SystemId)
+			system, err := gamesdb.GetSystem(result.SystemId)
 			if err != nil {
 				continue
 			}
 
 			results = append(results, SearchResultGame{
 				System: System{
-					Id:       system.Id,
-					Name:     system.Name,
-					Category: system.Category,
+					Id:   system.Id,
+					Name: system.Id,
 				},
 				Name: result.Name,
-				Path: mister.NormalizePath(cfg, result.Path),
+				Path: platform.NormalizePath(cfg, result.Path),
 			})
 		}
 

@@ -24,7 +24,6 @@ import (
 	"fmt"
 	"net/http"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -33,29 +32,27 @@ import (
 	"golang.org/x/exp/slices"
 
 	"github.com/rs/zerolog/log"
-	"github.com/wizzomafizzo/mrext/pkg/input"
 
-	"github.com/wizzomafizzo/mrext/pkg/games"
-	mrextMister "github.com/wizzomafizzo/mrext/pkg/mister"
 	"github.com/wizzomafizzo/tapto/pkg/config"
-	"github.com/wizzomafizzo/tapto/pkg/platforms/mister"
+	"github.com/wizzomafizzo/tapto/pkg/database/gamesdb"
+	"github.com/wizzomafizzo/tapto/pkg/platforms"
 )
 
 // TODO: adding some logging for each command
 // TODO: search game file
 // TODO: game file by hash
 
-var commandMappings = map[string]func(*cmdEnv) error{
+var commandMappings = map[string]func(platforms.Platform, platforms.CmdEnv) error{
 	"launch.system": cmdSystem,
 	"launch.random": cmdRandom,
 
 	"shell": cmdShell,
 	"delay": cmdDelay,
 
-	"mister.ini":  cmdIni,
-	"mister.core": cmdLaunchCore,
-	// "mister.script": cmdMisterScript,
-	"mister.mgl": cmdMisterMgl,
+	"mister.ini":  forwardCmd,
+	"mister.core": forwardCmd,
+	// "mister.script": forwardCmd,
+	"mister.mgl": forwardCmd,
 
 	"http.get":  cmdHttpGet,
 	"http.post": cmdHttpPost,
@@ -69,64 +66,48 @@ var commandMappings = map[string]func(*cmdEnv) error{
 	"coinp2":  cmdCoinP2,  // DEPRECATED
 	"random":  cmdRandom,  // DEPRECATED
 	"command": cmdShell,   // DEPRECATED
-	"ini":     cmdIni,     // DEPRECATED
+	"ini":     forwardCmd, // DEPRECATED
 	"system":  cmdSystem,  // DEPRECATED
 	"get":     cmdHttpGet, // DEPRECATED
 }
 
 var softwareChangeCommands = []string{"launch.system", "launch.random", "mister.core"}
 
-type cmdEnv struct {
-	args          string
-	cfg           *config.UserConfig
-	manual        bool
-	kbd           input.Keyboard
-	text          string
-	totalCommands int
-	currentIndex  int
+func cmdSystem(pl platforms.Platform, env platforms.CmdEnv) error {
+	if strings.EqualFold(env.Args, "menu") {
+		return pl.KillLauncher()
+	}
+
+	return pl.LaunchSystem(env.Cfg, env.Args)
 }
 
-func cmdSystem(env *cmdEnv) error {
-	if strings.EqualFold(env.args, "menu") {
-		return mrextMister.LaunchMenu()
+func cmdShell(pl platforms.Platform, env platforms.CmdEnv) error {
+	if !env.Manual {
+		return fmt.Errorf("shell commands must be manually run")
 	}
 
-	system, err := games.LookupSystem(env.args)
-	if err != nil {
-		return err
-	}
-
-	return mrextMister.LaunchCore(mister.UserConfigToMrext(env.cfg), *system)
+	return pl.Shell(env.Args)
 }
 
-func cmdShell(env *cmdEnv) error {
-	if !env.manual {
-		return fmt.Errorf("commands must be manually run")
-	}
-
-	command := exec.Command("bash", "-c", env.args)
-	err := command.Start()
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func cmdRandom(env *cmdEnv) error {
-	if env.args == "" {
+func cmdRandom(pl platforms.Platform, env platforms.CmdEnv) error {
+	if env.Args == "" {
 		return fmt.Errorf("no system specified")
 	}
 
-	if env.args == "all" {
-		return mrextMister.LaunchRandomGame(mister.UserConfigToMrext(env.cfg), games.AllSystems())
+	if env.Args == "all" {
+		game, err := gamesdb.RandomGame(pl, gamesdb.AllSystems())
+		if err != nil {
+			return err
+		}
+
+		return pl.LaunchFile(env.Cfg, game.Path)
 	}
 
-	systemIds := strings.Split(env.args, ",")
-	systems := make([]games.System, 0, len(systemIds))
+	systemIds := strings.Split(env.Args, ",")
+	systems := make([]gamesdb.System, 0, len(systemIds))
 
 	for _, id := range systemIds {
-		system, err := games.LookupSystem(id)
+		system, err := gamesdb.LookupSystem(id)
 		if err != nil {
 			log.Error().Err(err).Msgf("error looking up system: %s", id)
 			continue
@@ -135,123 +116,17 @@ func cmdRandom(env *cmdEnv) error {
 		systems = append(systems, *system)
 	}
 
-	return mrextMister.LaunchRandomGame(
-		mister.UserConfigToMrext(env.cfg),
-		systems,
-	)
+	game, err := gamesdb.RandomGame(pl, systems)
+	if err != nil {
+		return err
+	}
+
+	return pl.LaunchFile(env.Cfg, game.Path)
 }
 
-func cmdIni(env *cmdEnv) error {
-	inis, err := mrextMister.GetAllMisterIni()
-	if err != nil {
-		return err
-	}
-
-	if len(inis) == 0 {
-		return fmt.Errorf("no ini files found")
-	}
-
-	id, err := strconv.Atoi(env.args)
-	if err != nil {
-		return err
-	}
-
-	if id < 1 || id > len(inis) {
-		return fmt.Errorf("ini id out of range: %d", id)
-	}
-
-	doRelaunch := true
-	// only relaunch if there aren't any more commands
-	if env.totalCommands > 1 && env.currentIndex < env.totalCommands-1 {
-		doRelaunch = false
-	}
-
-	err = mrextMister.SetActiveIni(id, doRelaunch)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func cmdMisterScript(env *cmdEnv) error {
-	// TODO: escaping arguments
-	// TODO: does this work if game is running?
-
-	if mrextMister.IsScriptRunning() {
-		return fmt.Errorf("script already running")
-	}
-
-	args := strings.Fields(env.args)
-
-	if len(args) == 0 {
-		return fmt.Errorf("no script specified")
-	}
-
-	script := args[0]
-
-	if !strings.HasSuffix(script, ".sh") {
-		return fmt.Errorf("invalid script: %s", script)
-	}
-
-	scriptPath := filepath.Join(mister.ScriptsFolder, script)
-	if _, err := os.Stat(scriptPath); err != nil {
-		return fmt.Errorf("script not found: %s", script)
-	}
-
-	script = scriptPath
-
-	args = args[1:]
-	if len(args) > 0 {
-		scriptArgs := strings.Join(args, " ")
-		script = fmt.Sprintf("%s %s", script, scriptArgs)
-	}
-
-	return mrextMister.RunScript(env.kbd, script)
-}
-
-func cmdMisterMgl(env *cmdEnv) error {
-	if env.args == "" {
-		return fmt.Errorf("no mgl specified")
-	}
-
-	tmpFile, err := os.CreateTemp("", "*.mgl")
-	if err != nil {
-		return err
-	}
-
-	_, err = tmpFile.WriteString(env.args)
-	if err != nil {
-		return err
-	}
-
-	err = tmpFile.Close()
-	if err != nil {
-		return err
-	}
-
-	cmd, err := os.OpenFile(mister.CmdInterface, os.O_RDWR, 0)
-	if err != nil {
-		return err
-	}
-	defer cmd.Close()
-
-	_, err = cmd.WriteString(fmt.Sprintf("load_core %s\n", tmpFile.Name()))
-	if err != nil {
-		return err
-	}
-
+func cmdHttpGet(pl platforms.Platform, env platforms.CmdEnv) error {
 	go func() {
-		time.Sleep(5 * time.Second)
-		_ = os.Remove(tmpFile.Name())
-	}()
-
-	return nil
-}
-
-func cmdHttpGet(env *cmdEnv) error {
-	go func() {
-		resp, err := http.Get(env.args)
+		resp, err := http.Get(env.Args)
 		if err != nil {
 			log.Error().Msgf("error getting url: %s", err)
 			return
@@ -262,10 +137,10 @@ func cmdHttpGet(env *cmdEnv) error {
 	return nil
 }
 
-func cmdHttpPost(env *cmdEnv) error {
-	parts := strings.SplitN(env.args, ",", 3)
+func cmdHttpPost(pl platforms.Platform, env platforms.CmdEnv) error {
+	parts := strings.SplitN(env.Args, ",", 3)
 	if len(parts) < 3 {
-		return fmt.Errorf("invalid post format: %s", env.args)
+		return fmt.Errorf("invalid post format: %s", env.Args)
 	}
 
 	url, format, data := strings.TrimSpace(parts[0]), strings.TrimSpace(parts[1]), strings.TrimSpace(parts[2])
@@ -282,41 +157,34 @@ func cmdHttpPost(env *cmdEnv) error {
 	return nil
 }
 
-func cmdKey(env *cmdEnv) error {
-	code, err := strconv.Atoi(env.args)
-	if err != nil {
-		return err
-	}
-
-	env.kbd.Press(code)
-
-	return nil
+func cmdKey(pl platforms.Platform, env platforms.CmdEnv) error {
+	return pl.KeyboardInput(env.Args)
 }
 
-func insertCoin(env *cmdEnv, key int) error {
-	amount, err := strconv.Atoi(env.args)
+func insertCoin(pl platforms.Platform, env platforms.CmdEnv, key string) error {
+	amount, err := strconv.Atoi(env.Args)
 	if err != nil {
 		return err
 	}
 
 	for i := 0; i < amount; i++ {
-		env.kbd.Press(key)
+		pl.KeyboardInput(key)
 		time.Sleep(100 * time.Millisecond)
 	}
 
 	return nil
 }
 
-func cmdCoinP1(env *cmdEnv) error {
-	return insertCoin(env, 6)
+func cmdCoinP1(pl platforms.Platform, env platforms.CmdEnv) error {
+	return insertCoin(pl, env, "6")
 }
 
-func cmdCoinP2(env *cmdEnv) error {
-	return insertCoin(env, 7)
+func cmdCoinP2(pl platforms.Platform, env platforms.CmdEnv) error {
+	return insertCoin(pl, env, "7")
 }
 
-func cmdDelay(env *cmdEnv) error {
-	amount, err := strconv.Atoi(env.args)
+func cmdDelay(pl platforms.Platform, env platforms.CmdEnv) error {
+	amount, err := strconv.Atoi(env.Args)
 	if err != nil {
 		return err
 	}
@@ -326,13 +194,13 @@ func cmdDelay(env *cmdEnv) error {
 	return nil
 }
 
-func cmdLaunchCore(env *cmdEnv) error {
-	return mrextMister.LaunchShortCore(env.args)
+func forwardCmd(pl platforms.Platform, env platforms.CmdEnv) error {
+	return pl.ForwardCmd(env)
 }
 
 // Check all games folders for a relative path to a file
-func findFile(cfg *config.UserConfig, path string) (string, error) {
-	// TODO: can do basic check here too
+func findFile(pl platforms.Platform, cfg *config.UserConfig, path string) (string, error) {
+	// TODO: can do basic file exists check here too
 	if filepath.IsAbs(path) {
 		return path, nil
 	}
@@ -353,8 +221,7 @@ func findFile(cfg *config.UserConfig, path string) (string, error) {
 		}
 	}
 
-	// TODO: make sure these games folders are in the correct order
-	for _, gf := range games.GetGamesFolders(mister.UserConfigToMrext(cfg)) {
+	for _, gf := range pl.RootFolders(cfg) {
 		fullPath := filepath.Join(gf, statPath)
 		if _, err := os.Stat(fullPath); err == nil {
 			log.Debug().Msgf("found file: %s", fullPath)
@@ -365,48 +232,48 @@ func findFile(cfg *config.UserConfig, path string) (string, error) {
 	return path, fmt.Errorf("file not found: %s", path)
 }
 
-func cmdLaunch(env *cmdEnv) error {
+func cmdLaunch(pl platforms.Platform, env platforms.CmdEnv) error {
 	// if it's an absolute path, just try launch it
-	if filepath.IsAbs(env.args) {
-		log.Debug().Msgf("launching absolute path: %s", env.args)
-		return mrextMister.LaunchGenericFile(mister.UserConfigToMrext(env.cfg), env.args)
+	if filepath.IsAbs(env.Args) {
+		log.Debug().Msgf("launching absolute path: %s", env.Args)
+		return pl.LaunchFile(env.Cfg, env.Args)
 	}
 
 	// for relative paths, perform a basic check if the file exists in a games folder
 	// this always takes precedence over the system/path format (but is not totally cross platform)
-	if p, err := findFile(env.cfg, env.args); err == nil {
+	if p, err := findFile(pl, env.Cfg, env.Args); err == nil {
 		log.Debug().Msgf("launching found relative path: %s", p)
-		return mrextMister.LaunchGenericFile(mister.UserConfigToMrext(env.cfg), p)
+		return pl.LaunchFile(env.Cfg, p)
 	} else {
-		log.Debug().Err(err).Msgf("error finding file: %s", env.args)
+		log.Debug().Err(err).Msgf("error finding file: %s", env.Args)
 	}
 
 	// attempt to parse the <system>/<path> format
-	ps := strings.SplitN(env.text, "/", 2)
+	ps := strings.SplitN(env.Text, "/", 2)
 	if len(ps) < 2 {
-		return fmt.Errorf("invalid launch format: %s", env.text)
+		return fmt.Errorf("invalid launch format: %s", env.Text)
 	}
 
 	systemId, path := ps[0], ps[1]
 
-	system, err := games.LookupSystem(systemId)
+	system, err := gamesdb.LookupSystem(systemId)
 	if err != nil {
 		return err
 	}
 
 	log.Info().Msgf("launching system: %s, path: %s", systemId, path)
 
-	for _, f := range system.Folder {
+	for _, f := range system.Folders {
 		systemPath := filepath.Join(f, path)
-		if fp, err := findFile(env.cfg, systemPath); err == nil {
+		if fp, err := findFile(pl, env.Cfg, systemPath); err == nil {
 			log.Debug().Msgf("launching found system path: %s", fp)
-			return mrextMister.LaunchGenericFile(mister.UserConfigToMrext(env.cfg), fp)
+			return pl.LaunchFile(env.Cfg, fp)
 		} else {
 			log.Debug().Err(err).Msgf("error finding system file: %s", path)
 		}
 	}
 
-	return fmt.Errorf("file not found: %s", env.args)
+	return fmt.Errorf("file not found: %s", env.Args)
 }
 
 /**
@@ -414,9 +281,9 @@ func cmdLaunch(env *cmdEnv) error {
  * change the currently loaded software will also return a boolean set to true
  */
 func LaunchToken(
+	pl platforms.Platform,
 	cfg *config.UserConfig,
 	manual bool,
-	kbd input.Keyboard,
 	text string,
 	totalCommands int,
 	currentIndex int,
@@ -431,31 +298,31 @@ func LaunchToken(
 
 		cmd, args := strings.ToLower(strings.TrimSpace(ps[0])), strings.TrimSpace(ps[1])
 
-		env := &cmdEnv{
-			args:          args,
-			cfg:           cfg,
-			manual:        manual,
-			kbd:           kbd,
-			text:          text,
-			totalCommands: totalCommands,
-			currentIndex:  currentIndex,
+		env := platforms.CmdEnv{
+			Cmd:           cmd,
+			Args:          args,
+			Cfg:           cfg,
+			Manual:        manual,
+			Text:          text,
+			TotalCommands: totalCommands,
+			CurrentIndex:  currentIndex,
 		}
 
 		if f, ok := commandMappings[cmd]; ok {
-			return f(env), slices.Contains(softwareChangeCommands, cmd)
+			return f(pl, env), slices.Contains(softwareChangeCommands, cmd)
 		} else {
 			return fmt.Errorf("unknown command: %s", cmd), false
 		}
 	}
 
 	// if it's not a command, treat it as a generic launch command
-	return cmdLaunch(&cmdEnv{
-		args:          text,
-		cfg:           cfg,
-		manual:        manual,
-		kbd:           kbd,
-		text:          text,
-		totalCommands: totalCommands,
-		currentIndex:  currentIndex,
+	return cmdLaunch(pl, platforms.CmdEnv{
+		Cmd:           "launch",
+		Args:          text,
+		Cfg:           cfg,
+		Manual:        manual,
+		Text:          text,
+		TotalCommands: totalCommands,
+		CurrentIndex:  currentIndex,
 	}), true
 }

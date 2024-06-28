@@ -16,3 +16,5 @@ go.work
 /out
 scripts/mister/build/_build
 .DS_Store
+.tapto-mister-buildcache
+.tapto-mister-modcache

@@ -8,7 +8,7 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/wizzomafizzo/tapto/pkg/config"
 	"github.com/wizzomafizzo/tapto/pkg/daemon/state"
-	"github.com/wizzomafizzo/tapto/pkg/platforms/mister"
+	"github.com/wizzomafizzo/tapto/pkg/platforms"
 )
 
 type TokenResponse struct {
@@ -54,7 +54,11 @@ func (sr *StatusResponse) Render(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
-func newStatus(cfg *config.UserConfig, st *state.State, tr *mister.Tracker) StatusResponse {
+func newStatus(
+	pl platforms.Platform,
+	cfg *config.UserConfig,
+	st *state.State,
+) StatusResponse {
 	active := st.GetActiveCard()
 	last := st.GetLastScanned()
 	readerConnected, readerType := st.GetReaderStatus()
@@ -81,7 +85,7 @@ func newStatus(cfg *config.UserConfig, st *state.State, tr *mister.Tracker) Stat
 			ScanTime: last.ScanTime,
 		},
 		GamesIndex: IndexResponse{
-			Exists:      IndexInstance.Exists(),
+			Exists:      IndexInstance.Exists(pl),
 			Indexing:    IndexInstance.Indexing,
 			TotalSteps:  IndexInstance.TotalSteps,
 			CurrentStep: IndexInstance.CurrentStep,
@@ -89,24 +93,24 @@ func newStatus(cfg *config.UserConfig, st *state.State, tr *mister.Tracker) Stat
 			TotalFiles:  IndexInstance.TotalFiles,
 		},
 		Playing: PlayingResponse{
-			System:     tr.ActiveSystem,
-			SystemName: tr.ActiveSystemName,
-			Game:       tr.ActiveGameId,
-			GameName:   tr.ActiveGameName,
-			GamePath:   mister.NormalizePath(cfg, tr.ActiveGamePath),
+			System:     pl.ActiveSystem(),
+			SystemName: pl.ActiveSystem(),
+			Game:       pl.ActiveGame(),
+			GameName:   pl.ActiveGameName(),
+			GamePath:   pl.NormalizePath(cfg, pl.ActiveGamePath()),
 		},
 	}
 }
 
 func handleStatus(
+	pl platforms.Platform,
 	cfg *config.UserConfig,
 	st *state.State,
-	tr *mister.Tracker,
 ) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		log.Info().Msg("received status request")
 
-		resp := newStatus(cfg, st, tr)
+		resp := newStatus(pl, cfg, st)
 
 		err := render.Render(w, r, &resp)
 		if err != nil {
