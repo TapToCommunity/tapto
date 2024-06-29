@@ -147,7 +147,7 @@ func displayServiceInfo(stdscr *goncurses.Window, service *mister.Service) error
 			//toggleText = "Start Service"
 		}
 
-		printCenter(0, "TapTo v1.3")
+		printCenter(0, "TapTo v"+appVersion)
 
 		clearLine(1)
 		printLeft(1, statusText)
