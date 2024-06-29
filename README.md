@@ -1,31 +1,22 @@
 <h1 align="left">
-  <a href="https://tapto.wiki/">
-    <img width="60%" title="TapTo" src="assets/images/logo/tapto_gitbhub_logo.png" />
-  </a>
+  <img height="50px" title="TapTo" src="assets/images/logo/tapto_gitbhub_logo.png" />
 </h1>
+
+- [Downloads](https://github.com/wizzomafizzo/tapto/releases/latest/)
+- [TapTo Wiki](https://tapto.wiki/)
+- [Discord](https://wizzo.dev/discord)
+- [Developer Guide](docs/developers.md)
+- [API Documentation](docs/api.md)
+- [Contributors](#contributors)
+- [Licenses](#licenses)
+
+---
 
 TapTo is an open source system for launching games and scripted actions using physical objects like NFC cards. It's a great way to make playing games more accessible and add some fun to your gaming setup!
 
-See the [Getting Started](#getting-started) section below for everything you need to get up and running. Additional hardware is required but is aimed to be cheap and easily available. Please [join the Discord](https://wizzo.dev/discord) if you need any help or want to show off your work!
+This is the development repository for the core TapTo software.
 
-TapTo is currently supported on these platforms:
-
-- [MiSTer FPGA](https://mister-devel.github.io/MkDocs_MiSTer/)
-- [Commodore 64 (via TeensyROM)](https://github.com/SensoriumEmbedded/TeensyROM/blob/main/docs/NFC_Loader.md)
-
----
-
-[Download](https://github.com/wizzomafizzo/tapto/releases/latest/) | [TapTo Designer](https://tapto-designer.netlify.app/) | [Labels](docs/labels.md) | [Reader Cases](docs/community.md#cases) | [Vendors](docs/vendors.md) | [Community Projects](docs/community.md) | [API](docs/api.md)
-
----
-
-## Getting Started
-
-1. Buy or build a compatible NFC reader: [Reader Hardware](docs/readers.md)
-2. Buy some compatible NFC cards or tags: [Token Hardware](docs/tokens.md)
-3. Set up the software for your platform: [MiSTer FPGA](docs/mister.md) | [Commodore 64](https://github.com/SensoriumEmbedded/TeensyROM/blob/main/docs/NFC_Loader.md)
-4. Set up your cards or tags to launch games: [Token Commands](docs/commands.md)
-5. Make or buy some awesome labels: [Custom Labels](docs/labels.md)
+Want to get started with TapTo? Please visit the [TapTo Wiki](https://tapto.wiki/) for the latest information and guides. You can also [join the Discord](https://wizzo.dev/discord) if you need help.
 
 ## Contributors
 
@@ -48,7 +39,7 @@ TapTo has been a community effort from day one. Everyone's contributions are app
 
 Special thanks to **Gaz** for starting the project originally, and to **[javiwwweb](https://github.com/javiwwweb/MisTerRFID)** and **[Conner](https://github.com/ElRojo/MiSTerRFID)** for their existing MiSTerRFID projects.
 
-## License
+## Licenses
 
 This project's source code is licensed under the [GNU General Public License v3](/LICENSE).
 
