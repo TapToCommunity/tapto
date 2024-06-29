@@ -35,7 +35,7 @@ db_url = https://github.com/wizzomafizzo/tapto/raw/main/scripts/mister/repo/tapt
 
 ### Main Alternative
 
-An alternative version the the MiSTer Main application is also available by developer [spark2k06](https://github.com/spark2k06), which adds many great TapTo related features to the core of MiSTer. It's already being used by many people in the community, and is easy to install.
+An alternative version of the MiSTer Main application is also available by developer [spark2k06](https://github.com/spark2k06), which adds many great TapTo related features to the core of MiSTer. It's already being used by many people in the community, and is easy to install.
 
 Features include:
 - Rich game loading screens, show cover art on screen when a game is launched.
