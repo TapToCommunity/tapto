@@ -8,6 +8,7 @@ import (
 	"github.com/wizzomafizzo/tapto/pkg/platforms"
 	"github.com/wizzomafizzo/tapto/pkg/readers"
 	"github.com/wizzomafizzo/tapto/pkg/tokens"
+	"github.com/wizzomafizzo/tapto/pkg/utils"
 )
 
 type State struct {
@@ -40,14 +41,14 @@ func (s *State) SetUpdateHook(hook *func(st *State)) {
 func (s *State) SetActiveCard(card tokens.Token) {
 	s.mu.Lock()
 
-	if s.activeCard == card {
+	if utils.TokensEqual(&s.activeCard, &card) {
 		// ignore duplicate scans
 		s.mu.Unlock()
 		return
 	}
 
 	s.activeCard = card
-	if s.activeCard.UID != "" {
+	if !s.activeCard.ScanTime.IsZero() {
 		s.lastScanned = card
 	}
 

@@ -216,8 +216,6 @@ func processLaunchQueue(
 		case t := <-tq.Tokens:
 			log.Info().Msgf("processing token: %v", t)
 
-			st.SetActiveCard(t)
-
 			err := platform.AfterScanHook(t)
 			if err != nil {
 				log.Error().Err(err).Msgf("error writing tmp scan result")

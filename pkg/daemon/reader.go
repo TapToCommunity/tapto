@@ -42,14 +42,6 @@ func shouldExit(
 	return true
 }
 
-func cmpTokens(a, b *tokens.Token) bool {
-	if a == nil || b == nil {
-		return false
-	}
-
-	return a.UID == b.UID && a.Text == b.Text
-}
-
 func connectReaders(
 	cfg *config.UserConfig,
 	st *state.State,
@@ -228,7 +220,7 @@ func readerManager(
 			// a token has been launched that starts software
 			log.Debug().Msgf("new software token: %v", st)
 
-			if exitTimer != nil && !cmpTokens(st, softwareToken) {
+			if exitTimer != nil && !utils.TokensEqual(st, softwareToken) {
 				if stopped := exitTimer.Stop(); stopped {
 					log.Info().Msg("different software token inserted, cancelling exit")
 				}
@@ -238,7 +230,7 @@ func readerManager(
 			continue
 		}
 
-		if cmpTokens(scan, prevToken) {
+		if utils.TokensEqual(scan, prevToken) {
 			log.Debug().Msg("ignoring duplicate scan")
 			continue
 		}
@@ -247,10 +239,11 @@ func readerManager(
 
 		if scan != nil {
 			log.Info().Msgf("new token scanned: %v", scan)
+			st.SetActiveCard(*scan)
 			if !st.IsLauncherDisabled() {
 				if exitTimer != nil {
 					stopped := exitTimer.Stop()
-					if stopped && cmpTokens(scan, softwareToken) {
+					if stopped && utils.TokensEqual(scan, softwareToken) {
 						log.Info().Msg("same token reinserted, cancelling exit")
 						continue
 					} else if stopped {

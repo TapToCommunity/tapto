@@ -33,9 +33,21 @@ import (
 	"sort"
 	"strings"
 	"time"
+
+	"github.com/wizzomafizzo/tapto/pkg/tokens"
 )
 
 var r = rand.New(rand.NewSource(time.Now().UnixNano()))
+
+func TokensEqual(a, b *tokens.Token) bool {
+	if a == nil && b == nil {
+		return true
+	} else if a == nil || b == nil {
+		return false
+	}
+
+	return a.UID == b.UID && a.Text == b.Text
+}
 
 func GetMd5Hash(path string) (string, error) {
 	file, err := os.Open(path)
