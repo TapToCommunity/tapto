@@ -1681,7 +1681,7 @@ _writeTag() {
   txt="${1}"
 
   _infobox "Present NFC tag to begin writing..."
-  _tapto POST wirte '{"text": "'"${txt}"'"}'
+  _tapto POST write '{"text": "'"${txt}"'"}'
   exitcode="${?}"; [[ "${exitcode}" -ge 1 ]] && { _error "Unable to write the NFC Tag"; return 1; }
   # Workaround for -write enabling launching games again
   _tapto settings PUT '{"launching":false}'
