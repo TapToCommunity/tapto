@@ -637,10 +637,10 @@ _craftCommand(){
 
   case "${selected}" in
     launch.system)
-      category="$(_menu \
-        --backtitle "${title}" \
-        -- "${categories[@]}" )"
-      readarray -t systems < <(_tapto systems | jq -r  ".systems[] | select(.category == \"${category}\") | .id + \"\n\" + .name")
+      # category="$(_menu \
+      #   --backtitle "${title}" \
+      #   -- "${categories[@]}" )"
+      readarray -t systems < <(_tapto systems | jq -r  ".systems[] | .id + \"\n\" + .name")
       system="$(_menu \
         --backtitle "${title}" \
         -- "${systems[@]}" )"
@@ -648,10 +648,10 @@ _craftCommand(){
       command="${command}:${system}"
       ;;
     launch.random)
-      category="$(_menu \
-        --backtitle "${title}" \
-        -- "${categories[@]}" )"
-      readarray -t systems < <(_tapto systems | jq -r  ".systems[] | select(.category == \"${category}\") | .id + \"\n\" + .name")
+      # category="$(_menu \
+      #   --backtitle "${title}" \
+      #   -- "${categories[@]}" )"
+      readarray -t systems < <(_tapto systems | jq -r  ".systems[] | .id + \"\n\" + .name")
       system="$(_menu \
         --backtitle "${title}" \
         -- "${systems[@]}" )"
@@ -1257,10 +1257,10 @@ _gameBrowser() {
   relativeComponents=(
     ".." "Up one directory"
   )
-  readarray -t categories < <(_tapto systems | jq -r '.systems[] | .category' | sort -u | sed 's/.*/&\nCategory/')
-  category="$(_menu  --backtitle "${title}" --cancel-button "Back" --no-button "Back" -- "${categories[@]}" )"
+  # readarray -t categories < <(_tapto systems | jq -r '.systems[] | .category' | sort -u | sed 's/.*/&\nCategory/')
+  # category="$(_menu  --backtitle "${title}" --cancel-button "Back" --no-button "Back" -- "${categories[@]}" )"
   [[ "${?}" =~ ^(1|255)$ ]] && { selected="systems" "${FUNCNAME[1]}" ; return ; }
-  readarray -t systems < <(_tapto systems | jq -r  ".systems[] | select(.category == \"${category}\") | .id + \"\n\" + .name")
+  readarray -t systems < <(_tapto systems | jq -r  ".systems[] | .id + \"\n\" + .name")
   system="$(_menu  --backtitle "${title}" --cancel-button "Back" --no-button "Back"  -- "${systems[@]}" )"
   [[ "${?}" =~ ^(1|255)$ ]] && { "${FUNCNAME[1]}" ; return ; }
   tmpFile="$(mktemp)"
