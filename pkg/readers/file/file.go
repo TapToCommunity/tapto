@@ -149,5 +149,5 @@ func (r *FileReader) Info() string {
 }
 
 func (r *FileReader) Write(text string) error {
-	return nil
+	return errors.New("writing not supported on this reader")
 }
