@@ -1,5 +1,7 @@
 <h1 align="left">
-  <img width="60%" title="TapTo" src="assets/images/logo/tapto_gitbhub_logo.png" />
+  <a href="https://tapto.wiki/">
+    <img width="60%" title="TapTo" src="assets/images/logo/tapto_gitbhub_logo.png" />
+  </a>
 </h1>
 
 TapTo is an open source system for launching games and scripted actions using physical objects like NFC cards. It's a great way to make playing games more accessible and add some fun to your gaming setup!
@@ -7,12 +9,15 @@ TapTo is an open source system for launching games and scripted actions using ph
 See the [Getting Started](#getting-started) section below for everything you need to get up and running. Additional hardware is required but is aimed to be cheap and easily available. Please [join the Discord](https://wizzo.dev/discord) if you need any help or want to show off your work!
 
 TapTo is currently supported on these platforms:
+
 - [MiSTer FPGA](https://mister-devel.github.io/MkDocs_MiSTer/)
 - [Commodore 64 (via TeensyROM)](https://github.com/SensoriumEmbedded/TeensyROM/blob/main/docs/NFC_Loader.md)
 
-***
+---
+
 [Download](https://github.com/wizzomafizzo/tapto/releases/latest/) | [TapTo Designer](https://tapto-designer.netlify.app/) | [Labels](docs/labels.md) | [Reader Cases](docs/community.md#cases) | [Vendors](docs/vendors.md) | [Community Projects](docs/community.md) | [API](docs/api.md)
-***
+
+---
 
 ## Getting Started
 
