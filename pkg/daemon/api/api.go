@@ -68,7 +68,6 @@ func setupWs(
 }
 
 // https://github.com/ironstar-io/chizerolog/blob/master/main.go
-// TODO: this is way too noisy for regular logs, need to tone it down unless debug
 func LoggerMiddleware(logger *zerolog.Logger) func(next http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		fn := func(w http.ResponseWriter, r *http.Request) {

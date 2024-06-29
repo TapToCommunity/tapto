@@ -24,12 +24,6 @@ const (
 	periodBetweenLoop  = 250 * time.Millisecond
 )
 
-const (
-	ReaderTypePN532   = "PN532"
-	ReaderTypeACR122U = "ACR122U"
-	ReaderTypeUnknown = "Unknown"
-)
-
 type Reader struct {
 	cfg          *config.UserConfig
 	conn         string
@@ -161,20 +155,7 @@ func (r *Reader) Info() string {
 		return ""
 	}
 
-	// TODO: this conversation stuff is only necessary in the legacy socket
-	// output. it should be moved to there and make Info output the full
-	// libnfc device string
-
-	connProto := strings.SplitN(strings.ToLower(r.conn), ":", 2)[0]
-	deviceName := r.pnd.String()
-
-	if connProto == "pn532_uart" {
-		return ReaderTypePN532
-	} else if strings.Contains(deviceName, "ACR122U") {
-		return ReaderTypeACR122U
-	} else {
-		return ReaderTypeUnknown
-	}
+	return r.pnd.String()
 }
 
 func (r *Reader) Write(text string) error {

@@ -14,6 +14,12 @@ import (
 //       windows and can be entirely replaced with an http server which will
 //       also allow for remote access
 
+const (
+	ReaderTypePN532   = "PN532"
+	ReaderTypeACR122U = "ACR122U"
+	ReaderTypeUnknown = "Unknown"
+)
+
 func StartSocketServer(st *state.State) (net.Listener, error) {
 	socket, err := net.Listen("unix", mister.SocketFile)
 	if err != nil {
@@ -84,7 +90,21 @@ func StartSocketServer(st *state.State) (net.Listener, error) {
 						reader, ok := st.GetReader(rs[0])
 						if ok && reader != nil {
 							connected = reader.Connected()
-							rt = reader.Info()
+							info := reader.Info()
+
+							var connProto string
+							conn := strings.SplitN(strings.ToLower(reader.Device()), ":", 2)
+							if len(connProto) == 2 {
+								connProto = conn[0]
+							}
+
+							if connProto == "pn532_uart" {
+								rt = ReaderTypePN532
+							} else if strings.Contains(info, "ACR122U") {
+								rt = ReaderTypeACR122U
+							} else {
+								rt = ReaderTypeUnknown
+							}
 						}
 					}
 
