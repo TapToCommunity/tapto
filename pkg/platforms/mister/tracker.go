@@ -204,6 +204,8 @@ func (tr *Tracker) LoadCore() {
 
 		result := tr.LookupCoreName(coreName, tr.ActiveGamePath)
 		if result != (NameMapping{}) {
+			mister.SetActiveGame(result.CoreName)
+
 			if result.ArcadeName != "" {
 				tr.ActiveGameId = coreName
 				tr.ActiveGameName = result.ArcadeName
