@@ -11,10 +11,11 @@ type Scan struct {
 }
 
 type Reader interface {
+	// TODO: type? file, libnfc, etc.
 	// Ids returns the device string prefixes supported by this reader.
 	Ids() []string
 	// Open any necessary connections to the device and start polling.
-	// Takes a device connection string and a channel to send tokens to.
+	// Takes a device connection string and a channel to send scanned tokens.
 	Open(string, chan<- Scan) error
 	// Close any open connections to the device and stop polling.
 	Close() error
@@ -29,6 +30,6 @@ type Reader interface {
 	// Info returns a string with information about the connected device.
 	Info() string
 	// Write sends a string to the device to be written to a token, if
-	// that device supporting writing. Blocks until completion or timeout.
+	// that device supports writing. Blocks until completion or timeout.
 	Write(string) error
 }

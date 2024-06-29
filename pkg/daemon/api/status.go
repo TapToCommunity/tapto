@@ -28,9 +28,17 @@ type IndexResponse struct {
 	TotalFiles  int    `json:"totalFiles"`
 }
 
+// TODO: legacy, remove in v2
 type ReaderStatusResponse struct {
 	Connected bool   `json:"connected"`
 	Type      string `json:"type"`
+}
+
+type ReaderResponse struct {
+	// TODO: type
+	Connected bool   `json:"connected"`
+	Device    string `json:"device"`
+	Info      string `json:"info"`
 }
 
 type PlayingResponse struct {
@@ -42,7 +50,8 @@ type PlayingResponse struct {
 }
 
 type StatusResponse struct {
-	Reader      ReaderStatusResponse `json:"reader"`
+	Reader      ReaderStatusResponse `json:"reader"` // TODO: remove in v2
+	Readers     []ReaderResponse     `json:"readers"`
 	ActiveToken TokenResponse        `json:"activeToken"`
 	LastToken   TokenResponse        `json:"lastToken"`
 	Launching   bool                 `json:"launching"`
@@ -74,10 +83,23 @@ func newStatus(
 		}
 	}
 
+	readers := make([]ReaderResponse, 0)
+	for _, device := range rs {
+		reader, ok := st.GetReader(device)
+		if ok && reader != nil {
+			readers = append(readers, ReaderResponse{
+				Connected: reader.Connected(),
+				Device:    device,
+				Info:      reader.Info(),
+			})
+		}
+	}
+
 	launcherDisabled := st.IsLauncherDisabled()
 
 	return StatusResponse{
 		Launching: !launcherDisabled,
+		Readers:   readers,
 		Reader: ReaderStatusResponse{
 			Connected: readerConnected,
 			Type:      readerType,
