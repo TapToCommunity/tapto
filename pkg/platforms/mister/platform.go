@@ -37,6 +37,11 @@ func (p *Platform) Setup(cfg *config.UserConfig) error {
 	p.tr = tr
 	p.stopTr = stopTr
 
+	err = Setup(p.tr)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 

@@ -50,6 +50,9 @@ func connectReaders(
 	rs := st.ListReaders()
 	var toConnect []string
 
+	// TODO: this needs to gather the final list of reader paths, resolve any
+	// symlinks, remove duplicates, and then connect to them
+
 	userDevice := cfg.GetConnectionString()
 	if userDevice != "" && !utils.Contains(rs, userDevice) {
 		log.Debug().Msgf("user device not connected, adding: %s", userDevice)
@@ -135,7 +138,6 @@ func readerManager(
 	var lastError time.Time
 
 	var prevToken *tokens.Token
-	var softwareToken *tokens.Token
 	var exitTimer *time.Timer
 
 	readerTicker := time.NewTicker(1 * time.Second)
@@ -162,7 +164,7 @@ func readerManager(
 		go func() {
 			<-exitTimer.C
 
-			if pl.GetActiveLauncher() == "" {
+			if pl.GetActiveLauncher() == "" || st.GetSoftwareToken() == nil {
 				log.Debug().Msg("no active launcher, not exiting")
 				return
 			}
@@ -216,17 +218,17 @@ func readerManager(
 				continue
 			}
 			scan = t.Token
-		case st := <-softwareQueue:
+		case stoken := <-softwareQueue:
 			// a token has been launched that starts software
 			log.Debug().Msgf("new software token: %v", st)
 
-			if exitTimer != nil && !utils.TokensEqual(st, softwareToken) {
+			if exitTimer != nil && !utils.TokensEqual(stoken, st.GetSoftwareToken()) {
 				if stopped := exitTimer.Stop(); stopped {
 					log.Info().Msg("different software token inserted, cancelling exit")
 				}
 			}
 
-			softwareToken = st
+			st.SetSoftwareToken(stoken)
 			continue
 		}
 
@@ -243,7 +245,7 @@ func readerManager(
 			if !st.IsLauncherDisabled() {
 				if exitTimer != nil {
 					stopped := exitTimer.Stop()
-					if stopped && utils.TokensEqual(scan, softwareToken) {
+					if stopped && utils.TokensEqual(scan, st.GetSoftwareToken()) {
 						log.Info().Msg("same token reinserted, cancelling exit")
 						continue
 					} else if stopped {

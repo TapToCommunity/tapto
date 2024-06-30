@@ -125,7 +125,7 @@ func (r *Reader) Ids() []string {
 
 func (r *Reader) Detect(connected []string) string {
 	if !r.cfg.GetProbeDevice() {
-		log.Debug().Msg("device probing disabled")
+		// log.Debug().Msg("device probing disabled")
 		return ""
 	}
 
