@@ -79,7 +79,7 @@ func GetFileSize(path string) (int64, error) {
 }
 
 func GetLinuxSerialDeviceList() ([]string, error) {
-	path := "/dev/serial/by-id/"
+	path := "/dev/serial/by-id"
 
 	if _, err := os.Stat(path); os.IsNotExist(err) {
 		return nil, nil
@@ -89,6 +89,8 @@ func GetLinuxSerialDeviceList() ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer f.Close()
+
 	files, err := f.Readdir(0)
 	if err != nil {
 		return nil, err
@@ -97,8 +99,25 @@ func GetLinuxSerialDeviceList() ([]string, error) {
 	var devices []string
 
 	for _, v := range files {
-		if !v.IsDir() {
-			devices = append(devices, path+v.Name())
+		if v.IsDir() {
+			continue
+		}
+
+		// resolve symlinks and use that as the device path
+		if v.Mode()&os.ModeSymlink != 0 {
+			link, err := os.Readlink(filepath.Join(path, v.Name()))
+			if err != nil {
+				continue
+			}
+
+			abs, err := filepath.Abs(filepath.Join(path, link))
+			if err != nil {
+				continue
+			}
+
+			devices = append(devices, abs)
+		} else {
+			devices = append(devices, filepath.Join(path, v.Name()))
 		}
 	}
 

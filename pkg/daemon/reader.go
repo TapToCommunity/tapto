@@ -50,6 +50,9 @@ func connectReaders(
 	rs := st.ListReaders()
 	var toConnect []string
 
+	// TODO: this needs to gather the final list of reader paths, resolve any
+	// symlinks, remove duplicates, and then connect to them
+
 	userDevice := cfg.GetConnectionString()
 	if userDevice != "" && !utils.Contains(rs, userDevice) {
 		log.Debug().Msgf("user device not connected, adding: %s", userDevice)
