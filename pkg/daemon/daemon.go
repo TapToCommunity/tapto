@@ -214,6 +214,12 @@ func processLaunchQueue(
 	for {
 		select {
 		case t := <-tq.Tokens:
+			// TODO: change this channel to send a token pointer or something
+			if t.ScanTime.IsZero() {
+				// ignore empty tokens
+				continue
+			}
+
 			log.Info().Msgf("processing token: %v", t)
 
 			err := platform.AfterScanHook(t)
