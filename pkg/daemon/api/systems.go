@@ -5,13 +5,15 @@ import (
 
 	"github.com/go-chi/render"
 	"github.com/rs/zerolog/log"
+	"github.com/wizzomafizzo/tapto/pkg/assets"
 	"github.com/wizzomafizzo/tapto/pkg/database/gamesdb"
 	"github.com/wizzomafizzo/tapto/pkg/platforms"
 )
 
 type System struct {
-	Id   string `json:"id"`
-	Name string `json:"name"`
+	Id       string `json:"id"`
+	Name     string `json:"name"`
+	Category string `json:"category"`
 }
 
 type SystemsResponse struct {
@@ -45,10 +47,19 @@ func handleSystems(platform platforms.Platform) http.HandlerFunc {
 				continue
 			}
 
-			systems = append(systems, System{
-				Id:   sys.Id,
-				Name: sys.Id,
-			})
+			sr := System{
+				Id: sys.Id,
+			}
+
+			sm, err := assets.GetSystemMetadata(id)
+			if err != nil {
+				log.Error().Err(err).Msgf("error getting system metadata: %s", id)
+			}
+
+			sr.Name = sm.Name
+			sr.Category = sm.Category
+
+			systems = append(systems, sr)
 		}
 
 		err = render.Render(w, r, &SystemsResponse{
