@@ -50,6 +50,9 @@ func setupWs(
 
 	trHook := func() {
 		log.Debug().Msg("tracker update hook")
+		if pl.GetActiveLauncher() == "" {
+			st.SetSoftwareToken(nil)
+		}
 		send()
 	}
 	pl.SetEventHook(&trHook)

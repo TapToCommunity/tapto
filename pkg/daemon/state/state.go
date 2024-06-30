@@ -23,6 +23,7 @@ type State struct {
 	textMap         map[string]string
 	platform        platforms.Platform
 	readers         map[string]readers.Reader
+	softwareToken   *tokens.Token
 }
 
 func NewState(platform platforms.Platform) *State {
@@ -198,4 +199,19 @@ func (s *State) ListReaders() []string {
 	}
 
 	return readers
+}
+
+func (s *State) SetSoftwareToken(token *tokens.Token) {
+	s.mu.Lock()
+	s.softwareToken = token
+	s.mu.Unlock()
+	if s.updateHook != nil {
+		(*s.updateHook)(s)
+	}
+}
+
+func (s *State) GetSoftwareToken() *tokens.Token {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.softwareToken
 }
