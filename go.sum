@@ -1,8 +1,8 @@
 github.com/BurntSushi/toml v1.2.1 h1:9F2/+DoOYIOksmaJFPw1tGFy1eDnIJXg+UHjuD8lTak=
 github.com/ajg/form v1.5.1 h1:t9c7v8JUKu/XxOGBU0yjNpaMloxGEJhUkqFRq0ibGeU=
 github.com/ajg/form v1.5.1/go.mod h1:uL1WgH+h2mgNtvBq0339dVnzXdBETtL2LeUXaIv25UY=
-github.com/bendahl/uinput v1.6.0 h1:fM6r3OSC17rHh758mizKjSBuqi+XinhiGd4N3pWvZiI=
-github.com/bendahl/uinput v1.6.0/go.mod h1:Np7w3DINc9wB83p12fTAM3DPPhFnAKP0WTXRqCQJ6Z8=
+github.com/bendahl/uinput v1.7.0 h1:nA4fm8Wu8UYNOPykIZm66nkWEyvxzfmJ8YC02PM40jg=
+github.com/bendahl/uinput v1.7.0/go.mod h1:Np7w3DINc9wB83p12fTAM3DPPhFnAKP0WTXRqCQJ6Z8=
 github.com/clausecker/nfc/v2 v2.1.4 h1:zw2Cnny7pxPnuxVMBo+DXqXYETzUN7pMhNEA61yT5gY=
 github.com/clausecker/nfc/v2 v2.1.4/go.mod h1:BjRBQUQTQmiwh2tEfQ+xBM5xY05sV2gnZ0JRYEHog/o=
 github.com/coreos/go-systemd/v22 v22.5.0/go.mod h1:Y58oyj3AT4RCenI/lSvhwexgC+NSVTIJ3seZv2GcEnc=

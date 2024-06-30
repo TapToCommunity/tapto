@@ -57,9 +57,10 @@ var commandMappings = map[string]func(platforms.Platform, platforms.CmdEnv) erro
 	"http.get":  cmdHttpGet,
 	"http.post": cmdHttpPost,
 
-	"input.key":    cmdKey,
-	"input.coinp1": cmdCoinP1,
-	"input.coinp2": cmdCoinP2,
+	"input.key":     cmdKey,
+	"input.gamepad": cmdGamepad,
+	"input.coinp1":  cmdCoinP1,
+	"input.coinp2":  cmdCoinP2,
 
 	"key":     cmdKey,     // DEPRECATED
 	"coinp1":  cmdCoinP1,  // DEPRECATED
@@ -159,6 +160,10 @@ func cmdHttpPost(pl platforms.Platform, env platforms.CmdEnv) error {
 
 func cmdKey(pl platforms.Platform, env platforms.CmdEnv) error {
 	return pl.KeyboardInput(env.Args)
+}
+
+func cmdGamepad(pl platforms.Platform, env platforms.CmdEnv) error {
+	return pl.GamepadInput(strings.Split(env.Args, ""))
 }
 
 func insertCoin(pl platforms.Platform, env platforms.CmdEnv, key string) error {

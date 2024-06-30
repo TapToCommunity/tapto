@@ -41,4 +41,5 @@ type Platform interface {
 	Shell(string) error
 	KeyboardInput(string) error
 	ForwardCmd(CmdEnv) error
+	GamepadInput([]string) error
 }

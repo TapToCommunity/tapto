@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"strconv"
+	"time"
 
 	mrextConfig "github.com/wizzomafizzo/mrext/pkg/config"
 	"github.com/wizzomafizzo/mrext/pkg/games"
@@ -13,10 +14,13 @@ import (
 	"github.com/wizzomafizzo/tapto/pkg/config"
 	"github.com/wizzomafizzo/tapto/pkg/platforms"
 	"github.com/wizzomafizzo/tapto/pkg/tokens"
+
+	"github.com/bendahl/uinput"
 )
 
 type Platform struct {
 	kbd    input.Keyboard
+	gpd    uinput.Gamepad
 	tr     *Tracker
 	stopTr func() error
 }
@@ -28,6 +32,19 @@ func (p *Platform) Setup(cfg *config.UserConfig) error {
 	}
 
 	p.kbd = kbd
+
+	gpd, err := uinput.CreateGamepad(
+		"/dev/uinput",
+		[]byte("tapto"),
+		0x1234,
+		0x5678,
+	)
+	if err != nil {
+		return err
+	}
+	p.gpd = gpd
+
+	// TODO: this and kbd need to be closed after
 
 	tr, stopTr, err := StartTracker(*UserConfigToMrext(cfg))
 	if err != nil {
@@ -182,4 +199,33 @@ func (p *Platform) ForwardCmd(env platforms.CmdEnv) error {
 	} else {
 		return fmt.Errorf("command not supported on mister: %s", env.Cmd)
 	}
+}
+
+var gamepadKeymap = map[string]int{
+	"^": uinput.ButtonDpadUp,
+	"V": uinput.ButtonDpadDown,
+	"<": uinput.ButtonDpadLeft,
+	">": uinput.ButtonDpadRight,
+	"A": uinput.ButtonEast,
+	"B": uinput.ButtonSouth,
+	"X": uinput.ButtonNorth,
+	"Y": uinput.ButtonWest,
+	"S": uinput.ButtonStart,
+	"O": uinput.ButtonSelect,
+	"M": uinput.ButtonMode,
+	"L": uinput.ButtonBumperLeft,
+	"R": uinput.ButtonBumperRight,
+}
+
+func (p *Platform) GamepadInput(input []string) error {
+	for _, key := range input {
+		if code, ok := gamepadKeymap[key]; ok {
+			p.gpd.ButtonDown(code)
+			time.Sleep(40 * time.Millisecond)
+			p.gpd.ButtonUp(code)
+			time.Sleep(40 * time.Millisecond)
+		}
+	}
+
+	return nil
 }
