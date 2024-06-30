@@ -624,8 +624,8 @@ _commandPalette() {
 # Build a command using a command palette
 # Usage: _craftCommand
 _craftCommand(){
-  local command selected system systems recursion ms bulletList contentType tempFile postData categories category
-  readarray -t categories < <(_tapto systems | jq -r '.systems[] | .category' | sort -u | sed 's/.*/&\nCategory/')
+  local command selected system systems recursion ms bulletList contentType tempFile postData # categories category
+  # readarray -t categories < <(_tapto systems | jq -r '.systems[] | .category' | sort -u | sed 's/.*/&\nCategory/')
   command="**"
   selected="$(_menu \
     --cancel-label "Back" \
@@ -664,10 +664,10 @@ Current random systems:
 $(IFS=',' read -ra bulletList <<< "${system}"; printf "* %s\n" "${bulletList[@]}")
 _EOF_
         _yesno "${message}" --no-label "Done" --cancel-label "Done" || break
-        category="$(_menu \
-          --backtitle "${title}" \
-          -- "${categories[@]}" )"
-        readarray -t systems < <(_tapto systems | jq -r  ".systems[] | select(.category == \"${category}\") | .id + \"\n\" + .name")
+        # category="$(_menu \
+        #   --backtitle "${title}" \
+        #   -- "${categories[@]}" )"
+        readarray -t systems < <(_tapto systems | jq -r  ".systems[] | .id + \"\n\" + .name")
         system="${system},$(msg="${system}" _menu \
           --backtitle "${title}" \
           -- "${systems[@]}" )"
