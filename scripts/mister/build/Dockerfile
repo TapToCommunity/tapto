@@ -24,16 +24,14 @@ RUN mkdir /internal && cd /internal && \
     make -j "$(nproc)" && \
     make install
 
+# copy build script, not using task because go is too old in this environment
+COPY build.sh /usr/local/bin/build.sh
+RUN chmod +x /usr/local/bin/build.sh
+
 # drop permissions on output files
 RUN useradd -m -u 1000 build
 USER build
 
-# install mage
-RUN cd /home/build && \
-    git clone https://github.com/magefile/mage --depth 1 && \
-    mkdir /home/build/go && \
-    cd mage && go run bootstrap.go
-ENV PATH="${PATH}:/home/build/go/bin"
-
 WORKDIR /build
+
 RUN git config --global --add safe.directory /build
