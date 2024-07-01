@@ -2,8 +2,6 @@ module github.com/wizzomafizzo/tapto
 
 go 1.19
 
-require github.com/magefile/mage v1.15.0
-
 require github.com/rthornton128/goncurses v0.0.0-20220628231859-fd57939296e5
 
 require golang.org/x/exp v0.0.0-20240409090435-93d18d7e34b8
@@ -40,7 +38,6 @@ require (
 	github.com/gocarina/gocsv v0.0.0-20230616125104-99d496ca653d
 	github.com/gorilla/websocket v1.5.1
 	github.com/hsanjuan/go-ndef v0.0.1
-	github.com/joho/godotenv v1.5.1
 	github.com/rs/zerolog v1.31.0
 	github.com/wizzomafizzo/mrext v0.0.0-20240413092624-7a1a9463038c
 	go.etcd.io/bbolt v1.3.9
