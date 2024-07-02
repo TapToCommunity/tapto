@@ -254,6 +254,15 @@ func readerManager(
 					}
 				}
 
+				wt := st.GetWroteToken()
+				if wt != nil && utils.TokensEqual(scan, wt) {
+					log.Info().Msg("skipping launching just written token")
+					st.SetWroteToken(nil)
+					continue
+				} else {
+					st.SetWroteToken(nil)
+				}
+
 				log.Info().Msgf("sending token: %v", scan)
 				pl.PlaySuccessSound(cfg)
 				launchQueue.Enqueue(*scan)

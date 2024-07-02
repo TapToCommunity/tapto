@@ -49,11 +49,15 @@ func handleReaderWrite(st *state.State) http.HandlerFunc {
 			return
 		}
 
-		err = reader.Write(req.Text)
+		t, err := reader.Write(req.Text)
 		if err != nil {
 			log.Error().Err(err).Msg("error writing to reader")
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
+		}
+
+		if t != nil {
+			st.SetWroteToken(t)
 		}
 
 		w.WriteHeader(http.StatusOK)
