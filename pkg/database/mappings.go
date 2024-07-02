@@ -45,12 +45,8 @@ type Mapping struct {
 	Override string `json:"override"`
 }
 
-func MappingsKey(id string) string {
-	return "mappings:" + id
-}
-
-func newMappingsKey() string {
-	return MappingsKey(fmt.Sprint(time.Now().UnixMilli()))
+func mappingKey(id string) []byte {
+	return []byte(fmt.Sprintf("mappings:%s", id))
 }
 
 func NormalizeUid(uid string) string {
@@ -84,6 +80,8 @@ func (d *Database) AddMapping(m Mapping) error {
 		}
 	}
 
+	m.Added = time.Now().Unix()
+
 	md, err := json.Marshal(m)
 	if err != nil {
 		return err
@@ -91,7 +89,8 @@ func (d *Database) AddMapping(m Mapping) error {
 
 	return d.bdb.Update(func(txn *bolt.Tx) error {
 		b := txn.Bucket([]byte(BucketMappings))
-		return b.Put([]byte(newMappingsKey()), md)
+		id, _ := b.NextSequence()
+		return b.Put([]byte(mappingKey(strconv.Itoa(int(id)))), md)
 	})
 }
 
@@ -101,7 +100,7 @@ func (d *Database) GetMapping(id string) (Mapping, error) {
 	err := d.bdb.View(func(txn *bolt.Tx) error {
 		b := txn.Bucket([]byte(BucketMappings))
 
-		v := b.Get([]byte(MappingsKey(id)))
+		v := b.Get([]byte(mappingKey(id)))
 		if v == nil {
 			return fmt.Errorf("mapping not found: %s", id)
 		}
@@ -115,7 +114,7 @@ func (d *Database) GetMapping(id string) (Mapping, error) {
 func (d *Database) DeleteMapping(id string) error {
 	return d.bdb.Update(func(txn *bolt.Tx) error {
 		b := txn.Bucket([]byte(BucketMappings))
-		return b.Delete([]byte(MappingsKey(id)))
+		return b.Delete([]byte(mappingKey(id)))
 	})
 }
 
@@ -150,7 +149,7 @@ func (d *Database) UpdateMapping(id string, m Mapping) error {
 
 	return d.bdb.Update(func(txn *bolt.Tx) error {
 		b := txn.Bucket([]byte(BucketMappings))
-		return b.Put([]byte(MappingsKey(id)), md)
+		return b.Put([]byte(mappingKey(id)), md)
 	})
 }
 
@@ -175,11 +174,6 @@ func (d *Database) GetAllMappings() ([]Mapping, error) {
 			}
 
 			m.Id = ps[1]
-
-			m.Added, err = strconv.ParseInt(ps[1], 10, 64)
-			if err != nil {
-				return err
-			}
 
 			ms = append(ms, m)
 		}
