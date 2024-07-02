@@ -86,8 +86,14 @@ func StartSocketServer(st *state.State) (net.Listener, error) {
 
 					rs := st.ListReaders()
 					if len(rs) > 0 {
-						// TODO: picking one at random for now
-						reader, ok := st.GetReader(rs[0])
+						rid := rs[0]
+
+						lt := st.GetLastScanned()
+						if !lt.ScanTime.IsZero() && !lt.Remote {
+							rid = lt.Source
+						}
+
+						reader, ok := st.GetReader(rid)
 						if ok && reader != nil {
 							connected = reader.Connected()
 							info := reader.Info()
