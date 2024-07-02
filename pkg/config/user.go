@@ -34,11 +34,12 @@ const UserConfigEnv = "TAPTO_CONFIG"
 const UserAppPathEnv = "TAPTO_APP_PATH"
 
 type TapToConfig struct {
-	ConnectionString  string   `ini:"connection_string"`
-	AllowCommands     bool     `ini:"allow_commands"`
+	ConnectionString  string   `ini:"connection_string"` // DEPRECATED
+	Reader            []string `ini:"reader,omitempty,allowshadow"`
+	AllowCommands     bool     `ini:"allow_commands"` // TODO: rename to allow_shell
 	DisableSounds     bool     `ini:"disable_sounds"`
 	ProbeDevice       bool     `ini:"probe_device"`
-	ExitGame          bool     `ini:"exit_game"`
+	ExitGame          bool     `ini:"exit_game"` // TODO: rename to insert_mode
 	ExitGameBlocklist []string `ini:"exit_game_blocklist"`
 	ExitGameDelay     int8     `ini:"exit_game_delay"`
 	Debug             bool     `ini:"debug"`
@@ -67,6 +68,18 @@ func (c *UserConfig) SetConnectionString(connectionString string) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.TapTo.ConnectionString = connectionString
+}
+
+func (c *UserConfig) GetReader() []string {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.TapTo.Reader
+}
+
+func (c *UserConfig) SetReader(reader []string) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.TapTo.Reader = reader
 }
 
 func (c *UserConfig) GetAllowCommands() bool {
