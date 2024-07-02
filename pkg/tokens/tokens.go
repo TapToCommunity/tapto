@@ -8,7 +8,8 @@ type Token struct {
 	Text     string
 	Data     string
 	ScanTime time.Time
-	FromApi  bool
+	Remote   bool
+	Source   string
 }
 
 const (

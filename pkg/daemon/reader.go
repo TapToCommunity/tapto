@@ -31,7 +31,7 @@ func shouldExit(
 		return false
 	}
 
-	if st.GetLastScanned().FromApi || st.IsLauncherDisabled() {
+	if st.GetLastScanned().Remote || st.IsLauncherDisabled() {
 		return false
 	}
 

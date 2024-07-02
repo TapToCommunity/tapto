@@ -317,6 +317,7 @@ func (r *Reader) pollDevice(
 		Text:     tagText,
 		Data:     hex.EncodeToString(record.Bytes),
 		ScanTime: time.Now(),
+		Source:   r.conn,
 	}
 
 	return card, removed, nil

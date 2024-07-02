@@ -51,7 +51,7 @@ func handleLaunch(
 			UID:      req.UID,
 			Text:     req.Text,
 			ScanTime: time.Now(),
-			FromApi:  true,
+			Remote:   true,
 			Type:     req.Type,
 			Data:     req.Data,
 		}
@@ -82,7 +82,7 @@ func handleLaunchBasic(
 			UID:      "__api__",
 			Text:     text,
 			ScanTime: time.Now(),
-			FromApi:  true,
+			Remote:   true,
 		}
 
 		st.SetActiveCard(t)

@@ -114,6 +114,7 @@ func (r *FileReader) Open(device string, iq chan<- readers.Scan) error {
 				Text:     text,
 				Data:     hex.EncodeToString(contents),
 				ScanTime: time.Now(),
+				Source:   r.device,
 			}
 
 			log.Debug().Msgf("new token: %s", token.Text)
