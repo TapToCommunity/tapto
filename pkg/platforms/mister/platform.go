@@ -21,6 +21,10 @@ type Platform struct {
 	stopTr func() error
 }
 
+func (p *Platform) Id() string {
+	return "mister"
+}
+
 func (p *Platform) Setup(cfg *config.UserConfig) error {
 	kbd, err := input.NewKeyboard()
 	if err != nil {

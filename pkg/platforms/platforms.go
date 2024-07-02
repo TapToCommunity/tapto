@@ -18,6 +18,7 @@ type CmdEnv struct {
 }
 
 type Platform interface {
+	Id() string
 	Setup(*config.UserConfig) error
 	Stop() error
 	AfterScanHook(tokens.Token) error

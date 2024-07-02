@@ -143,6 +143,7 @@ func RunApiServer(
 		r.Use(middleware.Timeout(60 * time.Second))
 
 		r.Get("/status", handleStatus(pl, cfg, st))
+		r.Get("/version", handleVersion(pl))
 
 		r.Post("/launch", handleLaunch(st, tq))
 		r.Get("/launch/*", handleLaunchBasic(st, tq))
