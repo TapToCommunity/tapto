@@ -59,6 +59,13 @@ func connectReaders(
 		toConnect = append(toConnect, userDevice)
 	}
 
+	for _, device := range cfg.GetReader() {
+		if !utils.Contains(rs, device) && !utils.Contains(toConnect, device) {
+			log.Debug().Msgf("config device not connected, adding: %s", device)
+			toConnect = append(toConnect, device)
+		}
+	}
+
 	for _, device := range toConnect {
 		if _, ok := st.GetReader(device); !ok {
 			ps := strings.SplitN(device, ":", 2)
