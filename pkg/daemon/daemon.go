@@ -194,7 +194,8 @@ func launchToken(
 		if err != nil {
 			return err
 		}
-		if softwareSwap {
+
+		if softwareSwap && !token.FromApi {
 			log.Info().Msgf("current software launched set to: %s", token.UID)
 			lsq <- &token
 		}
