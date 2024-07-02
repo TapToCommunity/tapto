@@ -56,7 +56,7 @@ import (
 
 const (
 	appName    = "tapto"
-	appVersion = "1.5-dev"
+	appVersion = config.Version
 )
 
 func addToStartup() error {
@@ -133,7 +133,13 @@ func main() {
 	svcOpt := flag.String("service", "", "manage TapTo service (start, stop, restart, status)")
 	writeOpt := flag.String("write", "", "write text to tag")
 	launchOpt := flag.String("launch", "", "execute given text as if it were a token")
+	versionOpt := flag.Bool("version", false, "print version and exit")
 	flag.Parse()
+
+	if *versionOpt {
+		fmt.Println(appVersion)
+		os.Exit(0)
+	}
 
 	err := utils.InitLogging()
 	if err != nil {

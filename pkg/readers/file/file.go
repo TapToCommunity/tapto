@@ -114,6 +114,7 @@ func (r *FileReader) Open(device string, iq chan<- readers.Scan) error {
 				Text:     text,
 				Data:     hex.EncodeToString(contents),
 				ScanTime: time.Now(),
+				Source:   r.device,
 			}
 
 			log.Debug().Msgf("new token: %s", token.Text)
@@ -148,6 +149,6 @@ func (r *FileReader) Info() string {
 	return r.path
 }
 
-func (r *FileReader) Write(text string) error {
-	return errors.New("writing not supported on this reader")
+func (r *FileReader) Write(text string) (*tokens.Token, error) {
+	return nil, errors.New("writing not supported on this reader")
 }

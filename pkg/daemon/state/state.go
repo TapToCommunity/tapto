@@ -24,6 +24,7 @@ type State struct {
 	platform        platforms.Platform
 	readers         map[string]readers.Reader
 	softwareToken   *tokens.Token
+	wroteToken      *tokens.Token
 }
 
 func NewState(platform platforms.Platform) *State {
@@ -205,13 +206,22 @@ func (s *State) SetSoftwareToken(token *tokens.Token) {
 	s.mu.Lock()
 	s.softwareToken = token
 	s.mu.Unlock()
-	if s.updateHook != nil {
-		(*s.updateHook)(s)
-	}
 }
 
 func (s *State) GetSoftwareToken() *tokens.Token {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return s.softwareToken
+}
+
+func (s *State) SetWroteToken(token *tokens.Token) {
+	s.mu.Lock()
+	s.wroteToken = token
+	s.mu.Unlock()
+}
+
+func (s *State) GetWroteToken() *tokens.Token {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.wroteToken
 }

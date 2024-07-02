@@ -154,3 +154,32 @@ func handleStatus(
 		}
 	}
 }
+
+type VersionResponse struct {
+	Version  string `json:"version"`
+	Platform string `json:"platform"`
+}
+
+func (vr *VersionResponse) Render(w http.ResponseWriter, r *http.Request) error {
+	return nil
+}
+
+func handleVersion(
+	pl platforms.Platform,
+) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		log.Info().Msg("received version request")
+
+		resp := VersionResponse{
+			Version:  config.Version,
+			Platform: pl.Id(),
+		}
+
+		err := render.Render(w, r, &resp)
+		if err != nil {
+			log.Error().Err(err).Msgf("error encoding version response")
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
+}

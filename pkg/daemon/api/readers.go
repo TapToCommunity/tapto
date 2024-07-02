@@ -40,20 +40,29 @@ func handleReaderWrite(st *state.State) http.HandlerFunc {
 			return
 		}
 
-		// TODO: this just picks one at random for now
+		rid := rs[0]
+		lt := st.GetLastScanned()
 
-		reader, ok := st.GetReader(rs[0])
+		if !lt.ScanTime.IsZero() && !lt.Remote {
+			rid = lt.Source
+		}
+
+		reader, ok := st.GetReader(rid)
 		if !ok || reader == nil {
 			log.Error().Msg("reader not connected: " + rs[0])
 			http.Error(w, "reader not connected", http.StatusServiceUnavailable)
 			return
 		}
 
-		err = reader.Write(req.Text)
+		t, err := reader.Write(req.Text)
 		if err != nil {
 			log.Error().Err(err).Msg("error writing to reader")
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
+		}
+
+		if t != nil {
+			st.SetWroteToken(t)
 		}
 
 		w.WriteHeader(http.StatusOK)

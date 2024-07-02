@@ -31,7 +31,7 @@ func shouldExit(
 		return false
 	}
 
-	if st.GetLastScanned().FromApi || st.IsLauncherDisabled() {
+	if st.GetLastScanned().Remote || st.IsLauncherDisabled() {
 		return false
 	}
 
@@ -252,6 +252,15 @@ func readerManager(
 						log.Info().Msg("new token inserted, restarting exit timer")
 						startTimedExit()
 					}
+				}
+
+				wt := st.GetWroteToken()
+				if wt != nil && utils.TokensEqual(scan, wt) {
+					log.Info().Msg("skipping launching just written token")
+					st.SetWroteToken(nil)
+					continue
+				} else {
+					st.SetWroteToken(nil)
 				}
 
 				log.Info().Msgf("sending token: %v", scan)

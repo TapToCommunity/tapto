@@ -24,9 +24,14 @@ const (
 	periodBetweenLoop  = 250 * time.Millisecond
 )
 
+type WriteRequestResult struct {
+	Token *tokens.Token
+	Err   error
+}
+
 type WriteRequest struct {
 	Text   string
-	Result chan error
+	Result chan WriteRequestResult
 }
 
 type Reader struct {
@@ -161,25 +166,25 @@ func (r *Reader) Info() string {
 	return r.pnd.String()
 }
 
-func (r *Reader) Write(text string) error {
+func (r *Reader) Write(text string) (*tokens.Token, error) {
 	if !r.Connected() {
-		return errors.New("not connected")
+		return nil, errors.New("not connected")
 	}
 
 	req := WriteRequest{
 		Text:   text,
-		Result: make(chan error),
+		Result: make(chan WriteRequestResult),
 	}
 
 	r.write <- req
 
-	err := <-req.Result
-	if err != nil {
-		log.Error().Msgf("error writing to tag: %s", err)
-		return err
+	res := <-req.Result
+	if res.Err != nil {
+		log.Error().Msgf("error writing to tag: %s", res.Err)
+		return nil, res.Err
 	}
 
-	return nil
+	return res.Token, nil
 }
 
 func detectSerialReaders(connected []string) string {
@@ -312,13 +317,14 @@ func (r *Reader) pollDevice(
 		Text:     tagText,
 		Data:     hex.EncodeToString(record.Bytes),
 		ScanTime: time.Now(),
+		Source:   r.conn,
 	}
 
 	return card, removed, nil
 }
 
 func (r *Reader) writeTag(req WriteRequest) {
-	log.Info().Msgf("write request: %s", req.Text)
+	log.Info().Msgf("libnfc write request: %s", req.Text)
 
 	var count int
 	var target nfc.Target
@@ -344,13 +350,15 @@ func (r *Reader) writeTag(req WriteRequest) {
 	}
 
 	if count == 0 {
-		log.Error().Msgf("could not detect a card")
-		req.Result <- errors.New("could not detect a card")
+		log.Error().Msgf("could not detect a tag")
+		req.Result <- WriteRequestResult{
+			Err: errors.New("could not detect a tag"),
+		}
 		return
 	}
 
 	cardUid := tags.GetTagUID(target)
-	log.Info().Msgf("found card with UID: %s", cardUid)
+	log.Info().Msgf("found tag with UID: %s", cardUid)
 
 	cardType := tags.GetTagType(target)
 	var bytesWritten []byte
@@ -360,22 +368,55 @@ func (r *Reader) writeTag(req WriteRequest) {
 		bytesWritten, err = tags.WriteMifare(*r.pnd, req.Text, cardUid)
 		if err != nil {
 			log.Error().Msgf("error writing to mifare: %s", err)
-			req.Result <- err
+			req.Result <- WriteRequestResult{
+				Err: err,
+			}
 			return
 		}
 	case tokens.TypeNTAG:
 		bytesWritten, err = tags.WriteNtag(*r.pnd, req.Text)
 		if err != nil {
 			log.Error().Msgf("error writing to ntag: %s", err)
-			req.Result <- err
+			req.Result <- WriteRequestResult{
+				Err: err,
+			}
 			return
 		}
 	default:
-		log.Error().Msgf("unsupported card type: %s", cardType)
-		req.Result <- errors.New("unsupported card type")
+		log.Error().Msgf("unsupported tag type: %s", cardType)
+		req.Result <- WriteRequestResult{
+			Err: err,
+		}
+		return
+	}
+
+	t, _, err := r.pollDevice(r.pnd, nil, timesToPoll, periodBetweenPolls)
+	if err != nil || t == nil {
+		log.Error().Msgf("error reading written tag: %s", err)
+		req.Result <- WriteRequestResult{
+			Err: err,
+		}
+		return
+	}
+
+	if t.UID != cardUid {
+		log.Error().Msgf("UID mismatch after write: %s != %s", t.UID, cardUid)
+		req.Result <- WriteRequestResult{
+			Err: errors.New("UID mismatch after write"),
+		}
+		return
+	}
+
+	if t.Text != req.Text {
+		log.Error().Msgf("text mismatch after write: %s != %s", t.Text, req.Text)
+		req.Result <- WriteRequestResult{
+			Err: errors.New("text mismatch after write"),
+		}
 		return
 	}
 
 	log.Info().Msgf("successfully wrote to card: %s", hex.EncodeToString(bytesWritten))
-	req.Result <- nil
+	req.Result <- WriteRequestResult{
+		Token: t,
+	}
 }
