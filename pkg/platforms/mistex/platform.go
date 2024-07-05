@@ -1,28 +1,30 @@
-package mister
+package mistex
 
 import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strconv"
 
 	mrextConfig "github.com/wizzomafizzo/mrext/pkg/config"
 	"github.com/wizzomafizzo/mrext/pkg/games"
 	"github.com/wizzomafizzo/mrext/pkg/input"
-	"github.com/wizzomafizzo/mrext/pkg/mister"
+	mm "github.com/wizzomafizzo/mrext/pkg/mister"
 	"github.com/wizzomafizzo/tapto/pkg/config"
 	"github.com/wizzomafizzo/tapto/pkg/platforms"
+	"github.com/wizzomafizzo/tapto/pkg/platforms/mister"
 	"github.com/wizzomafizzo/tapto/pkg/tokens"
 )
 
 type Platform struct {
 	kbd    input.Keyboard
-	tr     *Tracker
+	tr     *mister.Tracker
 	stopTr func() error
 }
 
 func (p *Platform) Id() string {
-	return "mister"
+	return "mistex"
 }
 
 func (p *Platform) Setup(cfg *config.UserConfig) error {
@@ -33,7 +35,7 @@ func (p *Platform) Setup(cfg *config.UserConfig) error {
 
 	p.kbd = kbd
 
-	tr, stopTr, err := StartTracker(*UserConfigToMrext(cfg))
+	tr, stopTr, err := mister.StartTracker(*mister.UserConfigToMrext(cfg))
 	if err != nil {
 		return err
 	}
@@ -41,7 +43,7 @@ func (p *Platform) Setup(cfg *config.UserConfig) error {
 	p.tr = tr
 	p.stopTr = stopTr
 
-	err = Setup(p.tr)
+	err = mister.Setup(p.tr)
 	if err != nil {
 		return err
 	}
@@ -58,9 +60,9 @@ func (p *Platform) Stop() error {
 }
 
 func (p *Platform) AfterScanHook(token tokens.Token) error {
-	f, err := os.Create(TokenReadFile)
+	f, err := os.Create(mister.TokenReadFile)
 	if err != nil {
-		return fmt.Errorf("unable to create scan result file %s: %s", TokenReadFile, err)
+		return fmt.Errorf("unable to create scan result file %s: %s", mister.TokenReadFile, err)
 	}
 	defer func(f *os.File) {
 		_ = f.Close()
@@ -68,14 +70,14 @@ func (p *Platform) AfterScanHook(token tokens.Token) error {
 
 	_, err = f.WriteString(fmt.Sprintf("%s,%s", token.UID, token.Text))
 	if err != nil {
-		return fmt.Errorf("unable to write scan result file %s: %s", TokenReadFile, err)
+		return fmt.Errorf("unable to write scan result file %s: %s", mister.TokenReadFile, err)
 	}
 
 	return nil
 }
 
 func (p *Platform) RootFolders(cfg *config.UserConfig) []string {
-	return games.GetGamesFolders(UserConfigToMrext(cfg))
+	return games.GetGamesFolders(mister.UserConfigToMrext(cfg))
 }
 
 func (p *Platform) ZipsAsFolders() bool {
@@ -83,34 +85,50 @@ func (p *Platform) ZipsAsFolders() bool {
 }
 
 func (p *Platform) ConfigFolder() string {
-	return ConfigFolder
+	return mister.ConfigFolder
 }
 
 func (p *Platform) NormalizePath(cfg *config.UserConfig, path string) string {
-	return NormalizePath(cfg, path)
+	return mister.NormalizePath(cfg, path)
 }
 
-func (p *Platform) KillLauncher() error {
-	ExitGame()
+func LaunchMenu() error {
+	if _, err := os.Stat(mrextConfig.CmdInterface); err != nil {
+		return fmt.Errorf("command interface not accessible: %s", err)
+	}
+
+	cmd, err := os.OpenFile(mrextConfig.CmdInterface, os.O_RDWR, 0)
+	if err != nil {
+		return err
+	}
+	defer cmd.Close()
+
+	// TODO: hardcoded for xilinx variant, should read pref from mister.ini
+	cmd.WriteString(fmt.Sprintf("load_core %s\n", filepath.Join(mrextConfig.SdFolder, "menu.bit")))
+
 	return nil
 }
 
+func (p *Platform) KillLauncher() error {
+	return LaunchMenu()
+}
+
 func (p *Platform) LaunchingEnabled() bool {
-	_, err := os.Stat(DisableLaunchFile)
+	_, err := os.Stat(mister.DisableLaunchFile)
 	return err != nil
 }
 
 func (p *Platform) SetLaunching(disabled bool) error {
 	if disabled {
-		return os.Remove(DisableLaunchFile)
+		return os.Remove(mister.DisableLaunchFile)
 	} else {
-		_, err := os.Create(DisableLaunchFile)
+		_, err := os.Create(mister.DisableLaunchFile)
 		return err
 	}
 }
 
 func (p *Platform) GetActiveLauncher() string {
-	core := GetActiveCoreName()
+	core := mister.GetActiveCoreName()
 
 	if core == mrextConfig.MenuCore {
 		return ""
@@ -120,11 +138,11 @@ func (p *Platform) GetActiveLauncher() string {
 }
 
 func (p *Platform) PlayFailSound(cfg *config.UserConfig) {
-	PlayFail(cfg)
+	mister.PlayFail(cfg)
 }
 
 func (p *Platform) PlaySuccessSound(cfg *config.UserConfig) {
-	PlaySuccess(cfg)
+	mister.PlaySuccess(cfg)
 }
 
 func (p *Platform) ActiveSystem() string {
@@ -153,11 +171,11 @@ func (p *Platform) LaunchSystem(cfg *config.UserConfig, id string) error {
 		return err
 	}
 
-	return mister.LaunchCore(UserConfigToMrext(cfg), *system)
+	return mm.LaunchCore(mister.UserConfigToMrext(cfg), *system)
 }
 
 func (p *Platform) LaunchFile(cfg *config.UserConfig, path string) error {
-	return mister.LaunchGenericFile(UserConfigToMrext(cfg), path)
+	return mm.LaunchGenericFile(mister.UserConfigToMrext(cfg), path)
 }
 
 func (p *Platform) Shell(cmd string) error {
