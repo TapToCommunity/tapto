@@ -57,7 +57,6 @@ After=network.target
 Type=forking
 Restart=no
 ExecStart=/media/fat/Scripts/tapto.sh -service start
-ExecStop=/media/fat/Scripts/tapto.sh -service stop
 
 [Install]
 WantedBy=multi-user.target
@@ -228,9 +227,9 @@ func main() {
 			log.Info().Msg("service started manually")
 			fmt.Println("TapTo service started.")
 		}
+	} else {
+		fmt.Println("TapTo service is running.")
 	}
-
-	fmt.Println("TapTo service is running.")
 
 	ip, err := utils.GetLocalIp()
 	if err != nil {
