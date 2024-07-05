@@ -271,6 +271,17 @@ func StartDaemon(
 	tq := tokens.NewTokenQueue()
 	lsq := make(chan *tokens.Token)
 
+	log.Info().Msgf("TapTo v%s", config.Version)
+	log.Info().Msgf("config path = %s", cfg.IniPath)
+	log.Info().Msgf("app path = %s", cfg.AppPath)
+	log.Info().Msgf("connection_string = %s", cfg.GetConnectionString())
+	log.Info().Msgf("allow_commands = %t", cfg.GetAllowCommands())
+	log.Info().Msgf("disable_sounds = %t", cfg.GetDisableSounds())
+	log.Info().Msgf("probe_device = %t", cfg.GetProbeDevice())
+	log.Info().Msgf("exit_game = %t", cfg.GetExitGame())
+	log.Info().Msgf("exit_game_blocklist = %s", cfg.GetExitGameBlocklist())
+	log.Info().Msgf("debug = %t", cfg.GetDebug())
+
 	db, err := database.Open()
 	if err != nil {
 		log.Error().Err(err).Msgf("error opening database")
