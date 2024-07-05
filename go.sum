@@ -44,8 +44,8 @@ github.com/stretchr/testify v1.9.0 h1:HtqpIVDClZ4nwg75+f6Lvsy/wHu+3BoSGCbBAcpTsT
 github.com/stretchr/testify v1.9.0/go.mod h1:r2ic/lqez/lEtzL7wO/rwa5dbSLXVDPFyf8C91i36aY=
 github.com/txn2/txeh v1.4.0 h1:0tdvpA4HGJrj8X3kmrU6o/JFStI009nKxwDpMK5CnRU=
 github.com/txn2/txeh v1.4.0/go.mod h1:Mgq0hY184zCrDBLgvkIp+9NYGHoYbJcu4xKqUcx1shc=
-github.com/wizzomafizzo/mrext v0.0.0-20240705034926-32e1c9c44676 h1:wrucOAYb8LFEywrqQ3ySD/HQZ3GhRAaMA8h2saCxUog=
-github.com/wizzomafizzo/mrext v0.0.0-20240705034926-32e1c9c44676/go.mod h1:pWjoPIzJIXlDfEmdf++eUqsZKrEsYVkOHy39s/H7WLA=
+github.com/wizzomafizzo/mrext v0.0.0-20240705120538-5efdc40f9c08 h1:IfCVEDGCzNY4Lx+1tUUkTOLEv4yxXh9Jpsj6T+8YWr4=
+github.com/wizzomafizzo/mrext v0.0.0-20240705120538-5efdc40f9c08/go.mod h1:pWjoPIzJIXlDfEmdf++eUqsZKrEsYVkOHy39s/H7WLA=
 go.etcd.io/bbolt v1.3.9 h1:8x7aARPEXiXbHmtUwAIv7eV2fQFHrLLavdiJ3uzJXoI=
 go.etcd.io/bbolt v1.3.9/go.mod h1:zaO32+Ti0PK1ivdPtgMESzuzL2VPoIG1PCQNvOdo/dE=
 golang.org/x/exp v0.0.0-20240613232115-7f521ea00fb8 h1:yixxcjnhBmY0nkL253HFVIm0JsFHwrHdT3Yh6szTnfY=

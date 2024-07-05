@@ -39,7 +39,7 @@ require (
 	github.com/gorilla/websocket v1.5.1
 	github.com/hsanjuan/go-ndef v0.0.1
 	github.com/rs/zerolog v1.31.0
-	github.com/wizzomafizzo/mrext v0.0.0-20240705034926-32e1c9c44676
+	github.com/wizzomafizzo/mrext v0.0.0-20240705120538-5efdc40f9c08
 	go.etcd.io/bbolt v1.3.9
 	golang.org/x/sync v0.7.0
 )

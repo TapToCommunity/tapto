@@ -384,9 +384,25 @@ func StartFileWatch(tr *Tracker) (*fsnotify.Watcher, error) {
 		}
 	}()
 
+	if _, err := os.Stat(config.CoreNameFile); os.IsNotExist(err) {
+		err := os.WriteFile(config.CoreNameFile, []byte(""), 0644)
+		if err != nil {
+			return nil, err
+		}
+		log.Info().Msgf("created core name file: %s", config.CoreNameFile)
+	}
+
 	err = watcher.Add(config.CoreNameFile)
 	if err != nil {
 		return nil, err
+	}
+
+	if _, err := os.Stat(config.CoreConfigFolder); os.IsNotExist(err) {
+		err := os.MkdirAll(config.CoreConfigFolder, 0755)
+		if err != nil {
+			return nil, err
+		}
+		log.Info().Msgf("created core config folder: %s", config.CoreConfigFolder)
 	}
 
 	err = watcher.Add(config.CoreConfigFolder)
@@ -394,17 +410,30 @@ func StartFileWatch(tr *Tracker) (*fsnotify.Watcher, error) {
 		return nil, err
 	}
 
+	if _, err := os.Stat(config.ActiveGameFile); os.IsNotExist(err) {
+		err := os.WriteFile(config.ActiveGameFile, []byte(""), 0644)
+		if err != nil {
+			return nil, err
+		}
+		log.Info().Msgf("created active game file: %s", config.ActiveGameFile)
+	}
+
 	err = watcher.Add(config.ActiveGameFile)
 	if err != nil {
 		return nil, err
 	}
 
-	_, fileExistsError := os.Stat(config.CurrentPathFile)
-	if fileExistsError == nil {
-		err = watcher.Add(config.CurrentPathFile)
+	if _, err := os.Stat(config.CurrentPathFile); os.IsNotExist(err) {
+		err := os.WriteFile(config.CurrentPathFile, []byte(""), 0644)
 		if err != nil {
 			return nil, err
 		}
+		log.Info().Msgf("created current path file: %s", config.CurrentPathFile)
+	}
+
+	err = watcher.Add(config.CurrentPathFile)
+	if err != nil {
+		return nil, err
 	}
 
 	return watcher, nil

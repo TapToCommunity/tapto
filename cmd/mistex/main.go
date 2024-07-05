@@ -51,7 +51,6 @@ func tryAddToStartup() (bool, error) {
 	unitPath := "/etc/systemd/system/tapto.service"
 	unitFile := `[Unit]
 Description=TapTo service
-After=network.target
 
 [Service]
 Type=forking
@@ -72,7 +71,13 @@ WantedBy=multi-user.target
 		return false, err
 	}
 
-	cmd := exec.Command("systemctl", "enable", "tapto.service")
+	cmd := exec.Command("systemctl", "daemon-reload")
+	err = cmd.Run()
+	if err != nil {
+		return false, err
+	}
+
+	cmd = exec.Command("systemctl", "enable", "tapto.service")
 	err = cmd.Run()
 	if err != nil {
 		return false, err
