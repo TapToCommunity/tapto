@@ -1,5 +1,10 @@
 #!/bin/bash
 
-GO111MODULE=on GOPROXY=https://goproxy.io,direct CGO_ENABLED=1 CGO_LDFLAGS="-lnfc -lusb -lcurses" go build \
+export GO111MODULE=on
+export GOPROXY=https://goproxy.io,direct
+export CGO_ENABLED=1
+export CGO_LDFLAGS="-lpcsclite -lnfc -lusb -lcurses"
+
+go build \
     --ldflags "-linkmode external -extldflags -static -s -w" \
     -o _build/mister_arm/tapto.sh ./cmd/mister
