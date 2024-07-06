@@ -11,7 +11,7 @@ dotenv: [".env"]
 tasks:
   build:
     cmds:
-      - go build --ldflags "-linkmode external -extldflags -static -s -w" -o _build/${PLATFORM}_{{ARCH}} ./cmd/$PLATFORM
+      - go build --ldflags "-linkmode external -extldflags -static -s -w" -o _build/${PLATFORM}_{{ARCH}}/${TAPTO_BIN} ./cmd/$PLATFORM
 
   build-image-mister:
     vars:
@@ -19,6 +19,13 @@ tasks:
       DOCKERFILE: "{{.PWD}}/scripts/mister/build"
     cmds:
       - docker build --platform linux/arm/v7 -t {{.IMAGE_NAME}} {{.DOCKERFILE}}
+
+  build-image-mistex:
+    vars:
+      IMAGE_NAME: tapto/mistex-build
+      DOCKERFILE: "{{.PWD}}/scripts/linux_arm64/build"
+    cmds:
+      - docker build --platform linux/arm/v8 -t {{.IMAGE_NAME}} {{.DOCKERFILE}}
 
   build-mister:
     vars:
@@ -34,12 +41,33 @@ tasks:
       - rm -f {{.BUILD_DIR}}/tapto-mister.zip
       - zip {{.BUILD_DIR}}/tapto-mister.zip {{.BUILD_DIR}}/tapto.sh {{.BUILD_DIR}}/taptui.sh
 
+  build-mistex:
+    vars:
+      BUILD_DIR: "{{.PWD}}/_build/mistex_arm64"
+      BUILDCACHE: "{{.BUILD_DIR}}/.go-buildcache"
+      MODCACHE: "{{.BUILD_DIR}}/.go-modcache"
+      IMAGE_NAME: tapto/mistex-build
+      IMG_BUILDCACHE: /home/build/.cache/go-build
+      IMG_MODCACHE: /home/build/go/pkg/mod
+    cmds:
+      - docker run --rm --platform linux/arm/v8 -v {{.BUILDCACHE}}:{{.IMG_BUILDCACHE}} -v {{.MODCACHE}}:{{.IMG_MODCACHE}} -v {{.PWD}}:/build --user 1000:1000 {{.IMAGE_NAME}} bash -c "PLATFORM=mistex TAPTO_BIN=tapto.sh task build"
+      - cp {{.PWD}}/scripts/taptui/taptui.sh {{.BUILD_DIR}}
+      - rm -f {{.BUILD_DIR}}/tapto-mistex.zip
+      - zip {{.BUILD_DIR}}/tapto-mistex.zip {{.BUILD_DIR}}/tapto.sh {{.BUILD_DIR}}/taptui.sh
+
   deploy-mister:
     cmds:
       - task: build-mister
       - scp _build/mister_arm/taptui.sh root@${MISTER_IP}:/media/fat/Scripts/taptui.sh
       - scp _build/mister_arm/tapto.sh root@${MISTER_IP}:/media/fat/Scripts/tapto.sh
       - ssh root@${MISTER_IP} /media/fat/Scripts/tapto.sh -service restart
+
+  deploy-mistex:
+    cmds:
+      - task: build-mistex
+      - scp _build/mistex_arm64/taptui.sh root@${MISTEX_IP}:/media/fat/Scripts/taptui.sh
+      - scp _build/mistex_arm64/tapto.sh root@${MISTEX_IP}:/media/fat/Scripts/tapto.sh
+      - ssh root@${MISTEX_IP} /media/fat/Scripts/tapto.sh -service restart
 
   clean: rm -rf _build
 

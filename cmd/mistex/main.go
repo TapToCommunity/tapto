@@ -28,58 +28,62 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
+	"os/exec"
 	"strings"
 
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 
 	"github.com/wizzomafizzo/tapto/pkg/daemon/api"
-	"github.com/wizzomafizzo/tapto/pkg/launcher"
 	"github.com/wizzomafizzo/tapto/pkg/platforms/mister"
+	"github.com/wizzomafizzo/tapto/pkg/platforms/mistex"
 	"github.com/wizzomafizzo/tapto/pkg/utils"
-
-	gc "github.com/rthornton128/goncurses"
-	"github.com/wizzomafizzo/mrext/pkg/curses"
 
 	"github.com/wizzomafizzo/tapto/pkg/config"
 	"github.com/wizzomafizzo/tapto/pkg/daemon"
-
-	mrextMister "github.com/wizzomafizzo/mrext/pkg/mister"
 )
 
-// TODO: something like the nfc-list utility so new users with unsupported readers can help identify them
-// TODO: play sound using go library
-// TODO: would it be possible to unlock the OSD with a card?
-// TODO: use a tag to signal that that next tag should have the active game written to it
-// TODO: if it exists, use search.db instead of on demand index for random
+const appName = "tapto"
 
-const (
-	appName    = "tapto"
-	appVersion = config.Version
-)
+func tryAddToStartup() (bool, error) {
+	unitPath := "/etc/systemd/system/tapto.service"
+	unitFile := `[Unit]
+Description=TapTo service
 
-func addToStartup() error {
-	var startup mrextMister.Startup
+[Service]
+Type=forking
+Restart=no
+ExecStart=/media/fat/Scripts/tapto.sh -service start
 
-	err := startup.Load()
+[Install]
+WantedBy=multi-user.target
+`
+
+	_, err := os.Stat(unitPath)
+	if err == nil {
+		return false, nil
+	}
+
+	err = os.WriteFile(unitPath, []byte(unitFile), 0644)
 	if err != nil {
-		return err
+		return false, err
 	}
 
-	if !startup.Exists("mrext/" + appName) {
-		err = startup.AddService("mrext/" + appName)
-		if err != nil {
-			return err
-		}
-
-		err = startup.Save()
-		if err != nil {
-			return err
-		}
+	cmd := exec.Command("systemctl", "daemon-reload")
+	err = cmd.Run()
+	if err != nil {
+		return false, err
 	}
 
-	return nil
+	cmd = exec.Command("systemctl", "enable", "tapto.service")
+	err = cmd.Run()
+	if err != nil {
+		return false, err
+	}
+
+	return true, nil
 }
 
 func handleWriteCommand(textToWrite string, svc *mister.Service, cfg *config.UserConfig) {
@@ -100,7 +104,7 @@ func handleWriteCommand(textToWrite string, svc *mister.Service, cfg *config.Use
 
 	resp, err := http.Post(
 		// TODO: don't hardcode port
-		"http://localhost:7497/api/v1/readers/0/write",
+		"http://127.0.0.1:7497/api/v1/readers/0/write",
 		"application/json",
 		bytes.NewBuffer(body),
 	)
@@ -129,15 +133,37 @@ func handleWriteCommand(textToWrite string, svc *mister.Service, cfg *config.Use
 	os.Exit(0)
 }
 
+func handleLaunchCommand(tokenToLaunch string, svc *mister.Service, cfg *config.UserConfig) {
+	log.Info().Msgf("launching token: %s", tokenToLaunch)
+
+	if !svc.Running() {
+		_, _ = fmt.Fprintln(os.Stderr, "TapTo service is not running, please start it before launching.")
+		log.Error().Msg("TapTo service is not running, exiting")
+		os.Exit(1)
+	}
+
+	resp, err := http.Get("http://127.0.0.1:7497/api/v1/launch/" + url.QueryEscape(tokenToLaunch))
+	if err != nil {
+		_, _ = fmt.Fprintln(os.Stderr, "Error sending request:", err)
+		log.Error().Msgf("error sending request: %s", err)
+		os.Exit(1)
+	}
+	defer resp.Body.Close()
+
+	_, _ = fmt.Fprintln(os.Stderr, "Successfully launched token.")
+	log.Info().Msg("successfully launched token")
+	os.Exit(0)
+}
+
 func main() {
 	svcOpt := flag.String("service", "", "manage TapTo service (start, stop, restart, status)")
 	writeOpt := flag.String("write", "", "write text to tag")
-	launchOpt := flag.String("launch", "", "execute given text as if it were a token")
+	launchOpt := flag.String("launch", "", "execute text as if it were a token")
 	versionOpt := flag.Bool("version", false, "print version and exit")
 	flag.Parse()
 
 	if *versionOpt {
-		fmt.Println("TapTo v" + appVersion + " (mister)")
+		fmt.Println("TapTo v" + config.Version + " (mistex)")
 		os.Exit(0)
 	}
 
@@ -167,7 +193,7 @@ func main() {
 	svc, err := mister.NewService(mister.ServiceArgs{
 		Name: appName,
 		Entry: func() (func() error, error) {
-			return daemon.StartDaemon(&mister.Platform{}, cfg)
+			return daemon.StartDaemon(&mistex.Platform{}, cfg)
 		},
 	})
 	if err != nil {
@@ -178,47 +204,42 @@ func main() {
 
 	if *writeOpt != "" {
 		handleWriteCommand(*writeOpt, svc, cfg)
-	}
-
-	if *launchOpt != "" {
-		// TODO: this is doubling up on the split logic in daemon
-		cmds := strings.Split(*launchOpt, "||")
-		for i, cmd := range cmds {
-			err, _ := launcher.LaunchToken(&mister.Platform{}, cfg, true, cmd, len(cmds), i)
-			if err != nil {
-				log.Error().Msgf("error launching token: %s", err)
-				fmt.Println("Error launching token:", err)
-				os.Exit(1)
-			}
-		}
-
-		os.Exit(0)
+	} else if *launchOpt != "" {
+		handleLaunchCommand(*launchOpt, svc, cfg)
 	}
 
 	svc.ServiceHandler(svcOpt)
 
-	stdscr, err := curses.Setup()
-	if err != nil {
-		log.Error().Msgf("starting curses: %s", err)
-		os.Exit(1)
-	}
-	defer gc.End()
+	fmt.Println("TapTo v" + config.Version)
 
-	err = tryAddStartup(stdscr)
+	added, err := tryAddToStartup()
 	if err != nil {
-		log.Error().Msgf("error adding startup: %s", err)
+		log.Error().Msgf("error adding to startup: %s", err)
+		fmt.Println("Error adding to startup:", err)
 		os.Exit(1)
+	} else if added {
+		log.Info().Msg("added to startup")
+		fmt.Println("Added TapTo to MiSTeX startup.")
 	}
 
 	if !svc.Running() {
 		err := svc.Start()
+		fmt.Println("TapTo service not running, starting...")
 		if err != nil {
 			log.Error().Msgf("error starting service: %s", err)
+			fmt.Println("Error starting TapTo service:", err)
+		} else {
+			log.Info().Msg("service started manually")
+			fmt.Println("TapTo service started.")
 		}
+	} else {
+		fmt.Println("TapTo service is running.")
 	}
 
-	err = displayServiceInfo(stdscr, svc)
+	ip, err := utils.GetLocalIp()
 	if err != nil {
-		log.Error().Msgf("error displaying service info: %s", err)
+		fmt.Println("Device address: Unknown")
+	} else {
+		fmt.Println("Device address:", ip.String())
 	}
 }

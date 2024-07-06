@@ -12,16 +12,16 @@ import (
 	"github.com/wizzomafizzo/tapto/pkg/platforms"
 )
 
-var commandsMappings = map[string]func(Platform, platforms.CmdEnv) error{
-	"mister.ini":  cmdIni,
-	"mister.core": cmdLaunchCore,
+var commandsMappings = map[string]func(platforms.Platform, platforms.CmdEnv) error{
+	"mister.ini":  CmdIni,
+	"mister.core": CmdLaunchCore,
 	// "mister.script": cmdMisterScript,
-	"mister.mgl": cmdMisterMgl,
+	"mister.mgl": CmdMisterMgl,
 
-	"ini": cmdIni, // DEPRECATED
+	"ini": CmdIni, // DEPRECATED
 }
 
-func cmdIni(pl Platform, env platforms.CmdEnv) error {
+func CmdIni(pl platforms.Platform, env platforms.CmdEnv) error {
 	inis, err := mister.GetAllMisterIni()
 	if err != nil {
 		return err
@@ -54,11 +54,11 @@ func cmdIni(pl Platform, env platforms.CmdEnv) error {
 	return nil
 }
 
-func cmdLaunchCore(pl Platform, env platforms.CmdEnv) error {
+func CmdLaunchCore(pl platforms.Platform, env platforms.CmdEnv) error {
 	return mister.LaunchShortCore(env.Args)
 }
 
-func cmdMisterScript(pl Platform, env platforms.CmdEnv) error {
+func cmdMisterScript(pl platforms.Platform, env platforms.CmdEnv) error {
 	// TODO: escaping arguments
 	// TODO: does this work if game is running?
 
@@ -91,10 +91,12 @@ func cmdMisterScript(pl Platform, env platforms.CmdEnv) error {
 		script = fmt.Sprintf("%s %s", script, scriptArgs)
 	}
 
-	return mister.RunScript(pl.kbd, script)
+	// TODO: implement without specific reference to uinput.Keyboard
+	// return mister.RunScript(pl.kbd, script)
+	return nil
 }
 
-func cmdMisterMgl(pl Platform, env platforms.CmdEnv) error {
+func CmdMisterMgl(pl platforms.Platform, env platforms.CmdEnv) error {
 	if env.Args == "" {
 		return fmt.Errorf("no mgl specified")
 	}
