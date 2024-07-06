@@ -124,7 +124,9 @@ func (r *Reader) Close() error {
 func (r *Reader) Ids() []string {
 	return []string{
 		"pn532_uart",
+		"pn532_i2c",
 		"acr122_usb",
+		"pcsc",
 	}
 }
 
