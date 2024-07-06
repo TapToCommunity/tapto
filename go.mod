@@ -24,9 +24,11 @@ require (
 
 require (
 	github.com/ajg/form v1.5.1 // indirect
+	github.com/creack/goselect v0.1.2 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/stretchr/testify v1.9.0 // indirect
+	go.bug.st/serial v1.6.2 // indirect
 	golang.org/x/term v0.22.0 // indirect
 )
 
