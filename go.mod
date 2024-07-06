@@ -28,7 +28,6 @@ require (
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/stretchr/testify v1.9.0 // indirect
-	go.bug.st/serial v1.6.2 // indirect
 	golang.org/x/term v0.22.0 // indirect
 )
 
@@ -42,6 +41,7 @@ require (
 	github.com/hsanjuan/go-ndef v0.0.1
 	github.com/rs/zerolog v1.31.0
 	github.com/wizzomafizzo/mrext v0.0.0-20240705120538-5efdc40f9c08
+	go.bug.st/serial v1.6.2
 	go.etcd.io/bbolt v1.3.9
 	golang.org/x/sync v0.7.0
 )
