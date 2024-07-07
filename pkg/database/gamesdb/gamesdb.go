@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"sync"
 
 	bolt "go.etcd.io/bbolt"
 	"golang.org/x/sync/errgroup"
@@ -352,15 +353,30 @@ func SearchNamesRegexp(platform platforms.Platform, systems []System, query stri
 	})
 }
 
+var globCache = make(map[string]glob.Glob)
+var globCacheMutex = &sync.RWMutex{}
+
 func SearchNamesGlob(platform platforms.Platform, systems []System, query string) ([]SearchResult, error) {
 	return searchNamesGeneric(platform, systems, query, func(query, keyName string) bool {
-		// TODO: this should be cached
-		g, err := glob.Compile(query)
-		if err != nil {
-			return false
+		globCacheMutex.RLock()
+		cached, ok := globCache[query]
+		if !ok {
+			globCacheMutex.RUnlock()
+
+			g, err := glob.Compile(query)
+			if err != nil {
+				return false
+			}
+
+			globCacheMutex.Lock()
+			globCache[query] = g
+			globCacheMutex.Unlock()
+			cached = g
+		} else {
+			globCacheMutex.RUnlock()
 		}
 
-		return g.Match(strings.ToLower(keyName))
+		return cached.Match(strings.ToLower(keyName))
 	})
 }
 
