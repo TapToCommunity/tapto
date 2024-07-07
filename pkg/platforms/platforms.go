@@ -42,6 +42,7 @@ type Platform interface {
 	Shell(string) error
 	KeyboardInput(string) error // DEPRECATED
 	KeyboardPress(string) error
+	GamepadPress(string) error
 	ForwardCmd(CmdEnv) error
 	LookupMapping(tokens.Token) (string, bool)
 }

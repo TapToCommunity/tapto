@@ -35,7 +35,6 @@ import (
 )
 
 // TODO: adding some logging for each command
-// TODO: search game file
 // TODO: game file by hash
 
 var commandMappings = map[string]func(platforms.Platform, platforms.CmdEnv) error{
@@ -55,6 +54,7 @@ var commandMappings = map[string]func(platforms.Platform, platforms.CmdEnv) erro
 	"http.post": cmdHttpPost,
 
 	"input.keyboard": cmdKeyboard,
+	"input.gamepad":  cmdGamepad,
 	"input.coinp1":   cmdCoinP1,
 	"input.coinp2":   cmdCoinP2,
 

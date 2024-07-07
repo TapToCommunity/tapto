@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/bendahl/uinput"
 	"github.com/rs/zerolog/log"
 	mrextConfig "github.com/wizzomafizzo/mrext/pkg/config"
 	"github.com/wizzomafizzo/mrext/pkg/games"
@@ -20,6 +21,7 @@ import (
 
 type Platform struct {
 	kbd                 input.Keyboard
+	gpd                 uinput.Gamepad
 	tr                  *Tracker
 	stopTr              func() error
 	dbLoadTime          time.Time
@@ -62,6 +64,17 @@ func (p *Platform) Setup(cfg *config.UserConfig) error {
 	}
 
 	p.kbd = kbd
+
+	gpd, err := uinput.CreateGamepad(
+		"/dev/uinput",
+		[]byte("tapto"),
+		0x1234,
+		0x5678,
+	)
+	if err != nil {
+		return err
+	}
+	p.gpd = gpd
 
 	tr, stopTr, err := StartTracker(*UserConfigToMrext(cfg))
 	if err != nil {
@@ -107,6 +120,13 @@ func (p *Platform) Setup(cfg *config.UserConfig) error {
 func (p *Platform) Stop() error {
 	if p.stopTr != nil {
 		err := p.stopTr()
+		if err != nil {
+			return err
+		}
+	}
+
+	if p.gpd != nil {
+		err := p.gpd.Close()
 		if err != nil {
 			return err
 		}
@@ -256,6 +276,19 @@ func (p *Platform) KeyboardPress(name string) error {
 	} else {
 		p.kbd.Press(code)
 	}
+
+	return nil
+}
+
+func (p *Platform) GamepadPress(name string) error {
+	code, ok := GamepadMap[name]
+	if !ok {
+		return fmt.Errorf("unknown button: %s", name)
+	}
+
+	p.gpd.ButtonDown(code)
+	time.Sleep(40 * time.Millisecond)
+	p.gpd.ButtonUp(code)
 
 	return nil
 }

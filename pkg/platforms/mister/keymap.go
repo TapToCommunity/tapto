@@ -1,5 +1,7 @@
 package mister
 
+import "github.com/bendahl/uinput"
+
 var KeyboardMap = map[string]int{
 	"esc":       1,
 	"1":         2,
@@ -134,4 +136,34 @@ var KeyboardMap = map[string]int{
 	"B":  -48,
 	"N":  -49,
 	"M":  -50,
+}
+
+var GamepadMap = map[string]int{
+	"^":        uinput.ButtonDpadUp,
+	"{up}":     uinput.ButtonDpadUp,
+	"V":        uinput.ButtonDpadDown,
+	"{down}":   uinput.ButtonDpadDown,
+	"<":        uinput.ButtonDpadLeft,
+	"{left}":   uinput.ButtonDpadLeft,
+	">":        uinput.ButtonDpadRight,
+	"{right}":  uinput.ButtonDpadRight,
+	"A":        uinput.ButtonEast,
+	"a":        uinput.ButtonEast,
+	"B":        uinput.ButtonSouth,
+	"b":        uinput.ButtonSouth,
+	"X":        uinput.ButtonNorth,
+	"x":        uinput.ButtonNorth,
+	"Y":        uinput.ButtonWest,
+	"y":        uinput.ButtonWest,
+	"{start}":  uinput.ButtonStart,
+	"{select}": uinput.ButtonSelect,
+	"{menu}":   uinput.ButtonMode,
+	"L":        uinput.ButtonBumperLeft,
+	"l":        uinput.ButtonBumperLeft,
+	"{l1}":     uinput.ButtonBumperLeft,
+	"R":        uinput.ButtonBumperRight,
+	"r":        uinput.ButtonBumperRight,
+	"{r1}":     uinput.ButtonBumperRight,
+	"{l2}":     uinput.ButtonTriggerLeft,
+	"{r2}":     uinput.ButtonTriggerRight,
 }
