@@ -185,10 +185,11 @@ func main() {
 		zerolog.SetGlobalLevel(zerolog.InfoLevel)
 	}
 
+	pl := &mister.Platform{}
 	svc, err := mister.NewService(mister.ServiceArgs{
 		Name: appName,
 		Entry: func() (func() error, error) {
-			return daemon.StartDaemon(&mister.Platform{}, cfg)
+			return daemon.StartDaemon(pl, cfg)
 		},
 	})
 	if err != nil {
@@ -225,7 +226,7 @@ func main() {
 		}
 	}
 
-	err = displayServiceInfo(stdscr, svc)
+	err = displayServiceInfo(pl, cfg, stdscr, svc)
 	if err != nil {
 		log.Error().Msgf("error displaying service info: %s", err)
 	}
