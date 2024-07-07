@@ -40,6 +40,7 @@ type Platform interface {
 	LaunchSystem(*config.UserConfig, string) error
 	LaunchFile(*config.UserConfig, string) error
 	Shell(string) error
-	KeyboardInput(string) error
+	KeyboardInput(string) error // DEPRECATED
+	KeyboardPress(string) error
 	ForwardCmd(CmdEnv) error
 }

@@ -198,6 +198,21 @@ func (p *Platform) KeyboardInput(input string) error {
 	return nil
 }
 
+func (p *Platform) KeyboardPress(name string) error {
+	code, ok := mister.KeyboardMap[name]
+	if !ok {
+		return fmt.Errorf("unknown key: %s", name)
+	}
+
+	if code < 0 {
+		p.kbd.Combo(42, -code)
+	} else {
+		p.kbd.Press(code)
+	}
+
+	return nil
+}
+
 func (p *Platform) ForwardCmd(env platforms.CmdEnv) error {
 	if f, ok := commandsMappings[env.Cmd]; ok {
 		return f(p, env)
