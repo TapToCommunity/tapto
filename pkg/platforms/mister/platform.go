@@ -26,6 +26,7 @@ type Platform struct {
 	uidMap              map[string]string
 	textMap             map[string]string
 	stopMappingsWatcher func() error
+	cmdMappings         map[string]func(platforms.Platform, platforms.CmdEnv) error
 }
 
 type oldDb struct {
@@ -89,6 +90,15 @@ func (p *Platform) Setup(cfg *config.UserConfig) error {
 	err = Setup(p.tr)
 	if err != nil {
 		return err
+	}
+
+	p.cmdMappings = map[string]func(platforms.Platform, platforms.CmdEnv) error{
+		"mister.ini":    CmdIni,
+		"mister.core":   CmdLaunchCore,
+		"mister.script": cmdMisterScript(p.kbd),
+		"mister.mgl":    CmdMisterMgl,
+
+		"ini": CmdIni, // DEPRECATED
 	}
 
 	return nil
@@ -251,7 +261,7 @@ func (p *Platform) KeyboardPress(name string) error {
 }
 
 func (p *Platform) ForwardCmd(env platforms.CmdEnv) error {
-	if f, ok := commandsMappings[env.Cmd]; ok {
+	if f, ok := p.cmdMappings[env.Cmd]; ok {
 		return f(p, env)
 	} else {
 		return fmt.Errorf("command not supported on mister: %s", env.Cmd)

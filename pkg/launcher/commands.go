@@ -46,10 +46,10 @@ var commandMappings = map[string]func(platforms.Platform, platforms.CmdEnv) erro
 	"shell": cmdShell,
 	"delay": cmdDelay,
 
-	"mister.ini":  forwardCmd,
-	"mister.core": forwardCmd,
-	// "mister.script": forwardCmd,
-	"mister.mgl": forwardCmd,
+	"mister.ini":    forwardCmd,
+	"mister.core":   forwardCmd,
+	"mister.script": forwardCmd,
+	"mister.mgl":    forwardCmd,
 
 	"http.get":  cmdHttpGet,
 	"http.post": cmdHttpPost,
