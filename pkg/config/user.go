@@ -44,6 +44,7 @@ type TapToConfig struct {
 	ExitGameDelay     int8     `ini:"exit_game_delay"`
 	Debug             bool     `ini:"debug"`
 	ApiPort           int      `ini:"api_port"`
+	ApiBasicAuth      string   `ini:"api_basic_auth"`
 }
 
 type SystemsConfig struct {
