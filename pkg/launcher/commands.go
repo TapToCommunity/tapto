@@ -22,19 +22,15 @@ package launcher
 
 import (
 	"fmt"
-	"net/http"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
-	"time"
 
 	"golang.org/x/exp/slices"
 
 	"github.com/rs/zerolog/log"
 
 	"github.com/wizzomafizzo/tapto/pkg/config"
-	"github.com/wizzomafizzo/tapto/pkg/database/gamesdb"
 	"github.com/wizzomafizzo/tapto/pkg/platforms"
 )
 
@@ -74,207 +70,6 @@ var commandMappings = map[string]func(platforms.Platform, platforms.CmdEnv) erro
 
 var softwareChangeCommands = []string{"launch.system", "launch.random", "mister.core"}
 
-func cmdSystem(pl platforms.Platform, env platforms.CmdEnv) error {
-	if strings.EqualFold(env.Args, "menu") {
-		return pl.KillLauncher()
-	}
-
-	return pl.LaunchSystem(env.Cfg, env.Args)
-}
-
-func cmdShell(pl platforms.Platform, env platforms.CmdEnv) error {
-	if !env.Manual {
-		return fmt.Errorf("shell commands must be manually run")
-	}
-
-	return pl.Shell(env.Args)
-}
-
-func cmdRandom(pl platforms.Platform, env platforms.CmdEnv) error {
-	if env.Args == "" {
-		return fmt.Errorf("no system specified")
-	}
-
-	if env.Args == "all" {
-		game, err := gamesdb.RandomGame(pl, gamesdb.AllSystems())
-		if err != nil {
-			return err
-		}
-
-		return pl.LaunchFile(env.Cfg, game.Path)
-	}
-
-	systemIds := strings.Split(env.Args, ",")
-	systems := make([]gamesdb.System, 0, len(systemIds))
-
-	for _, id := range systemIds {
-		system, err := gamesdb.LookupSystem(id)
-		if err != nil {
-			log.Error().Err(err).Msgf("error looking up system: %s", id)
-			continue
-		}
-
-		systems = append(systems, *system)
-	}
-
-	game, err := gamesdb.RandomGame(pl, systems)
-	if err != nil {
-		return err
-	}
-
-	return pl.LaunchFile(env.Cfg, game.Path)
-}
-
-func cmdHttpGet(pl platforms.Platform, env platforms.CmdEnv) error {
-	go func() {
-		resp, err := http.Get(env.Args)
-		if err != nil {
-			log.Error().Msgf("error getting url: %s", err)
-			return
-		}
-		resp.Body.Close()
-	}()
-
-	return nil
-}
-
-func cmdHttpPost(pl platforms.Platform, env platforms.CmdEnv) error {
-	parts := strings.SplitN(env.Args, ",", 3)
-	if len(parts) < 3 {
-		return fmt.Errorf("invalid post format: %s", env.Args)
-	}
-
-	url, format, data := strings.TrimSpace(parts[0]), strings.TrimSpace(parts[1]), strings.TrimSpace(parts[2])
-
-	go func() {
-		resp, err := http.Post(url, format, strings.NewReader(data))
-		if err != nil {
-			log.Error().Msgf("error posting to url: %s", err)
-			return
-		}
-		resp.Body.Close()
-	}()
-
-	return nil
-}
-
-// DEPRECATED
-func cmdKey(pl platforms.Platform, env platforms.CmdEnv) error {
-	return pl.KeyboardInput(env.Args)
-}
-
-// converts a string to a list of key symbols. long names are named inside
-// curly braces and characters can be escaped with a backslash
-func readKeys(keys string) ([]string, error) {
-	var names []string
-	inEscape := false
-	inName := false
-	var name string
-
-	for _, c := range keys {
-		if inEscape {
-			name += string(c)
-			inEscape = false
-			continue
-		}
-
-		if c == '\\' {
-			inEscape = true
-			continue
-		}
-
-		if c == '{' {
-			if inName {
-				return nil, fmt.Errorf("unexpected {")
-			}
-
-			inName = true
-			continue
-		}
-
-		if c == '}' {
-			if !inName {
-				return nil, fmt.Errorf("unexpected }")
-			}
-
-			names = append(names, name)
-			name = ""
-			inName = false
-			continue
-		}
-
-		if inName {
-			name += string(c)
-		} else {
-			names = append(names, string(c))
-		}
-	}
-
-	if inName {
-		return nil, fmt.Errorf("missing }")
-	}
-
-	return names, nil
-}
-
-func cmdKeyboard(pl platforms.Platform, env platforms.CmdEnv) error {
-	log.Info().Msgf("keyboard input: %s", env.Args)
-
-	// TODO: stuff like adjust delay, only press, etc.
-	//	     basically a filled out mini macro language for key presses
-
-	names, err := readKeys(env.Args)
-	if err != nil {
-		return err
-	}
-
-	for _, name := range names {
-		if err := pl.KeyboardPress(name); err != nil {
-			return err
-		}
-		time.Sleep(100 * time.Millisecond)
-	}
-
-	return nil
-}
-
-func insertCoin(pl platforms.Platform, env platforms.CmdEnv, key string) error {
-	amount, err := strconv.Atoi(env.Args)
-	if err != nil {
-		return err
-	}
-
-	for i := 0; i < amount; i++ {
-		pl.KeyboardInput(key)
-		time.Sleep(100 * time.Millisecond)
-	}
-
-	return nil
-}
-
-func cmdCoinP1(pl platforms.Platform, env platforms.CmdEnv) error {
-	log.Info().Msgf("inserting coin for player 1: %s", env.Args)
-	return insertCoin(pl, env, "6")
-}
-
-func cmdCoinP2(pl platforms.Platform, env platforms.CmdEnv) error {
-	log.Info().Msgf("inserting coin for player 2: %s", env.Args)
-	return insertCoin(pl, env, "7")
-}
-
-func cmdDelay(pl platforms.Platform, env platforms.CmdEnv) error {
-	log.Info().Msgf("delaying for: %s", env.Args)
-
-	amount, err := strconv.Atoi(env.Args)
-	if err != nil {
-		return err
-	}
-
-	time.Sleep(time.Duration(amount) * time.Millisecond)
-
-	return nil
-}
-
 func forwardCmd(pl platforms.Platform, env platforms.CmdEnv) error {
 	return pl.ForwardCmd(env)
 }
@@ -311,50 +106,6 @@ func findFile(pl platforms.Platform, cfg *config.UserConfig, path string) (strin
 	}
 
 	return path, fmt.Errorf("file not found: %s", path)
-}
-
-func cmdLaunch(pl platforms.Platform, env platforms.CmdEnv) error {
-	// if it's an absolute path, just try launch it
-	if filepath.IsAbs(env.Args) {
-		log.Debug().Msgf("launching absolute path: %s", env.Args)
-		return pl.LaunchFile(env.Cfg, env.Args)
-	}
-
-	// for relative paths, perform a basic check if the file exists in a games folder
-	// this always takes precedence over the system/path format (but is not totally cross platform)
-	if p, err := findFile(pl, env.Cfg, env.Args); err == nil {
-		log.Debug().Msgf("launching found relative path: %s", p)
-		return pl.LaunchFile(env.Cfg, p)
-	} else {
-		log.Debug().Err(err).Msgf("error finding file: %s", env.Args)
-	}
-
-	// attempt to parse the <system>/<path> format
-	ps := strings.SplitN(env.Text, "/", 2)
-	if len(ps) < 2 {
-		return fmt.Errorf("invalid launch format: %s", env.Text)
-	}
-
-	systemId, path := ps[0], ps[1]
-
-	system, err := gamesdb.LookupSystem(systemId)
-	if err != nil {
-		return err
-	}
-
-	log.Info().Msgf("launching system: %s, path: %s", systemId, path)
-
-	for _, f := range system.Folders {
-		systemPath := filepath.Join(f, path)
-		if fp, err := findFile(pl, env.Cfg, systemPath); err == nil {
-			log.Debug().Msgf("launching found system path: %s", fp)
-			return pl.LaunchFile(env.Cfg, fp)
-		} else {
-			log.Debug().Err(err).Msgf("error finding system file: %s", path)
-		}
-	}
-
-	return fmt.Errorf("file not found: %s", env.Args)
 }
 
 /**
