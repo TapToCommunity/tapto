@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/rs/zerolog/log"
-	"github.com/wizzomafizzo/mrext/pkg/input"
 	"github.com/wizzomafizzo/mrext/pkg/mister"
 	"github.com/wizzomafizzo/tapto/pkg/platforms"
 )
@@ -51,7 +50,7 @@ func CmdLaunchCore(pl platforms.Platform, env platforms.CmdEnv) error {
 	return mister.LaunchShortCore(env.Args)
 }
 
-func cmdMisterScript(kbd input.Keyboard) func(platforms.Platform, platforms.CmdEnv) error {
+func cmdMisterScript(plm Platform) func(platforms.Platform, platforms.CmdEnv) error {
 	return func(pl platforms.Platform, env platforms.CmdEnv) error {
 		args := strings.Fields(env.Args)
 
@@ -74,7 +73,7 @@ func cmdMisterScript(kbd input.Keyboard) func(platforms.Platform, platforms.CmdE
 
 		args = args[1:]
 		if len(args) == 0 {
-			return runScript(kbd, script, "")
+			return runScript(plm, script, "")
 		}
 
 		cleaned := "'"
@@ -99,7 +98,7 @@ func cmdMisterScript(kbd input.Keyboard) func(platforms.Platform, platforms.CmdE
 		cleaned += "'"
 
 		log.Info().Msgf("running script: %s", script+" "+cleaned)
-		return runScript(kbd, script, cleaned)
+		return runScript(plm, script, cleaned)
 	}
 }
 

@@ -95,7 +95,7 @@ func (p *Platform) Setup(cfg *config.UserConfig) error {
 	p.cmdMappings = map[string]func(platforms.Platform, platforms.CmdEnv) error{
 		"mister.ini":    CmdIni,
 		"mister.core":   CmdLaunchCore,
-		"mister.script": cmdMisterScript(p.kbd),
+		"mister.script": cmdMisterScript(*p),
 		"mister.mgl":    CmdMisterMgl,
 
 		"ini": CmdIni, // DEPRECATED

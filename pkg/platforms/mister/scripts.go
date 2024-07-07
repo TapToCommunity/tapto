@@ -58,12 +58,20 @@ func openConsole(kbd input.Keyboard) error {
 	return nil
 }
 
-func runScript(kbd input.Keyboard, bin string, args string) error {
+func runScript(pl Platform, bin string, args string) error {
 	if _, err := os.Stat(bin); err != nil {
 		return err
 	}
 
-	err := openConsole(kbd)
+	if pl.GetActiveLauncher() != "" {
+		// menu must be open to switch tty and launch script
+		err := pl.KillLauncher()
+		if err != nil {
+			return err
+		}
+	}
+
+	err := openConsole(pl.kbd)
 	if err != nil {
 		return err
 	}
@@ -103,7 +111,7 @@ cd $(dirname "%s")
 		return err
 	}
 
-	kbd.ExitConsole()
+	pl.kbd.ExitConsole()
 
 	return nil
 }
