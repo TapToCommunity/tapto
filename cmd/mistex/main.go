@@ -103,7 +103,7 @@ func handleWriteCommand(textToWrite string, svc *mister.Service, cfg *config.Use
 	}
 
 	resp, err := http.Post(
-		"http://127.0.0.1:"+string(cfg.TapTo.ApiPort)+"/api/v1/readers/0/write",
+		"http://127.0.0.1:"+cfg.TapTo.ApiPort+"/api/v1/readers/0/write",
 		"application/json",
 		bytes.NewBuffer(body),
 	)
@@ -141,7 +141,7 @@ func handleLaunchCommand(tokenToLaunch string, svc *mister.Service, cfg *config.
 		os.Exit(1)
 	}
 
-	resp, err := http.Get("http://127.0.0.1:" + string(cfg.TapTo.ApiPort) + "/api/v1/launch/" + url.QueryEscape(tokenToLaunch))
+	resp, err := http.Get("http://127.0.0.1:" + cfg.TapTo.ApiPort + "/api/v1/launch/" + url.QueryEscape(tokenToLaunch))
 	if err != nil {
 		_, _ = fmt.Fprintln(os.Stderr, "Error sending request:", err)
 		log.Error().Msgf("error sending request: %s", err)

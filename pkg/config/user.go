@@ -43,7 +43,7 @@ type TapToConfig struct {
 	ExitGameBlocklist []string `ini:"exit_game_blocklist"`
 	ExitGameDelay     int8     `ini:"exit_game_delay"`
 	Debug             bool     `ini:"debug"`
-	ApiPort           int      `ini:"api_port"`
+	ApiPort           string   `ini:"api_port"`
 	ApiBasicAuth      string   `ini:"api_basic_auth"`
 }
 
