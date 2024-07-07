@@ -28,6 +28,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"strings"
 
@@ -35,7 +36,6 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/wizzomafizzo/tapto/pkg/daemon/api"
-	"github.com/wizzomafizzo/tapto/pkg/launcher"
 	"github.com/wizzomafizzo/tapto/pkg/platforms/mister"
 	"github.com/wizzomafizzo/tapto/pkg/utils"
 
@@ -52,7 +52,6 @@ import (
 // TODO: play sound using go library
 // TODO: would it be possible to unlock the OSD with a card?
 // TODO: use a tag to signal that that next tag should have the active game written to it
-// TODO: if it exists, use search.db instead of on demand index for random
 
 const (
 	appName    = "tapto"
@@ -99,8 +98,7 @@ func handleWriteCommand(textToWrite string, svc *mister.Service, cfg *config.Use
 	}
 
 	resp, err := http.Post(
-		// TODO: don't hardcode port
-		"http://localhost:7497/api/v1/readers/0/write",
+		"http://localhost:"+string(cfg.TapTo.ApiPort)+"/api/v1/readers/0/write",
 		"application/json",
 		bytes.NewBuffer(body),
 	)
@@ -129,6 +127,28 @@ func handleWriteCommand(textToWrite string, svc *mister.Service, cfg *config.Use
 	os.Exit(0)
 }
 
+func handleLaunchCommand(tokenToLaunch string, svc *mister.Service, cfg *config.UserConfig) {
+	log.Info().Msgf("launching token: %s", tokenToLaunch)
+
+	if !svc.Running() {
+		_, _ = fmt.Fprintln(os.Stderr, "TapTo service is not running, please start it before launching.")
+		log.Error().Msg("TapTo service is not running, exiting")
+		os.Exit(1)
+	}
+
+	resp, err := http.Get("http://127.0.0.1:" + string(cfg.TapTo.ApiPort) + "/api/v1/launch/" + url.QueryEscape(tokenToLaunch))
+	if err != nil {
+		_, _ = fmt.Fprintln(os.Stderr, "Error sending request:", err)
+		log.Error().Msgf("error sending request: %s", err)
+		os.Exit(1)
+	}
+	defer resp.Body.Close()
+
+	_, _ = fmt.Fprintln(os.Stderr, "Successfully launched token.")
+	log.Info().Msg("successfully launched token")
+	os.Exit(0)
+}
+
 func main() {
 	svcOpt := flag.String("service", "", "manage TapTo service (start, stop, restart, status)")
 	writeOpt := flag.String("write", "", "write text to tag")
@@ -150,6 +170,7 @@ func main() {
 	cfg, err := config.NewUserConfig(appName, &config.UserConfig{
 		TapTo: config.TapToConfig{
 			ProbeDevice: true,
+			ApiPort:     config.DefaultApiPort,
 		},
 	})
 	if err != nil {
@@ -178,21 +199,8 @@ func main() {
 
 	if *writeOpt != "" {
 		handleWriteCommand(*writeOpt, svc, cfg)
-	}
-
-	if *launchOpt != "" {
-		// TODO: this is doubling up on the split logic in daemon
-		cmds := strings.Split(*launchOpt, "||")
-		for i, cmd := range cmds {
-			err, _ := launcher.LaunchToken(&mister.Platform{}, cfg, true, cmd, len(cmds), i)
-			if err != nil {
-				log.Error().Msgf("error launching token: %s", err)
-				fmt.Println("Error launching token:", err)
-				os.Exit(1)
-			}
-		}
-
-		os.Exit(0)
+	} else if *launchOpt != "" {
+		handleLaunchCommand(*launchOpt, svc, cfg)
 	}
 
 	svc.ServiceHandler(svcOpt)

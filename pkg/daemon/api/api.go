@@ -182,7 +182,7 @@ func RunApiServer(
 		},
 	))
 
-	err := http.ListenAndServe(":7497", r) // TODO: move port to config
+	err := http.ListenAndServe(":"+string(cfg.TapTo.ApiPort), r)
 	if err != nil {
 		log.Error().Msgf("error starting http server: %s", err)
 	}
