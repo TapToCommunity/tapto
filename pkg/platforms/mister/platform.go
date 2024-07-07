@@ -4,8 +4,11 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"regexp"
 	"strconv"
+	"time"
 
+	"github.com/rs/zerolog/log"
 	mrextConfig "github.com/wizzomafizzo/mrext/pkg/config"
 	"github.com/wizzomafizzo/mrext/pkg/games"
 	"github.com/wizzomafizzo/mrext/pkg/input"
@@ -16,9 +19,35 @@ import (
 )
 
 type Platform struct {
-	kbd    input.Keyboard
-	tr     *Tracker
-	stopTr func() error
+	kbd                 input.Keyboard
+	tr                  *Tracker
+	stopTr              func() error
+	dbLoadTime          time.Time
+	uidMap              map[string]string
+	textMap             map[string]string
+	stopMappingsWatcher func() error
+}
+
+type oldDb struct {
+	Uids  map[string]string
+	Texts map[string]string
+}
+
+func (p *Platform) getDB() oldDb {
+	return oldDb{
+		Uids:  p.uidMap,
+		Texts: p.textMap,
+	}
+}
+
+func (p *Platform) GetDBLoadTime() time.Time {
+	return p.dbLoadTime
+}
+
+func (p *Platform) SetDB(uidMap map[string]string, textMap map[string]string) {
+	p.dbLoadTime = time.Now()
+	p.uidMap = uidMap
+	p.textMap = textMap
 }
 
 func (p *Platform) Id() string {
@@ -41,6 +70,22 @@ func (p *Platform) Setup(cfg *config.UserConfig) error {
 	p.tr = tr
 	p.stopTr = stopTr
 
+	uids, texts, err := LoadCsvMappings()
+	if err != nil {
+		log.Error().Msgf("error loading mappings: %s", err)
+	} else {
+		p.SetDB(uids, texts)
+	}
+
+	closeMappingsWatcher, err := StartCsvMappingsWatcher(
+		p.GetDBLoadTime,
+		p.SetDB,
+	)
+	if err != nil {
+		log.Error().Msgf("error starting mappings watcher: %s", err)
+	}
+	p.stopMappingsWatcher = closeMappingsWatcher
+
 	err = Setup(p.tr)
 	if err != nil {
 		return err
@@ -51,7 +96,17 @@ func (p *Platform) Setup(cfg *config.UserConfig) error {
 
 func (p *Platform) Stop() error {
 	if p.stopTr != nil {
-		return p.stopTr()
+		err := p.stopTr()
+		if err != nil {
+			return err
+		}
+	}
+
+	if p.stopMappingsWatcher != nil {
+		err := p.stopMappingsWatcher()
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -201,4 +256,36 @@ func (p *Platform) ForwardCmd(env platforms.CmdEnv) error {
 	} else {
 		return fmt.Errorf("command not supported on mister: %s", env.Cmd)
 	}
+}
+
+func (p *Platform) LookupMapping(t tokens.Token) (string, bool) {
+	oldDb := p.getDB()
+
+	// check nfc.csv uids
+	if v, ok := oldDb.Uids[t.UID]; ok {
+		log.Info().Msg("launching with csv uid match override")
+		return v, true
+	}
+
+	// check nfc.csv texts
+	for pattern, cmd := range oldDb.Texts {
+		// check if pattern is a regex
+		re, err := regexp.Compile(pattern)
+
+		// not a regex
+		if err != nil {
+			if pattern, ok := oldDb.Texts[t.Text]; ok {
+				log.Info().Msg("launching with csv text match override")
+				return pattern, true
+			}
+		}
+
+		// regex
+		if re.MatchString(t.Text) {
+			log.Info().Msg("launching with csv regex text match override")
+			return cmd, true
+		}
+	}
+
+	return "", false
 }

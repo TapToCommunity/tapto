@@ -18,7 +18,7 @@ You should have received a copy of the GNU General Public License
 along with TapTo.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-package launcher
+package mister
 
 import (
 	_ "embed"
@@ -31,7 +31,6 @@ import (
 	"github.com/fsnotify/fsnotify"
 	"github.com/gocarina/gocsv"
 	"github.com/rs/zerolog/log"
-	"github.com/wizzomafizzo/tapto/pkg/platforms/mister"
 )
 
 type CsvMappingEntry struct {
@@ -44,12 +43,12 @@ func LoadCsvMappings() (map[string]string, map[string]string, error) {
 	uids := make(map[string]string)
 	texts := make(map[string]string)
 
-	if _, err := os.Stat(mister.MappingsFile); errors.Is(err, os.ErrNotExist) {
+	if _, err := os.Stat(MappingsFile); errors.Is(err, os.ErrNotExist) {
 		log.Info().Msg("no database file found, skipping")
 		return nil, nil, nil
 	}
 
-	f, err := os.Open(mister.MappingsFile)
+	f, err := os.Open(MappingsFile)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -135,9 +134,9 @@ func StartCsvMappingsWatcher(
 				} else if event.Has(fsnotify.Remove) {
 					// editors may also delete the file on write
 					time.Sleep(delay)
-					_, err := os.Stat(mister.MappingsFile)
+					_, err := os.Stat(MappingsFile)
 					if err == nil {
-						err = dbWatcher.Add(mister.MappingsFile)
+						err = dbWatcher.Add(MappingsFile)
 						if err != nil {
 							log.Error().Msgf("error watching database: %s", err)
 						}
@@ -159,7 +158,7 @@ func StartCsvMappingsWatcher(
 		}
 	}()
 
-	err = dbWatcher.Add(mister.MappingsFile)
+	err = dbWatcher.Add(MappingsFile)
 	if err != nil {
 		log.Error().Msgf("error watching database: %s", err)
 	}
