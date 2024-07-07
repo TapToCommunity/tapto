@@ -2,6 +2,7 @@ package launcher
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -9,6 +10,7 @@ import (
 
 	"github.com/wizzomafizzo/tapto/pkg/database/gamesdb"
 	"github.com/wizzomafizzo/tapto/pkg/platforms"
+	"github.com/wizzomafizzo/tapto/pkg/utils"
 )
 
 func cmdSystem(pl platforms.Platform, env platforms.CmdEnv) error {
@@ -26,6 +28,63 @@ func cmdRandom(pl platforms.Platform, env platforms.CmdEnv) error {
 
 	if env.Args == "all" {
 		game, err := gamesdb.RandomGame(pl, gamesdb.AllSystems())
+		if err != nil {
+			return err
+		}
+
+		return pl.LaunchFile(env.Cfg, game.Path)
+	}
+
+	// absolute path, try read dir and pick random file
+	// TODO: won't work for zips, switch to using gamesdb when it indexes paths
+	// TODO: doesn't filter on extensions
+	if filepath.IsAbs(env.Args) {
+		if _, err := os.Stat(env.Args); err != nil {
+			return err
+		}
+
+		files, err := filepath.Glob(filepath.Join(env.Args, "*"))
+		if err != nil {
+			return err
+		}
+
+		if len(files) == 0 {
+			return fmt.Errorf("no files found in: %s", env.Args)
+		}
+
+		file, err := utils.RandomElem(files)
+		if err != nil {
+			return err
+		}
+
+		return pl.LaunchFile(env.Cfg, file)
+	}
+
+	// perform a search similar to launch.search and pick randomly
+	// looking for <system>/<query> format
+	ps := strings.SplitN(env.Args, "/", 2)
+	if len(ps) == 2 {
+		systemId, query := ps[0], ps[1]
+
+		system, err := gamesdb.LookupSystem(systemId)
+		if err != nil {
+			return err
+		} else if system == nil {
+			return fmt.Errorf("system not found: %s", systemId)
+		}
+
+		query = strings.ToLower(query)
+
+		res, err := gamesdb.SearchNamesGlob(pl, []gamesdb.System{*system}, query)
+		if err != nil {
+			return err
+		}
+
+		if len(res) == 0 {
+			return fmt.Errorf("no results found for: %s", query)
+		}
+
+		game, err := utils.RandomElem(res)
 		if err != nil {
 			return err
 		}
