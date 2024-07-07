@@ -11,7 +11,7 @@ require gopkg.in/ini.v1 v1.67.0
 require github.com/fsnotify/fsnotify v1.6.0
 
 require (
-	github.com/bendahl/uinput v1.6.0 // indirect
+	github.com/bendahl/uinput v1.7.0
 	github.com/libp2p/zeroconf/v2 v2.2.0 // indirect
 	github.com/miekg/dns v1.1.55 // indirect
 	github.com/txn2/txeh v1.4.0 // indirect

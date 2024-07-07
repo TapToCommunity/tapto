@@ -6,7 +6,9 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strconv"
+	"time"
 
+	"github.com/bendahl/uinput"
 	mrextConfig "github.com/wizzomafizzo/mrext/pkg/config"
 	"github.com/wizzomafizzo/mrext/pkg/games"
 	"github.com/wizzomafizzo/mrext/pkg/input"
@@ -19,6 +21,7 @@ import (
 
 type Platform struct {
 	kbd    input.Keyboard
+	gpd    uinput.Gamepad
 	tr     *mister.Tracker
 	stopTr func() error
 }
@@ -32,8 +35,18 @@ func (p *Platform) Setup(cfg *config.UserConfig) error {
 	if err != nil {
 		return err
 	}
-
 	p.kbd = kbd
+
+	gpd, err := uinput.CreateGamepad(
+		"/dev/uinput",
+		[]byte("tapto"),
+		0x1234,
+		0x5678,
+	)
+	if err != nil {
+		return err
+	}
+	p.gpd = gpd
 
 	tr, stopTr, err := mister.StartTracker(*mister.UserConfigToMrext(cfg))
 	if err != nil {
@@ -54,6 +67,13 @@ func (p *Platform) Setup(cfg *config.UserConfig) error {
 func (p *Platform) Stop() error {
 	if p.stopTr != nil {
 		return p.stopTr()
+	}
+
+	if p.gpd != nil {
+		err := p.gpd.Close()
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -209,6 +229,19 @@ func (p *Platform) KeyboardPress(name string) error {
 	} else {
 		p.kbd.Press(code)
 	}
+
+	return nil
+}
+
+func (p *Platform) GamepadPress(name string) error {
+	code, ok := mister.GamepadMap[name]
+	if !ok {
+		return fmt.Errorf("unknown button: %s", name)
+	}
+
+	p.gpd.ButtonDown(code)
+	time.Sleep(40 * time.Millisecond)
+	p.gpd.ButtonUp(code)
 
 	return nil
 }

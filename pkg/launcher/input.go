@@ -90,6 +90,24 @@ func cmdKeyboard(pl platforms.Platform, env platforms.CmdEnv) error {
 	return nil
 }
 
+func cmdGamepad(pl platforms.Platform, env platforms.CmdEnv) error {
+	log.Info().Msgf("gamepad input: %s", env.Args)
+
+	names, err := readKeys(env.Args)
+	if err != nil {
+		return err
+	}
+
+	for _, name := range names {
+		if err := pl.GamepadPress(name); err != nil {
+			return err
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
+
+	return nil
+}
+
 func insertCoin(pl platforms.Platform, env platforms.CmdEnv, key string) error {
 	amount, err := strconv.Atoi(env.Args)
 	if err != nil {
