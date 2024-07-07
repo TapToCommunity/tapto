@@ -220,3 +220,7 @@ func (p *Platform) ForwardCmd(env platforms.CmdEnv) error {
 		return fmt.Errorf("command not supported on mister: %s", env.Cmd)
 	}
 }
+
+func (p *Platform) LookupMapping(_ tokens.Token) (string, bool) {
+	return "", false
+}

@@ -43,4 +43,5 @@ type Platform interface {
 	KeyboardInput(string) error // DEPRECATED
 	KeyboardPress(string) error
 	ForwardCmd(CmdEnv) error
+	LookupMapping(tokens.Token) (string, bool)
 }

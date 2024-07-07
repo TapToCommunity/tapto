@@ -103,7 +103,7 @@ func checkMappingData(m database.Mapping, t tokens.Token) bool {
 	return false
 }
 
-func getMapping(db *database.Database, oldDb state.OldDb, token tokens.Token) (string, bool) {
+func getMapping(db *database.Database, pl platforms.Platform, token tokens.Token) (string, bool) {
 	// check db mappings
 	ms, err := db.GetEnabledMappings()
 	if err != nil {
@@ -130,33 +130,8 @@ func getMapping(db *database.Database, oldDb state.OldDb, token tokens.Token) (s
 		}
 	}
 
-	// check nfc.csv uids
-	if v, ok := oldDb.Uids[token.UID]; ok {
-		log.Info().Msg("launching with csv uid match override")
-		return v, true
-	}
-
-	// check nfc.csv texts
-	for pattern, cmd := range oldDb.Texts {
-		// check if pattern is a regex
-		re, err := regexp.Compile(pattern)
-
-		// not a regex
-		if err != nil {
-			if pattern, ok := oldDb.Texts[token.Text]; ok {
-				log.Info().Msg("launching with csv text match override")
-				return pattern, true
-			}
-		}
-
-		// regex
-		if re.MatchString(token.Text) {
-			log.Info().Msg("launching with csv regex text match override")
-			return cmd, true
-		}
-	}
-
-	return "", false
+	// check platform mappings
+	return pl.LookupMapping(token)
 }
 
 func launchToken(
@@ -169,7 +144,7 @@ func launchToken(
 ) error {
 	text := token.Text
 
-	mappingText, mapped := getMapping(db, state.GetDB(), token)
+	mappingText, mapped := getMapping(db, platform, token)
 	if mapped {
 		log.Info().Msgf("found mapping: %s", mappingText)
 		text = mappingText
@@ -294,21 +269,6 @@ func StartDaemon(
 		return nil, err
 	}
 
-	uids, texts, err := launcher.LoadCsvMappings()
-	if err != nil {
-		log.Error().Msgf("error loading mappings: %s", err)
-	} else {
-		st.SetDB(uids, texts)
-	}
-
-	closeMappingsWatcher, err := launcher.StartCsvMappingsWatcher(
-		st.GetDBLoadTime,
-		st.SetDB,
-	)
-	if err != nil {
-		log.Error().Msgf("error starting mappings watcher: %s", err)
-	}
-
 	if !platform.LaunchingEnabled() {
 		st.DisableLauncher()
 	}
@@ -339,9 +299,6 @@ func StartDaemon(
 			log.Warn().Msgf("error stopping platform: %s", err)
 		}
 
-		if closeMappingsWatcher != nil {
-			return closeMappingsWatcher()
-		}
 		return nil
 	}, nil
 }

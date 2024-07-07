@@ -2,7 +2,6 @@ package state
 
 import (
 	"sync"
-	"time"
 
 	"github.com/rs/zerolog/log"
 	"github.com/wizzomafizzo/tapto/pkg/platforms"
@@ -18,9 +17,6 @@ type State struct {
 	lastScanned     tokens.Token
 	stopService     bool
 	disableLauncher bool
-	dbLoadTime      time.Time
-	uidMap          map[string]string
-	textMap         map[string]string
 	platform        platforms.Platform
 	readers         map[string]readers.Reader
 	softwareToken   *tokens.Token
@@ -116,37 +112,6 @@ func (s *State) IsLauncherDisabled() bool {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return s.disableLauncher
-}
-
-type OldDb struct {
-	Uids  map[string]string
-	Texts map[string]string
-}
-
-func (s *State) GetDB() OldDb {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	return OldDb{
-		Uids:  s.uidMap,
-		Texts: s.textMap,
-	}
-}
-
-func (s *State) GetDBLoadTime() time.Time {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	return s.dbLoadTime
-}
-
-func (s *State) SetDB(uidMap map[string]string, textMap map[string]string) {
-	s.mu.Lock()
-	s.dbLoadTime = time.Now()
-	s.uidMap = uidMap
-	s.textMap = textMap
-	s.mu.Unlock()
-	if s.updateHook != nil {
-		(*s.updateHook)(s)
-	}
 }
 
 func (s *State) GetReader(device string) (readers.Reader, bool) {
