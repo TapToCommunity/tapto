@@ -97,3 +97,56 @@ func cmdLaunch(pl platforms.Platform, env platforms.CmdEnv) error {
 
 	return fmt.Errorf("file not found: %s", env.Args)
 }
+
+func cmdSearch(pl platforms.Platform, env platforms.CmdEnv) error {
+	if env.Args == "" {
+		return fmt.Errorf("no query specified")
+	}
+
+	query := strings.ToLower(env.Args)
+	query = strings.TrimSpace(query)
+
+	if !strings.Contains(env.Args, "/") {
+		// search all systems
+		res, err := gamesdb.SearchNamesPartial(pl, gamesdb.AllSystems(), query)
+		if err != nil {
+			return err
+		}
+
+		if len(res) == 0 {
+			return fmt.Errorf("no results found for: %s", query)
+		}
+
+		return pl.LaunchFile(env.Cfg, res[0].Path)
+	}
+
+	ps := strings.SplitN(query, "/", 2)
+	if len(ps) < 2 {
+		return fmt.Errorf("invalid search format: %s", query)
+	}
+
+	systemId, query := ps[0], ps[1]
+	systems := make([]gamesdb.System, 0)
+
+	if systemId == "all" {
+		systems = gamesdb.AllSystems()
+	} else {
+		system, err := gamesdb.LookupSystem(systemId)
+		if err != nil {
+			return err
+		}
+
+		systems = append(systems, *system)
+	}
+
+	res, err := gamesdb.SearchNamesPartial(pl, systems, query)
+	if err != nil {
+		return err
+	}
+
+	if len(res) == 0 {
+		return fmt.Errorf("no results found for: %s", query)
+	}
+
+	return pl.LaunchFile(env.Cfg, res[0].Path)
+}

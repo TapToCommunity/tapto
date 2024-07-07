@@ -41,6 +41,7 @@ import (
 var commandMappings = map[string]func(platforms.Platform, platforms.CmdEnv) error{
 	"launch.system": cmdSystem,
 	"launch.random": cmdRandom,
+	"launch.search": cmdSearch,
 
 	"shell": cmdShell,
 	"delay": cmdDelay,
@@ -68,7 +69,13 @@ var commandMappings = map[string]func(platforms.Platform, platforms.CmdEnv) erro
 	"get":       cmdHttpGet, // DEPRECATED
 }
 
-var softwareChangeCommands = []string{"launch.system", "launch.random", "mister.core"}
+var softwareChangeCommands = []string{
+	"launch.system",
+	"launch.random",
+	"launch.search",
+	"mister.core",
+	"mister.mgl",
+}
 
 func forwardCmd(pl platforms.Platform, env platforms.CmdEnv) error {
 	return pl.ForwardCmd(env)
