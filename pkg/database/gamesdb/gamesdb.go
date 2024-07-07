@@ -11,6 +11,7 @@ import (
 	bolt "go.etcd.io/bbolt"
 	"golang.org/x/sync/errgroup"
 
+	"github.com/gobwas/glob"
 	"github.com/rs/zerolog/log"
 	"github.com/wizzomafizzo/tapto/pkg/config"
 	"github.com/wizzomafizzo/tapto/pkg/platforms"
@@ -341,12 +342,25 @@ func SearchNamesWords(platform platforms.Platform, systems []System, query strin
 // Return indexed names matching query using regular expression.
 func SearchNamesRegexp(platform platforms.Platform, systems []System, query string) ([]SearchResult, error) {
 	return searchNamesGeneric(platform, systems, query, func(query, keyName string) bool {
+		// TODO: this should be cached
 		r, err := regexp.Compile(query)
 		if err != nil {
 			return false
 		}
 
 		return r.MatchString(keyName)
+	})
+}
+
+func SearchNamesGlob(platform platforms.Platform, systems []System, query string) ([]SearchResult, error) {
+	return searchNamesGeneric(platform, systems, query, func(query, keyName string) bool {
+		// TODO: this should be cached
+		g, err := glob.Compile(query)
+		if err != nil {
+			return false
+		}
+
+		return g.Match(strings.ToLower(keyName))
 	})
 }
 
