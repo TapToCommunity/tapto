@@ -143,7 +143,7 @@ func (r *Reader) Detect(connected []string) string {
 	}
 
 	if utils.Contains(connected, device) {
-		log.Info().Msgf("already connected to: %s", device)
+		// log.Debug().Msgf("already connected to: %s", device)
 		return ""
 	}
 

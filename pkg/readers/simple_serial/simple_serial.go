@@ -112,9 +112,7 @@ func (r *SimpleSerialReader) Open(device string, iq chan<- readers.Scan) error {
 		var lineBuf []byte
 
 		for r.polling {
-			time.Sleep(100 * time.Millisecond)
-
-			buf := make([]byte, 4096)
+			buf := make([]byte, 1024)
 			n, err := r.port.Read(buf)
 			if err != nil {
 				log.Error().Err(err).Msg("failed to read from serial port")
