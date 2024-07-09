@@ -204,9 +204,8 @@ func (tr *Tracker) LoadCore() {
 
 		result := tr.LookupCoreName(coreName, tr.ActiveGamePath)
 		if result != (NameMapping{}) {
-			mister.SetActiveGame(result.CoreName)
-
 			if result.ArcadeName != "" {
+				mister.SetActiveGame(result.CoreName)
 				tr.ActiveGameId = coreName
 				tr.ActiveGameName = result.ArcadeName
 				tr.ActiveGamePath = "" // TODO: any way to find this?
@@ -241,6 +240,10 @@ func (tr *Tracker) loadGame() {
 	if err != nil {
 		log.Error().Msgf("error getting active game: %s", err)
 		tr.stopGame()
+		return
+	} else if !filepath.IsAbs(activeGame) {
+		// arcade game, ignore handling
+		// TODO: will this work ok long term?
 		return
 	} else if activeGame == "" {
 		tr.stopGame()

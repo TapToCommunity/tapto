@@ -7,6 +7,7 @@ import (
 
 	"github.com/go-chi/render"
 	"github.com/rs/zerolog/log"
+	"github.com/wizzomafizzo/tapto/pkg/assets"
 	"github.com/wizzomafizzo/tapto/pkg/config"
 	"github.com/wizzomafizzo/tapto/pkg/database/gamesdb"
 	"github.com/wizzomafizzo/tapto/pkg/platforms"
@@ -64,7 +65,12 @@ func (s *Index) GenerateIndex(platform platforms.Platform, cfg *config.UserConfi
 				if err != nil {
 					s.CurrentDesc = status.SystemId
 				} else {
-					s.CurrentDesc = system.Id
+					md, err := assets.GetSystemMetadata(system.Id)
+					if err != nil {
+						s.CurrentDesc = system.Id
+					} else {
+						s.CurrentDesc = md.Name
+					}
 				}
 			}
 			log.Info().Msgf("indexing status: %s", s.CurrentDesc)
