@@ -109,7 +109,7 @@ func tryAddStartup(stdscr *goncurses.Window) error {
 }
 
 func generateIndexWindow(pl platforms.Platform, cfg *config.UserConfig, stdscr *goncurses.Window) error {
-	win, err := curses.NewWindow(stdscr, 4, 40, "", -1)
+	win, err := curses.NewWindow(stdscr, 4, 46, "", -1)
 	if err != nil {
 		return err
 	}
@@ -205,7 +205,7 @@ func generateIndexWindow(pl platforms.Platform, cfg *config.UserConfig, stdscr *
 
 func displayServiceInfo(pl platforms.Platform, cfg *config.UserConfig, stdscr *goncurses.Window, service *mister.Service) error {
 	width := 50
-	height := 7
+	height := 9
 
 	win, err := curses.NewWindow(stdscr, height, width, "", -1)
 	if err != nil {
@@ -247,7 +247,14 @@ func displayServiceInfo(pl platforms.Platform, cfg *config.UserConfig, stdscr *g
 		printCenter(0, "TapTo v"+appVersion)
 
 		clearLine(1)
-		printLeft(1, statusText)
+		printCenter(1, "Visit tapto.wiki for guides and help!")
+
+		win.HLine(2, 1, goncurses.ACS_HLINE, width-2)
+		win.MoveAddChar(2, 0, goncurses.ACS_LTEE)
+		win.MoveAddChar(2, width-1, goncurses.ACS_RTEE)
+
+		clearLine(3)
+		printLeft(3, statusText)
 
 		ip, err := utils.GetLocalIp()
 		var ipDisplay string
@@ -260,15 +267,15 @@ func displayServiceInfo(pl platforms.Platform, cfg *config.UserConfig, stdscr *g
 			}
 		}
 
-		clearLine(2)
-		printLeft(2, "Device address: "+ipDisplay)
+		clearLine(4)
+		printLeft(4, "Device address: "+ipDisplay)
 
-		clearLine(3)
+		clearLine(5)
 		dbExistsDisplay := "NOT CREATED"
 		if gamesdb.DbExists(pl) {
 			dbExistsDisplay = "CREATED"
 		}
-		printLeft(3, "Games DB:       "+dbExistsDisplay)
+		printLeft(5, "Games DB:       "+dbExistsDisplay)
 
 		clearLine(height - 2)
 		curses.DrawActionButtons(win, []string{"Update Games DB", "Exit"}, selected, 2)
