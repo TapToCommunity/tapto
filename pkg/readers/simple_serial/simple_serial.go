@@ -59,13 +59,26 @@ func (r *SimpleSerialReader) parseLine(line string) (*tokens.Token, error) {
 	}
 
 	ps := strings.Split(args, "\t")
+	hasArg := false
 	for i := 0; i < len(ps); i++ {
 		ps[i] = strings.TrimSpace(ps[i])
 		if strings.HasPrefix(ps[i], "uid=") {
 			t.UID = ps[i][4:]
+			hasArg = true
 		} else if strings.HasPrefix(ps[i], "text=") {
 			t.Text = ps[i][5:]
+			hasArg = true
+		} else if strings.HasPrefix(ps[i], "removable=") {
+			// TODO: this isn't really what removable means, but it works
+			//		 for now. it will block shell commands though
+			t.Remote = ps[i][10:] == "no"
+			hasArg = true
 		}
+	}
+
+	// if there are no named arguments, whole args becomes text
+	if !hasArg {
+		t.Text = args
 	}
 
 	return &t, nil
@@ -112,9 +125,7 @@ func (r *SimpleSerialReader) Open(device string, iq chan<- readers.Scan) error {
 		var lineBuf []byte
 
 		for r.polling {
-			time.Sleep(100 * time.Millisecond)
-
-			buf := make([]byte, 4096)
+			buf := make([]byte, 1024)
 			n, err := r.port.Read(buf)
 			if err != nil {
 				log.Error().Err(err).Msg("failed to read from serial port")

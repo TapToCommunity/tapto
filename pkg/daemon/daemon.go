@@ -257,12 +257,14 @@ func StartDaemon(
 	log.Info().Msgf("exit_game_blocklist = %s", cfg.GetExitGameBlocklist())
 	log.Info().Msgf("debug = %t", cfg.GetDebug())
 
+	log.Debug().Msg("opening database")
 	db, err := database.Open()
 	if err != nil {
 		log.Error().Err(err).Msgf("error opening database")
 		return nil, err
 	}
 
+	log.Debug().Msg("running platform setup")
 	err = platform.Setup(cfg)
 	if err != nil {
 		log.Error().Msgf("error setting up platform: %s", err)

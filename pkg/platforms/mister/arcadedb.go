@@ -84,6 +84,11 @@ func UpdateArcadeDb() (bool, error) {
 		dbAge = dbFile.ModTime()
 	}
 
+	// skip if current file is less than a day old
+	if time.Since(dbAge) < 24*time.Hour {
+		return false, nil
+	}
+
 	latestFile := contents[len(contents)-1]
 
 	latestFileDate, err := time.Parse("ArcadeDatabase060102.csv", latestFile.Name)

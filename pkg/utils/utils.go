@@ -103,22 +103,7 @@ func GetLinuxSerialDeviceList() ([]string, error) {
 			continue
 		}
 
-		// resolve symlinks and use that as the device path
-		if v.Mode()&os.ModeSymlink != 0 {
-			link, err := os.Readlink(filepath.Join(path, v.Name()))
-			if err != nil {
-				continue
-			}
-
-			abs, err := filepath.Abs(filepath.Join(path, link))
-			if err != nil {
-				continue
-			}
-
-			devices = append(devices, abs)
-		} else {
-			devices = append(devices, filepath.Join(path, v.Name()))
-		}
+		devices = append(devices, filepath.Join(path, v.Name()))
 	}
 
 	return devices, nil

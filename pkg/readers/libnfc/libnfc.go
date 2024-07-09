@@ -4,7 +4,10 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/clausecker/nfc/v2"
@@ -143,7 +146,7 @@ func (r *Reader) Detect(connected []string) string {
 	}
 
 	if utils.Contains(connected, device) {
-		log.Info().Msgf("already connected to: %s", device)
+		// log.Debug().Msgf("already connected to: %s", device)
 		return ""
 	}
 
@@ -189,6 +192,10 @@ func (r *Reader) Write(text string) (*tokens.Token, error) {
 	return res.Token, nil
 }
 
+// keep track of serial devices that had failed opens
+var serialCacheMu = &sync.RWMutex{}
+var serialBlockList = []string{}
+
 func detectSerialReaders(connected []string) string {
 	devices, err := utils.GetLinuxSerialDeviceList()
 	if err != nil {
@@ -197,16 +204,57 @@ func detectSerialReaders(connected []string) string {
 	}
 
 	for _, device := range devices {
-		connectionString := "pn532_uart:" + device
+		// the libnfc open is extremely disruptive to other devices, we want
+		// to minimise the number of times we try to open a device
+		connStr := "pn532_uart:" + device
 
-		if utils.Contains(connected, connectionString) {
+		// ignore if device is in block list
+		serialCacheMu.RLock()
+		if utils.Contains(serialBlockList, device) {
+			serialCacheMu.RUnlock()
+			continue
+		}
+		serialCacheMu.RUnlock()
+
+		// ignore if exact same device and reader are connected
+		if utils.Contains(connected, connStr) {
 			continue
 		}
 
-		pnd, err := nfc.Open(connectionString)
+		// resolve device symlink if necessary
+		realPath := ""
+		symPath, err := os.Readlink(device)
 		if err == nil {
+			parent := filepath.Dir(device)
+			abs, err := filepath.Abs(filepath.Join(parent, symPath))
+			if err == nil {
+				realPath = abs
+			}
+		}
+
+		// ignore if same resolved device and reader connected
+		if realPath != "" && utils.Contains(connected, realPath) {
+			continue
+		}
+
+		// ignore if different reader already connected
+		if strings.HasSuffix(device, ":"+device) {
+			continue
+		}
+
+		// ignore if different resolved device and reader connected
+		if realPath != "" && strings.HasSuffix(realPath, ":"+realPath) {
+			continue
+		}
+
+		pnd, err := nfc.Open(connStr)
+		if err != nil {
+			serialCacheMu.Lock()
+			serialBlockList = append(serialBlockList, device)
+			serialCacheMu.Unlock()
+		} else {
 			pnd.Close()
-			return connectionString
+			return connStr
 		}
 	}
 
