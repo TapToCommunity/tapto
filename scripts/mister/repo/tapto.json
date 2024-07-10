@@ -1,10 +1,10 @@
 {
     "db_id": "mrext/tapto",
-    "timestamp": 1720543617,
+    "timestamp": 1720589551,
     "files": {
         "Scripts/tapto.sh": {
-            "hash": "204731b87026e6b91da52f5bdcb434cc",
-            "size": 8981216,
+            "hash": "acddf3c0ae476167548ed223380638b7",
+            "size": 8883628,
             "url": "https://github.com/wizzomafizzo/tapto/releases/download/v1.5.0/tapto.sh",
             "tags": [
                 "tapto"
