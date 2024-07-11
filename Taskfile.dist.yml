@@ -61,8 +61,10 @@ tasks:
     env:
       GOOS: windows
       PLATFORM: windows
+      TAPTO_BIN: TapTo.exe
+      CGO_ENABLED: 0
     cmds:
-      - task: build
+      - go build -o _build/${PLATFORM}_{{ARCH}}/${TAPTO_BIN} ./cmd/$PLATFORM
 
   deploy-mister:
     cmds:
