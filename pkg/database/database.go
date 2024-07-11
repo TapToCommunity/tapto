@@ -6,30 +6,30 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/wizzomafizzo/tapto/pkg/platforms/mister"
 	bolt "go.etcd.io/bbolt"
 )
 
 const (
 	BucketHistory  = "history"
 	BucketMappings = "mappings"
+	DbFile         = "tapto.db"
 )
 
 // Check if the db exists on disk.
 func DbExists() bool {
-	_, err := os.Stat(mister.DbFile)
+	_, err := os.Stat(DbFile)
 	return err == nil
 }
 
 // Open the db with the given options. If the database does not exist it
 // will be created and the buckets will be initialized.
 func open(options *bolt.Options) (*bolt.DB, error) {
-	err := os.MkdirAll(filepath.Dir(mister.DbFile), 0755)
+	err := os.MkdirAll(filepath.Dir(DbFile), 0755)
 	if err != nil {
 		return nil, err
 	}
 
-	db, err := bolt.Open(mister.DbFile, 0600, options)
+	db, err := bolt.Open(DbFile, 0600, options)
 	if err != nil {
 		return nil, err
 	}

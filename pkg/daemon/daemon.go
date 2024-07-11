@@ -279,18 +279,18 @@ func StartDaemon(
 	go readerManager(platform, cfg, st, tq, lsq)
 	go processLaunchQueue(platform, cfg, st, tq, db, lsq)
 
-	socket, err := StartSocketServer(st)
-	if err != nil {
-		log.Error().Msgf("error starting socket server: %s", err)
-	}
+	// socket, err := StartSocketServer(st)
+	// if err != nil {
+	// 	log.Error().Msgf("error starting socket server: %s", err)
+	// }
 
 	return func() error {
-		if socket != nil {
-			err := socket.Close()
-			if err != nil {
-				log.Warn().Msgf("error closing socket: %s", err)
-			}
-		}
+		// if socket != nil {
+		// 	err := socket.Close()
+		// 	if err != nil {
+		// 		log.Warn().Msgf("error closing socket: %s", err)
+		// 	}
+		// }
 
 		tq.Close()
 

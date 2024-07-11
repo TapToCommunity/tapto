@@ -10,7 +10,7 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/wizzomafizzo/tapto/pkg/config"
 	"github.com/wizzomafizzo/tapto/pkg/daemon/state"
-	"github.com/wizzomafizzo/tapto/pkg/platforms/mister"
+	// "github.com/wizzomafizzo/tapto/pkg/platforms/mister"
 )
 
 type SettingsResponse struct {
@@ -151,7 +151,7 @@ func handleSettingsDownloadLog() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		log.Info().Msg("received settings log request")
 
-		file, err := os.Open(mister.LogFile)
+		file, err := os.Open("tapto.log")
 		if err != nil {
 			log.Error().Err(err).Msg("error opening log file")
 			http.Error(w, err.Error(), http.StatusInternalServerError)

@@ -1,3 +1,5 @@
+//go:build linux
+
 /*
 TapTo
 Copyright (C) 2023, 2024 Callan Barrett

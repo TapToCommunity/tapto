@@ -13,7 +13,7 @@ import (
 	"github.com/wizzomafizzo/tapto/pkg/utils"
 
 	"github.com/wizzomafizzo/tapto/pkg/readers/file"
-	"github.com/wizzomafizzo/tapto/pkg/readers/libnfc"
+	// "github.com/wizzomafizzo/tapto/pkg/readers/libnfc"
 	"github.com/wizzomafizzo/tapto/pkg/readers/simple_serial"
 	"github.com/wizzomafizzo/tapto/pkg/tokens"
 )
@@ -97,48 +97,48 @@ func connectReaders(
 					log.Info().Msgf("opened simple serial reader: %s", device)
 				}
 			} else {
-				r := libnfc.NewReader(cfg)
-				err := r.Open(device, iq)
-				if err != nil {
-					log.Error().Msgf("error opening libnfc reader: %s", err)
-					continue
-				} else {
-					st.SetReader(device, r)
-					log.Info().Msgf("opened libnfc reader: %s", device)
-				}
+				// r := libnfc.NewReader(cfg)
+				// err := r.Open(device, iq)
+				// if err != nil {
+				// 	log.Error().Msgf("error opening libnfc reader: %s", err)
+				// 	continue
+				// } else {
+				// 	st.SetReader(device, r)
+				// 	log.Info().Msgf("opened libnfc reader: %s", device)
+				// }
 			}
 		}
 	}
 
-	lrDetect := libnfc.NewReader(cfg)
-	detectDevice := lrDetect.Detect(st.ListReaders())
-	if detectDevice != "" {
-		// log.Info().Msgf("detected new reader: %s", detectDevice)
-		err := lrDetect.Open(detectDevice, iq)
-		if err != nil {
-			log.Error().Msgf("error opening detected reader: %s", err)
-		}
+	// lrDetect := libnfc.NewReader(cfg)
+	// detectDevice := lrDetect.Detect(st.ListReaders())
+	// if detectDevice != "" {
+	// 	// log.Info().Msgf("detected new reader: %s", detectDevice)
+	// 	err := lrDetect.Open(detectDevice, iq)
+	// 	if err != nil {
+	// 		log.Error().Msgf("error opening detected reader: %s", err)
+	// 	}
 
-		if lrDetect != nil {
-			if lrDetect.Connected() {
-				st.SetReader(detectDevice, lrDetect)
-			} else {
-				_ = lrDetect.Close()
-			}
-		}
-	}
+	// 	if lrDetect != nil {
+	// 		if lrDetect.Connected() {
+	// 			st.SetReader(detectDevice, lrDetect)
+	// 		} else {
+	// 			_ = lrDetect.Close()
+	// 		}
+	// 	}
+	// }
 
-	if !utils.Contains(rs, "") {
-		lrAny := libnfc.NewReader(cfg)
-		err := lrAny.Open("", iq)
-		if err == nil {
-			if lrAny != nil && lrAny.Connected() {
-				st.SetReader("", lrAny)
-			} else if lrAny != nil {
-				_ = lrAny.Close()
-			}
-		}
-	}
+	// if !utils.Contains(rs, "") {
+	// 	lrAny := libnfc.NewReader(cfg)
+	// 	err := lrAny.Open("", iq)
+	// 	if err == nil {
+	// 		if lrAny != nil && lrAny.Connected() {
+	// 			st.SetReader("", lrAny)
+	// 		} else if lrAny != nil {
+	// 			_ = lrAny.Close()
+	// 		}
+	// 	}
+	// }
 
 	return nil
 }
