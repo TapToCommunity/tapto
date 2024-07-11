@@ -55,6 +55,15 @@ tasks:
       - rm -f {{.BUILD_DIR}}/tapto-mistex.zip
       - zip {{.BUILD_DIR}}/tapto-mistex.zip {{.BUILD_DIR}}/tapto.sh {{.BUILD_DIR}}/taptui.sh
 
+  build-windows:
+    vars:
+      BUILD_DIR: "{{.PWD}}/_build/windows_{{.ARCH}}"
+    env:
+      GOOS: windows
+      PLATFORM: windows
+    cmds:
+      - task: build
+
   deploy-mister:
     cmds:
       - task: build-mister
