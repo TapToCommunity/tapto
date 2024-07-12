@@ -257,7 +257,7 @@ func StartDaemon(
 	log.Info().Msgf("debug = %t", cfg.GetDebug())
 
 	log.Debug().Msg("opening database")
-	db, err := database.Open()
+	db, err := database.Open(platform)
 	if err != nil {
 		log.Error().Err(err).Msgf("error opening database")
 		return nil, err
