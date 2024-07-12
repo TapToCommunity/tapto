@@ -9,6 +9,7 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/wizzomafizzo/tapto/pkg/config"
 	"github.com/wizzomafizzo/tapto/pkg/platforms"
+	"github.com/wizzomafizzo/tapto/pkg/readers"
 	"github.com/wizzomafizzo/tapto/pkg/tokens"
 )
 
@@ -28,6 +29,10 @@ func (p *Platform) Stop() error {
 }
 
 func (p *Platform) AfterScanHook(token tokens.Token) error {
+	return nil
+}
+
+func (p *Platform) ReadersUpdateHook(readers map[string]*readers.Reader) error {
 	return nil
 }
 

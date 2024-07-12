@@ -2,6 +2,7 @@ package platforms
 
 import (
 	"github.com/wizzomafizzo/tapto/pkg/config"
+	"github.com/wizzomafizzo/tapto/pkg/readers"
 	"github.com/wizzomafizzo/tapto/pkg/tokens"
 )
 
@@ -22,6 +23,7 @@ type Platform interface {
 	Setup(*config.UserConfig) error
 	Stop() error
 	AfterScanHook(tokens.Token) error
+	ReadersUpdateHook(map[string]*readers.Reader) error
 	RootFolders(*config.UserConfig) []string
 	ZipsAsFolders() bool
 	ConfigFolder() string // TODO: rename to data folder (because that's what it is)

@@ -18,6 +18,7 @@ import (
 	"github.com/wizzomafizzo/tapto/pkg/config"
 	"github.com/wizzomafizzo/tapto/pkg/platforms"
 	"github.com/wizzomafizzo/tapto/pkg/platforms/mister"
+	"github.com/wizzomafizzo/tapto/pkg/readers"
 	"github.com/wizzomafizzo/tapto/pkg/tokens"
 )
 
@@ -95,6 +96,10 @@ func (p *Platform) AfterScanHook(token tokens.Token) error {
 		return fmt.Errorf("unable to write scan result file %s: %s", mister.TokenReadFile, err)
 	}
 
+	return nil
+}
+
+func (p *Platform) ReadersUpdateHook(readers map[string]*readers.Reader) error {
 	return nil
 }
 

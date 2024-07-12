@@ -44,6 +44,7 @@ func shouldExit(
 }
 
 func connectReaders(
+	pl platforms.Platform,
 	cfg *config.UserConfig,
 	st *state.State,
 	iq chan<- readers.Scan,
@@ -140,6 +141,16 @@ func connectReaders(
 	// 	}
 	// }
 
+	ids := st.ListReaders()
+	readers := make(map[string]*readers.Reader, 0)
+	for _, id := range ids {
+		r, ok := st.GetReader(id)
+		if ok && r != nil {
+			readers[id] = &r
+		}
+	}
+	pl.ReadersUpdateHook(readers)
+
 	return nil
 }
 
@@ -213,7 +224,7 @@ func readerManager(
 					}
 				}
 
-				err := connectReaders(cfg, st, inputQueue)
+				err := connectReaders(pl, cfg, st, inputQueue)
 				if err != nil {
 					log.Error().Msgf("error connecting readers: %s", err)
 				}

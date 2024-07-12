@@ -18,6 +18,7 @@ import (
 	"github.com/wizzomafizzo/mrext/pkg/mister"
 	"github.com/wizzomafizzo/tapto/pkg/config"
 	"github.com/wizzomafizzo/tapto/pkg/platforms"
+	"github.com/wizzomafizzo/tapto/pkg/readers"
 	"github.com/wizzomafizzo/tapto/pkg/tokens"
 )
 
@@ -31,6 +32,9 @@ type Platform struct {
 	textMap             map[string]string
 	stopMappingsWatcher func() error
 	cmdMappings         map[string]func(platforms.Platform, platforms.CmdEnv) error
+	readers             map[string]*readers.Reader
+	lastScan            *tokens.Token
+	stopSocket          func()
 }
 
 type oldDb struct {
@@ -107,6 +111,20 @@ func (p *Platform) Setup(cfg *config.UserConfig) error {
 		return err
 	}
 
+	stopSocket, err := StartSocketServer(
+		p,
+		func() *tokens.Token {
+			return p.lastScan
+		},
+		func() map[string]*readers.Reader {
+			return p.readers
+		},
+	)
+	if err != nil {
+		log.Error().Msgf("error starting socket server: %s", err)
+	}
+	p.stopSocket = stopSocket
+
 	p.cmdMappings = map[string]func(platforms.Platform, platforms.CmdEnv) error{
 		"mister.ini":    CmdIni,
 		"mister.core":   CmdLaunchCore,
@@ -141,6 +159,8 @@ func (p *Platform) Stop() error {
 		}
 	}
 
+	p.stopSocket()
+
 	return nil
 }
 
@@ -158,6 +178,13 @@ func (p *Platform) AfterScanHook(token tokens.Token) error {
 		return fmt.Errorf("unable to write scan result file %s: %s", TokenReadFile, err)
 	}
 
+	p.lastScan = &token
+
+	return nil
+}
+
+func (p *Platform) ReadersUpdateHook(readers map[string]*readers.Reader) error {
+	p.readers = readers
 	return nil
 }
 
