@@ -19,6 +19,9 @@ import (
 	"github.com/wizzomafizzo/tapto/pkg/config"
 	"github.com/wizzomafizzo/tapto/pkg/platforms"
 	"github.com/wizzomafizzo/tapto/pkg/readers"
+	"github.com/wizzomafizzo/tapto/pkg/readers/file"
+	"github.com/wizzomafizzo/tapto/pkg/readers/libnfc"
+	"github.com/wizzomafizzo/tapto/pkg/readers/simple_serial"
 	"github.com/wizzomafizzo/tapto/pkg/tokens"
 )
 
@@ -61,6 +64,14 @@ func (p *Platform) SetDB(uidMap map[string]string, textMap map[string]string) {
 
 func (p *Platform) Id() string {
 	return "mister"
+}
+
+func (p *Platform) SupportedReaders(cfg *config.UserConfig) []readers.Reader {
+	return []readers.Reader{
+		libnfc.NewReader(cfg),
+		file.NewReader(cfg),
+		simple_serial.NewReader(cfg),
+	}
 }
 
 func (p *Platform) Setup(cfg *config.UserConfig) error {

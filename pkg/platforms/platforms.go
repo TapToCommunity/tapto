@@ -24,6 +24,7 @@ type Platform interface {
 	Stop() error
 	AfterScanHook(tokens.Token) error
 	ReadersUpdateHook(map[string]*readers.Reader) error
+	SupportedReaders(*config.UserConfig) []readers.Reader
 	RootFolders(*config.UserConfig) []string
 	ZipsAsFolders() bool
 	ConfigFolder() string // TODO: rename to data folder (because that's what it is)
