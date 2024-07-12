@@ -1,3 +1,5 @@
+//go:build windows
+
 /*
 TapTo
 Copyright (C) 2023 Gareth Jones
@@ -47,7 +49,8 @@ func main() {
 		os.Exit(0)
 	}
 
-	err := utils.InitLogging()
+	pl := &windows.Platform{}
+	err := utils.InitLogging(pl)
 	if err != nil {
 		fmt.Println("Error initializing logging:", err)
 		os.Exit(1)
@@ -73,7 +76,7 @@ func main() {
 
 	fmt.Println("TapTo v" + config.Version)
 
-	stopSvc, err := daemon.StartDaemon(&windows.Platform{}, cfg)
+	stopSvc, err := daemon.StartDaemon(pl, cfg)
 	if err != nil {
 		log.Error().Msgf("error starting service: %s", err)
 		fmt.Println("Error starting service:", err)

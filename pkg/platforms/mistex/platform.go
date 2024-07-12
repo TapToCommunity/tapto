@@ -110,6 +110,10 @@ func (p *Platform) ConfigFolder() string {
 	return mister.ConfigFolder
 }
 
+func (p *Platform) LogFolder() string {
+	return mister.TempFolder
+}
+
 func (p *Platform) NormalizePath(cfg *config.UserConfig, path string) string {
 	return mister.NormalizePath(cfg, path)
 }

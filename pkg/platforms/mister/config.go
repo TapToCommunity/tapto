@@ -21,7 +21,7 @@ const (
 	DbFile            = ConfigFolder + "/tapto.db"
 	GamesDbFile       = ConfigFolder + "/games.db"
 	ArcadeDbUrl       = "https://api.github.com/repositories/521644036/contents/ArcadeDatabase_CSV"
-	ArcadeDbFile      = ConfigFolder + "//ArcadeDatabase.csv"
+	ArcadeDbFile      = ConfigFolder + "/ArcadeDatabase.csv"
 	ScriptsFolder     = mrextConfig.ScriptsFolder
 	CmdInterface      = "/dev/MiSTer_cmd"
 )

@@ -2,7 +2,6 @@ package api
 
 import (
 	"encoding/json"
-	"io"
 	"net/http"
 	"runtime/debug"
 	"strings"
@@ -20,7 +19,6 @@ import (
 	"github.com/wizzomafizzo/tapto/pkg/database"
 	"github.com/wizzomafizzo/tapto/pkg/platforms"
 	"github.com/wizzomafizzo/tapto/pkg/tokens"
-	"github.com/wizzomafizzo/tapto/pkg/utils"
 )
 
 const (
@@ -63,12 +61,6 @@ func setupWs(
 		send()
 	}
 	IndexInstance.SetEventHook(&idxHook)
-
-	// give the ws module a logger that doesn't include itself
-	websocket.SetLogger(log.Output(io.MultiWriter(utils.BaseLogWriters...)))
-	// change the global logger to include the ws writer
-	writers := append(utils.BaseLogWriters, &websocket.LogWriter{})
-	log.Logger = log.Output(io.MultiWriter(writers...))
 }
 
 // https://github.com/ironstar-io/chizerolog/blob/master/main.go
@@ -174,7 +166,7 @@ func RunApiServer(
 		r.Get("/history", handleHistory(db))
 
 		r.Get("/settings", handleSettings(cfg, st))
-		r.Get("/settings/log/download", handleSettingsDownloadLog())
+		r.Get("/settings/log/download", handleSettingsDownloadLog(pl))
 		r.Put("/settings", handleSettingsUpdate(cfg, st))
 		r.Post("/settings/index/games", handleIndexGames(pl, cfg))
 	})

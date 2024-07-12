@@ -24,16 +24,17 @@ type Platform interface {
 	AfterScanHook(tokens.Token) error
 	RootFolders(*config.UserConfig) []string
 	ZipsAsFolders() bool
-	ConfigFolder() string
+	ConfigFolder() string // TODO: rename to data folder (because that's what it is)
+	LogFolder() string
 	NormalizePath(*config.UserConfig, string) string
 	KillLauncher() error
-	LaunchingEnabled() bool
-	SetLaunching(bool) error
+	LaunchingEnabled() bool  // TODO: remove? should be mister only?
+	SetLaunching(bool) error // TODO: remove? should be mister only?
 	GetActiveLauncher() string
-	PlayFailSound(*config.UserConfig)
+	PlayFailSound(*config.UserConfig) // TODO: change to like PlaySound?
 	PlaySuccessSound(*config.UserConfig)
 	ActiveSystem() string
-	ActiveGame() string
+	ActiveGame() string // TODO: check where this is used
 	ActiveGameName() string
 	ActiveGamePath() string
 	SetEventHook(*func())

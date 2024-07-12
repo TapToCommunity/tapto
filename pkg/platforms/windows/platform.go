@@ -1,7 +1,10 @@
+//go:build windows
+
 package windows
 
 import (
 	"os"
+	"path/filepath"
 
 	"github.com/rs/zerolog/log"
 	"github.com/wizzomafizzo/tapto/pkg/config"
@@ -36,13 +39,22 @@ func (p *Platform) ZipsAsFolders() bool {
 	return false
 }
 
-func (p *Platform) ConfigFolder() string {
-	cwd, err := os.Getwd()
+func exeDir() string {
+	exe, err := os.Executable()
 	if err != nil {
 		return ""
 	}
 
-	return cwd
+	return filepath.Dir(exe)
+}
+
+func (p *Platform) ConfigFolder() string {
+	// this could be AppData instead
+	return filepath.Join(exeDir(), "data")
+}
+
+func (p *Platform) LogFolder() string {
+	return filepath.Join(exeDir(), "logs")
 }
 
 func (p *Platform) NormalizePath(cfg *config.UserConfig, path string) string {

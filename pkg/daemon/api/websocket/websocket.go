@@ -9,13 +9,6 @@ import (
 	"github.com/rs/zerolog"
 )
 
-type LogWriter struct{}
-
-func (lw *LogWriter) Write(p []byte) (n int, err error) {
-	Broadcast(fmt.Sprintf("LOG %s", string(p)))
-	return len(p), nil
-}
-
 var upgrader = websocket.Upgrader{
 	CheckOrigin: func(r *http.Request) bool {
 		return true
@@ -87,12 +80,6 @@ func (cg *connGroup) Broadcast(msg string) {
 }
 
 var conns = &connGroup{}
-
-func SetLogger(l zerolog.Logger) {
-	conns.mu.Lock()
-	defer conns.mu.Unlock()
-	conns.logger = l
-}
 
 func Handle(
 	connectPayload func() []string,

@@ -168,7 +168,8 @@ func main() {
 		os.Exit(0)
 	}
 
-	err := utils.InitLogging()
+	pl := &mistex.Platform{}
+	err := utils.InitLogging(pl)
 	if err != nil {
 		fmt.Println("Error initializing logging:", err)
 		os.Exit(1)
@@ -195,7 +196,7 @@ func main() {
 	svc, err := mister.NewService(mister.ServiceArgs{
 		Name: appName,
 		Entry: func() (func() error, error) {
-			return daemon.StartDaemon(&mistex.Platform{}, cfg)
+			return daemon.StartDaemon(pl, cfg)
 		},
 	})
 	if err != nil {

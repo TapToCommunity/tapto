@@ -163,7 +163,8 @@ func main() {
 		os.Exit(0)
 	}
 
-	err := utils.InitLogging()
+	pl := &mister.Platform{}
+	err := utils.InitLogging(pl)
 	if err != nil {
 		fmt.Println("Error initializing logging:", err)
 		os.Exit(1)
@@ -187,7 +188,6 @@ func main() {
 		zerolog.SetGlobalLevel(zerolog.InfoLevel)
 	}
 
-	pl := &mister.Platform{}
 	svc, err := mister.NewService(mister.ServiceArgs{
 		Name: appName,
 		Entry: func() (func() error, error) {

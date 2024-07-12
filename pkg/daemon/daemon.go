@@ -138,7 +138,6 @@ func launchToken(
 	platform platforms.Platform,
 	cfg *config.UserConfig,
 	token tokens.Token,
-	state *state.State,
 	db *database.Database,
 	lsq chan<- *tokens.Token,
 ) error {
@@ -219,7 +218,7 @@ func processLaunchQueue(
 				continue
 			}
 
-			err = launchToken(platform, cfg, t, st, db, lsq)
+			err = launchToken(platform, cfg, t, db, lsq)
 			if err != nil {
 				log.Error().Err(err).Msgf("error launching token")
 			}
