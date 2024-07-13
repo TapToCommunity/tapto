@@ -4,6 +4,7 @@ package windows
 
 import (
 	"os"
+	"os/exec"
 	"path/filepath"
 
 	"github.com/rs/zerolog/log"
@@ -46,7 +47,9 @@ func (p *Platform) ReadersUpdateHook(readers map[string]*readers.Reader) error {
 }
 
 func (p *Platform) RootFolders(cfg *config.UserConfig) []string {
-	return []string{}
+	return []string{
+		"C:\\scratch",
+	}
 }
 
 func (p *Platform) ZipsAsFolders() bool {
@@ -127,6 +130,16 @@ func (p *Platform) LaunchSystem(cfg *config.UserConfig, id string) error {
 
 func (p *Platform) LaunchFile(cfg *config.UserConfig, path string) error {
 	log.Info().Msgf("launching file: %s", path)
+
+	if filepath.Ext(path) == ".txt" {
+		// get filename minus ext
+
+		fn := filepath.Base(path)
+		fn = fn[:len(fn)-4]
+
+		return exec.Command("cmd", "/c", "C:\\Program Files (x86)\\Steam\\steam.exe", "steam://rungameid/"+fn).Start()
+	}
+
 	return nil
 }
 

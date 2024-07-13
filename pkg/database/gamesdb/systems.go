@@ -77,6 +77,11 @@ func AllSystems() []System {
 }
 
 var Systems = map[string]System{
+	"Steam": {
+		Id:         "Steam",
+		Folders:    []string{"Steam"},
+		Extensions: []string{".txt"},
+	},
 	// Consoles
 	"AdventureVision": {
 		Id:         "AdventureVision",
