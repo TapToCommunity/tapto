@@ -11,6 +11,7 @@ import (
 	"github.com/wizzomafizzo/tapto/pkg/readers"
 	"github.com/wizzomafizzo/tapto/pkg/readers/acr122_pcsc"
 	"github.com/wizzomafizzo/tapto/pkg/readers/file"
+	"github.com/wizzomafizzo/tapto/pkg/readers/pn532_uart"
 	"github.com/wizzomafizzo/tapto/pkg/readers/simple_serial"
 	"github.com/wizzomafizzo/tapto/pkg/tokens"
 )
@@ -27,6 +28,7 @@ func (p *Platform) SupportedReaders(cfg *config.UserConfig) []readers.Reader {
 		file.NewReader(cfg),
 		simple_serial.NewReader(cfg),
 		acr122_pcsc.NewAcr122Pcsc(cfg),
+		pn532_uart.NewReader(cfg),
 	}
 }
 

@@ -121,6 +121,13 @@ func (r *SimpleSerialReader) Close() error {
 }
 
 func (r *SimpleSerialReader) Detect(connected []string) string {
+	ports, err := serial.GetPortsList()
+	if err != nil {
+		log.Error().Err(err).Msg("failed to get serial ports")
+	}
+
+	log.Debug().Msgf("detected serial ports: %v", ports)
+
 	return ""
 }
 
