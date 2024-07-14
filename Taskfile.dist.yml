@@ -66,6 +66,17 @@ tasks:
     cmds:
       - go build -o _build/${PLATFORM}_{{ARCH}}/${TAPTO_BIN} ./cmd/$PLATFORM
 
+  build-mac:
+    vars:
+      BUILD_DIR: "{{.PWD}}/_build/mac_{{.ARCH}}"
+    env:
+      GOOS: darwin
+      PLATFORM: mac
+      TAPTO_BIN: tapto
+      CGO_ENABLED: 0
+    cmds:
+      - go build -o _build/${PLATFORM}_{{ARCH}}/${TAPTO_BIN} ./cmd/$PLATFORM
+
   deploy-mister:
     cmds:
       - task: build-mister
