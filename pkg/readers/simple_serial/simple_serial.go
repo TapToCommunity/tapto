@@ -3,7 +3,7 @@ package simple_serial
 import (
 	"errors"
 	"os"
-	"path/filepath"
+	"runtime"
 	"strings"
 	"time"
 
@@ -96,12 +96,10 @@ func (r *SimpleSerialReader) Open(device string, iq chan<- readers.Scan) error {
 
 	path := ps[1]
 
-	if !filepath.IsAbs(path) {
-		return errors.New("invalid device path, must be absolute")
-	}
-
-	if _, err := os.Stat(path); err != nil {
-		return err
+	if runtime.GOOS != "windows" {
+		if _, err := os.Stat(path); err != nil {
+			return err
+		}
 	}
 
 	port, err := serial.Open(path, &serial.Mode{

@@ -1,4 +1,4 @@
-package acr122pcsc
+package acr122_pcsc
 
 import (
 	"errors"
