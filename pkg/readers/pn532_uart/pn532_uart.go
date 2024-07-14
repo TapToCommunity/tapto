@@ -68,7 +68,7 @@ func (r *SimpleSerialReader) Open(device string, iq chan<- readers.Scan) error {
 		return err
 	}
 
-	_, err = SamConfiguration(port)
+	err = SamConfiguration(port)
 	if err != nil {
 		return err
 	}
@@ -78,7 +78,7 @@ func (r *SimpleSerialReader) Open(device string, iq chan<- readers.Scan) error {
 		return err
 	}
 
-	log.Info().Msgf("firmware version: %s", resp)
+	log.Info().Msgf("firmware version: %x", resp)
 
 	r.port = port
 	r.device = device
@@ -121,12 +121,12 @@ func (r *SimpleSerialReader) Close() error {
 }
 
 func (r *SimpleSerialReader) Detect(connected []string) string {
-	ports, err := serial.GetPortsList()
+	_, err := serial.GetPortsList()
 	if err != nil {
 		log.Error().Err(err).Msg("failed to get serial ports")
 	}
 
-	log.Debug().Msgf("detected serial ports: %v", ports)
+	// log.Debug().Msgf("detected serial ports: %v", ports)
 
 	return ""
 }

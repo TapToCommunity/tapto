@@ -3,6 +3,7 @@ package pn532_uart
 import (
 	"bytes"
 	"errors"
+	"time"
 
 	"go.bug.st/serial"
 )
@@ -13,41 +14,35 @@ const (
 	CmdGetGeneralStatus    = 0x04
 	CmdInListPassiveTarget = 0x4A
 	CmdInDataExchange      = 0x40
-	FrmPreamble            = 0x00
-	FrmStart1              = 0x00
-	FrmStart2              = 0xFF
-	FrmPostamble           = 0x00
 	HostToPn532            = 0xD4
 	Pn532ToHost            = 0xD5
+	Pn532Ready             = 0x01
 )
 
 var Ack = []byte{0x00, 0x00, 0xFF, 0x00, 0xFF, 0x00}
 
-func WriteCmd(port serial.Port, cmd []byte) error {
-	cmdLen := len(cmd)
-	if cmdLen < 1 {
-		return errors.New("cmd is empty")
-	}
-	if cmdLen > 255 {
-		return errors.New("cmd is too long")
-	}
+func NewFrame(cmd byte, data []byte) []byte {
+	frm := []byte{0x00, 0x00, 0xFF}
 
-	len := byte(cmdLen + 1)
-	tfi := byte(HostToPn532)
-	dcs := byte(^len + 1)
+	len := byte(len(data))
+	frm = append(frm, len+2)
+	frm = append(frm, ^len+1)
+	frm = append(frm, HostToPn532)
+	frm = append(frm, cmd)
+	frm = append(frm, data...)
 
-	data := append([]byte{FrmPreamble, FrmStart1, FrmStart2, len, tfi}, cmd...)
-	data = append(data, dcs, FrmPostamble)
-
-	_, err := port.Write(data)
-	if err != nil {
-		return err
+	sum := byte(0)
+	for _, b := range frm[6:] {
+		sum += b
 	}
 
-	return nil
+	frm = append(frm, ^sum+1)
+	frm = append(frm, 0x00)
+
+	return frm
 }
 
-func ReadAck(port serial.Port) error {
+func readAck(port serial.Port) error {
 	buf := make([]byte, 6)
 	_, err := port.Read(buf)
 	if err != nil {
@@ -55,71 +50,90 @@ func ReadAck(port serial.Port) error {
 	}
 
 	if !bytes.Equal(buf, Ack) {
-		return errors.New("invalid ack")
+		return errors.New("invalid ACK")
 	}
 
 	return nil
 }
 
-func ReadResponse(port serial.Port) ([]byte, error) {
-	buf := make([]byte, 6)
+func wakeUp(port serial.Port) error {
+	_, err := port.Write([]byte{0x55, 0x55, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF, 0x03, 0xFD, 0xD4, 0x14, 0x01, 0x17, 0x00})
+	if err != nil {
+		return err
+	}
+
+	time.Sleep(50 * time.Millisecond)
+
+	return nil
+}
+
+func SamConfiguration(port serial.Port) error {
+	err := wakeUp(port)
+	if err != nil {
+		return err
+	}
+
+	frm := NewFrame(CmdSamConfiguration, []byte{0x01, 0x14, 0x01})
+	_, err = port.Write(frm)
+	if err != nil {
+		return err
+	}
+
+	return readAck(port)
+}
+
+func readFrame(port serial.Port) ([]byte, error) {
+	buf := make([]byte, 255+7)
 	_, err := port.Read(buf)
 	if err != nil {
-		return nil, err
+		return []byte{}, err
 	}
 
 	if len(buf) < 6 {
-		return nil, errors.New("invalid response")
+		return []byte{}, errors.New("response too short")
 	}
 
-	if buf[0] != FrmPreamble || buf[1] != FrmStart1 || buf[2] != FrmStart2 {
-		return nil, errors.New("invalid response")
+	i := 0
+	for ; i < len(buf); i++ {
+		if buf[i] == 0xFF {
+			break
+		}
 	}
 
-	len := buf[3]
-	// tfi := buf[4]
-	dcs := buf[5]
-
-	if dcs != ^byte(len+1) {
-		return nil, errors.New("invalid dcs")
+	if i == len(buf) {
+		return []byte{}, errors.New("no frame start found")
 	}
 
-	data := make([]byte, len)
-	_, err = port.Read(data)
-	if err != nil {
-		return nil, err
+	buf = buf[i:]
+	if len(buf) < 7 {
+		return []byte{}, errors.New("frame too short")
 	}
 
-	return data, nil
-}
-
-func SendCmd(port serial.Port, cmd []byte) ([]byte, error) {
-	err := WriteCmd(port, cmd)
-	if err != nil {
-		return nil, err
+	flen := int(buf[0])
+	if len(buf) < flen+7 {
+		return []byte{}, errors.New("length mismatch")
 	}
 
-	err = ReadAck(port)
-	if err != nil {
-		return nil, err
-	}
-
-	data, err := ReadResponse(port)
-	if err != nil {
-		return nil, err
-	}
-
-	return data, nil
+	return buf, nil
 }
 
 func GetFirmwareVersion(port serial.Port) ([]byte, error) {
-	return SendCmd(port, []byte{CmdGetFirmwareVersion})
-}
+	err := wakeUp(port)
+	if err != nil {
+		return []byte{}, err
+	}
 
-func GetGeneralStatus(port serial.Port) ([]byte, error) {
-	return SendCmd(port, []byte{CmdGetGeneralStatus})
-}
+	frm := NewFrame(CmdGetFirmwareVersion, nil)
+	_, err = port.Write(frm)
+	if err != nil {
+		return []byte{}, err
+	}
 
-func SamConfiguration(port serial.Port) ([]byte, error) {
-	return SendCmd(port, []byte{CmdSamConfiguration, 0x01, 0x14, 0x01})
+	buf := make([]byte, 64)
+	_, err = port.Read(buf)
+	if err != nil {
+		return []byte{}, err
+	}
+
+	return buf, nil
 }
