@@ -73,12 +73,17 @@ func (r *SimpleSerialReader) Open(device string, iq chan<- readers.Scan) error {
 		return err
 	}
 
-	resp, err := GetFirmwareVersion(port)
+	fv, err := GetFirmwareVersion(port)
 	if err != nil {
 		return err
 	}
+	log.Info().Msgf("firmware version: %v", fv)
 
-	log.Info().Msgf("firmware version: %x", resp)
+	gs, err := GetGeneralStatus(port)
+	if err != nil {
+		return err
+	}
+	log.Info().Msgf("general status: %v", gs)
 
 	r.port = port
 	r.device = device

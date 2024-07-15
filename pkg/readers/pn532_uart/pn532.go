@@ -3,137 +3,231 @@ package pn532_uart
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"time"
 
+	"github.com/rs/zerolog/log"
 	"go.bug.st/serial"
 )
 
 const (
-	CmdSamConfiguration    = 0x14
-	CmdGetFirmwareVersion  = 0x02
-	CmdGetGeneralStatus    = 0x04
-	CmdInListPassiveTarget = 0x4A
-	CmdInDataExchange      = 0x40
-	HostToPn532            = 0xD4
-	Pn532ToHost            = 0xD5
-	Pn532Ready             = 0x01
+	cmdSamConfiguration    = 0x14
+	cmdGetFirmwareVersion  = 0x02
+	cmdGetGeneralStatus    = 0x04
+	cmdInListPassiveTarget = 0x4A
+	cmdInDataExchange      = 0x40
+	hostToPn532            = 0xD4
+	pn532ToHost            = 0xD5
+	pn532Ready             = 0x01
 )
 
-var Ack = []byte{0x00, 0x00, 0xFF, 0x00, 0xFF, 0x00}
-
-func NewFrame(cmd byte, data []byte) []byte {
-	frm := []byte{0x00, 0x00, 0xFF}
-
-	len := byte(len(data))
-	frm = append(frm, len+2)
-	frm = append(frm, ^len+1)
-	frm = append(frm, HostToPn532)
-	frm = append(frm, cmd)
-	frm = append(frm, data...)
-
-	sum := byte(0)
-	for _, b := range frm[6:] {
-		sum += b
-	}
-
-	frm = append(frm, ^sum+1)
-	frm = append(frm, 0x00)
-
-	return frm
-}
-
-func readAck(port serial.Port) error {
-	buf := make([]byte, 6)
-	_, err := port.Read(buf)
-	if err != nil {
-		return err
-	}
-
-	if !bytes.Equal(buf, Ack) {
-		return errors.New("invalid ACK")
-	}
-
-	return nil
-}
-
 func wakeUp(port serial.Port) error {
-	_, err := port.Write([]byte{0x55, 0x55, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF, 0x03, 0xFD, 0xD4, 0x14, 0x01, 0x17, 0x00})
+	// over uart, pn532 must be "woken up" by sending 2 x 0x55 and then "waiting a while"
+	// we send a bunch of 0x00 to wait
+	_, err := port.Write([]byte{0x55, 0x55, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00})
 	if err != nil {
 		return err
 	}
 
-	time.Sleep(50 * time.Millisecond)
-
 	return nil
 }
 
-func SamConfiguration(port serial.Port) error {
+func waitAck(port serial.Port) error {
+	// pn532 will send this sequence to acknowledge it received the previous command
+	start := time.Now()
+
+	buf := make([]byte, 6)
+	for {
+		_, err := port.Read(buf)
+		if err != nil {
+			return err
+		}
+
+		if bytes.Equal(buf, []byte{0x00, 0x00, 0xFF, 0x00, 0xFF, 0x00}) {
+			return nil
+		} else {
+			if time.Since(start) > 1*time.Second {
+				return errors.New("timeout waiting for ACK")
+			} else {
+				continue
+			}
+		}
+	}
+}
+
+func sendFrame(port serial.Port, cmd byte, args []byte) error {
+	// create frame
+	frm := []byte{0x00, 0x00, 0xFF} // preamble and start code
+
+	data := []byte{hostToPn532, cmd}
+	data = append(data, args...)
+
+	if len(data) > 255 {
+		// TODO: extended frames are not implemented
+		return errors.New("data too big for frame")
+	}
+
+	dlen := byte(len(data))
+	frm = append(frm, dlen)    // length
+	frm = append(frm, ^dlen+1) // length checksum
+
+	checksum := byte(0)
+
+	for _, b := range data {
+		frm = append(frm, b)
+		checksum += b
+	}
+
+	frm = append(frm, ^checksum+1) // data checksum
+	frm = append(frm, 0x00)        // postamble
+
+	log.Debug().Msgf("sending frame: %x", frm)
+
+	// write frame
 	err := wakeUp(port)
 	if err != nil {
 		return err
 	}
 
-	frm := NewFrame(CmdSamConfiguration, []byte{0x01, 0x14, 0x01})
-	_, err = port.Write(frm)
+	n, err := port.Write(frm)
 	if err != nil {
 		return err
+	} else if n != len(frm) {
+		return errors.New("write error, not all bytes written")
 	}
 
-	return readAck(port)
+	time.Sleep(2 * time.Millisecond)
+
+	return waitAck(port)
 }
 
-func readFrame(port serial.Port) ([]byte, error) {
+func receiveFrame(port serial.Port) ([]byte, error) {
 	buf := make([]byte, 255+7)
 	_, err := port.Read(buf)
 	if err != nil {
 		return []byte{}, err
 	}
 
-	if len(buf) < 6 {
-		return []byte{}, errors.New("response too short")
-	}
-
-	i := 0
-	for ; i < len(buf); i++ {
-		if buf[i] == 0xFF {
+	// find middle of packet code (0x00 0xff) and skip preamble
+	off := 0
+	for ; off < len(buf); off++ {
+		if buf[off] == 0xFF {
 			break
 		}
 	}
-
-	if i == len(buf) {
-		return []byte{}, errors.New("no frame start found")
+	if off == len(buf) {
+		return []byte{}, errors.New("no frame found")
 	}
 
-	buf = buf[i:]
-	if len(buf) < 7 {
-		return []byte{}, errors.New("frame too short")
+	// check frame length value and checksum (LEN)
+	off++
+	frameLen := int(buf[off])
+	if ((frameLen + int(buf[off+1])) & 0xFF) != 0 {
+		return []byte{}, errors.New("invalid frame length")
 	}
 
-	flen := int(buf[0])
-	if len(buf) < flen+7 {
-		return []byte{}, errors.New("length mismatch")
+	// check frame checksum against data (LCS)
+	chk := byte(0)
+	for _, b := range buf[off+2 : off+2+frameLen+1] {
+		chk += b
+	}
+	if chk != 0 {
+		return []byte{}, errors.New("invalid frame checksum")
 	}
 
-	return buf, nil
+	// check tfi
+	off += 2
+	if buf[off] != pn532ToHost {
+		return []byte{}, errors.New("invalid TFI, expected PN532 to host")
+	}
+
+	// get frame data
+	off++
+	log.Debug().Msgf("received frame: %x", buf[off:off+frameLen-1])
+
+	// return data part of frame
+	data := make([]byte, frameLen-1)
+	copy(data, buf[off:off+frameLen-1])
+
+	return data, nil
 }
 
-func GetFirmwareVersion(port serial.Port) ([]byte, error) {
-	err := wakeUp(port)
+func callCommand(
+	port serial.Port,
+	cmd byte,
+	data []byte,
+) ([]byte, error) {
+	err := sendFrame(port, cmd, data)
 	if err != nil {
 		return []byte{}, err
 	}
 
-	frm := NewFrame(CmdGetFirmwareVersion, nil)
-	_, err = port.Write(frm)
+	res, err := receiveFrame(port)
 	if err != nil {
 		return []byte{}, err
 	}
 
-	buf := make([]byte, 64)
-	_, err = port.Read(buf)
+	return res, nil
+}
+
+func SamConfiguration(port serial.Port) error {
+	// sets pn532 to "normal" mode
+	res, err := callCommand(port, cmdSamConfiguration, []byte{0x01, 0x14, 0x01})
 	if err != nil {
-		return []byte{}, err
+		return err
+	} else if len(res) != 1 || res[0] != 0x15 {
+		return errors.New("unexpected sam configuration response")
 	}
 
-	return buf, nil
+	return nil
+}
+
+type FirmwareVersion struct {
+	Version          string
+	SupportIso14443a bool
+	SupportIso14443b bool
+	SupportIso18092  bool
+}
+
+func GetFirmwareVersion(port serial.Port) (FirmwareVersion, error) {
+	res, err := callCommand(port, cmdGetFirmwareVersion, []byte{})
+	if err != nil {
+		return FirmwareVersion{}, err
+	} else if len(res) != 5 || res[0] != 0x03 {
+		return FirmwareVersion{}, errors.New("unexpected firmware version response")
+	}
+
+	if res[1] != 0x32 {
+		return FirmwareVersion{}, fmt.Errorf("unexpected IC: %x", res[1])
+	}
+
+	fv := FirmwareVersion{
+		Version:          fmt.Sprintf("%d.%d", res[2], res[3]),
+		SupportIso14443a: res[4]&0x01 == 0x01,
+		SupportIso14443b: res[4]&0x02 == 0x02,
+		SupportIso18092:  res[4]&0x04 == 0x04,
+	}
+
+	return fv, nil
+}
+
+type GeneralStatus struct {
+	LastError    byte
+	FieldPresent bool
+}
+
+func GetGeneralStatus(port serial.Port) (GeneralStatus, error) {
+	res, err := callCommand(port, cmdGetGeneralStatus, []byte{})
+	if err != nil {
+		return GeneralStatus{}, err
+	} else if len(res) < 4 || res[0] != 0x05 {
+		return GeneralStatus{}, errors.New("unexpected general status response")
+	}
+
+	gs := GeneralStatus{
+		LastError:    res[1],
+		FieldPresent: res[2] == 0x01,
+	}
+
+	return gs, nil
 }
