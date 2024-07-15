@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/rs/zerolog/log"
+	"github.com/wizzomafizzo/tapto/pkg/tokens"
 	"go.bug.st/serial"
 )
 
@@ -81,7 +81,7 @@ func sendFrame(port serial.Port, cmd byte, args []byte) error {
 	frm = append(frm, ^checksum+1) // data checksum
 	frm = append(frm, 0x00)        // postamble
 
-	log.Debug().Msgf("sending frame: %x", frm)
+	// log.Debug().Msgf("sending frame: %x", frm)
 
 	// write frame
 	err := wakeUp(port)
@@ -101,6 +101,8 @@ func sendFrame(port serial.Port, cmd byte, args []byte) error {
 	return waitAck(port)
 }
 
+var ErrNoFrameFound = errors.New("no frame found")
+
 func receiveFrame(port serial.Port) ([]byte, error) {
 	buf := make([]byte, 255+7)
 	_, err := port.Read(buf)
@@ -116,7 +118,7 @@ func receiveFrame(port serial.Port) ([]byte, error) {
 		}
 	}
 	if off == len(buf) {
-		return []byte{}, errors.New("no frame found")
+		return []byte{}, ErrNoFrameFound
 	}
 
 	// check frame length value and checksum (LEN)
@@ -138,12 +140,13 @@ func receiveFrame(port serial.Port) ([]byte, error) {
 	// check tfi
 	off += 2
 	if buf[off] != pn532ToHost {
+		//log.Debug().Msgf("received frame: %x", buf)
 		return []byte{}, errors.New("invalid TFI, expected PN532 to host")
 	}
 
 	// get frame data
 	off++
-	log.Debug().Msgf("received frame: %x", buf[off:off+frameLen-1])
+	//log.Debug().Msgf("received frame: %x", buf[off:off+frameLen-1])
 
 	// return data part of frame
 	data := make([]byte, frameLen-1)
@@ -230,4 +233,59 @@ func GetGeneralStatus(port serial.Port) (GeneralStatus, error) {
 	}
 
 	return gs, nil
+}
+
+type Target struct {
+	Type     string
+	Uid      string
+	UidBytes []byte
+}
+
+func InListPassiveTarget(port serial.Port) (*Target, error) {
+	res, err := callCommand(port, cmdInListPassiveTarget, []byte{0x01, 0x00})
+	if errors.Is(err, ErrNoFrameFound) {
+		// no tag detected
+		return nil, nil
+	} else if err != nil {
+		return nil, err
+	} else if len(res) < 2 || res[0] != 0x4B {
+		return nil, errors.New("unexpected passive target response")
+	} else if res[1] != 0x01 {
+		// no tag detected
+		return nil, nil
+	}
+
+	uidLen := res[6]
+	if uidLen == 0 {
+		return nil, errors.New("invalid uid length")
+	}
+
+	uid := res[7 : 7+uidLen]
+	uidStr := fmt.Sprintf("%x", uid)
+
+	tagType := ""
+	if bytes.Equal(res[3:6], []byte{0x00, 0x04, 0x08}) {
+		tagType = tokens.TypeMifare
+	} else if bytes.Equal(res[3:6], []byte{0x00, 0x44, 0x00}) {
+		tagType = tokens.TypeNTAG
+	}
+
+	return &Target{
+		Type:     tagType,
+		Uid:      uidStr,
+		UidBytes: uid,
+	}, nil
+}
+
+func InDataExchange(port serial.Port, data []byte) ([]byte, error) {
+	res, err := callCommand(port, cmdInDataExchange, append([]byte{0x01}, data...))
+	if err != nil {
+		return []byte{}, err
+	} else if len(res) < 2 || res[0] != 0x41 {
+		return []byte{}, errors.New("unexpected data exchange response")
+	} else if res[1] != 0x00 {
+		return []byte{}, errors.New("data exchange failed: " + fmt.Sprintf("%x", res[1]))
+	}
+
+	return res[1:], nil
 }

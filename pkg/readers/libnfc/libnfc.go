@@ -245,7 +245,14 @@ func detectSerialReaders(connected []string) string {
 		}
 
 		// ignore if different reader already connected
-		if strings.HasSuffix(device, ":"+device) {
+		match := false
+		for _, c := range connected {
+			if strings.HasSuffix(c, ":"+device) {
+				match = true
+				break
+			}
+		}
+		if match {
 			continue
 		}
 
