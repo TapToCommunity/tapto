@@ -144,7 +144,12 @@ func cmdLaunch(pl platforms.Platform, env platforms.CmdEnv) error {
 
 	log.Info().Msgf("launching system: %s, path: %s", systemId, path)
 
-	for _, f := range system.Folders {
+	launcher, ok := pl.Launchers()[system.Id]
+	if !ok {
+		return fmt.Errorf("system not supported: %s", system.Id)
+	}
+
+	for _, f := range launcher.Folders {
 		systemPath := filepath.Join(f, path)
 		if fp, err := findFile(pl, env.Cfg, systemPath); err == nil {
 			log.Debug().Msgf("launching found system path: %s", fp)

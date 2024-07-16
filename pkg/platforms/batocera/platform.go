@@ -165,3 +165,7 @@ func (p *Platform) ForwardCmd(env platforms.CmdEnv) error {
 func (p *Platform) LookupMapping(_ tokens.Token) (string, bool) {
 	return "", false
 }
+
+func (p *Platform) Launchers() map[string]platforms.Launcher {
+	return nil
+}

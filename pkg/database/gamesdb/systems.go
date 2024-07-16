@@ -2,7 +2,6 @@ package gamesdb
 
 import (
 	"fmt"
-	"path/filepath"
 	"strings"
 
 	"github.com/wizzomafizzo/tapto/pkg/utils"
@@ -17,10 +16,8 @@ import (
 // be used to attempt to associate a file with a system.
 
 type System struct {
-	Id         string
-	Aliases    []string
-	Folders    []string
-	Extensions []string
+	Id      string
+	Aliases []string
 }
 
 // GetSystem looks up an exact system definition by ID.
@@ -47,22 +44,6 @@ func LookupSystem(id string) (*System, error) {
 	}
 
 	return nil, fmt.Errorf("unknown system: %s", id)
-}
-
-// MatchSystemFile returns true if a given file's extension is valid for a system.
-func MatchSystemFile(system System, path string) bool {
-	// ignore dot files
-	if strings.HasPrefix(filepath.Base(path), ".") {
-		return false
-	}
-
-	for _, ext := range system.Extensions {
-		if strings.HasSuffix(strings.ToLower(path), ext) {
-			return true
-		}
-	}
-
-	return false
 }
 
 func AllSystems() []System {
@@ -187,546 +168,342 @@ const (
 var Systems = map[string]System{
 	// Consoles
 	SystemAdventureVision: {
-		Id:         SystemAdventureVision,
-		Aliases:    []string{"AVision"},
-		Folders:    []string{"AVision"},
-		Extensions: []string{".bin"},
+		Id:      SystemAdventureVision,
+		Aliases: []string{"AVision"},
 	},
 	SystemArcadia: {
-		Id:         SystemArcadia,
-		Folders:    []string{"Arcadia"},
-		Extensions: []string{".bin"},
+		Id: SystemArcadia,
 	},
 	SystemAstrocade: {
-		Id:         SystemAstrocade,
-		Folders:    []string{"Astrocade"},
-		Extensions: []string{".bin"},
+		Id: SystemAstrocade,
 	},
 	SystemAtari2600: {
-		Id:         SystemAtari2600,
-		Folders:    []string{"ATARI7800", "Atari2600"},
-		Extensions: []string{".a26"},
+		Id: SystemAtari2600,
 	},
 	SystemAtari5200: {
-		Id:         SystemAtari5200,
-		Folders:    []string{"ATARI5200"},
-		Extensions: []string{".a52"},
+		Id: SystemAtari5200,
 	},
 	SystemAtari7800: {
-		Id:         SystemAtari7800,
-		Folders:    []string{"ATARI7800"},
-		Extensions: []string{".a78"},
+		Id: SystemAtari7800,
 	},
 	SystemAtariLynx: {
-		Id:         SystemAtariLynx,
-		Folders:    []string{"AtariLynx"},
-		Extensions: []string{".lnx"},
+		Id: SystemAtariLynx,
 	},
 	SystemCasioPV1000: {
-		Id:         SystemCasioPV1000,
-		Aliases:    []string{"Casio_PV-1000"},
-		Folders:    []string{"Casio_PV-1000"},
-		Extensions: []string{".bin"},
+		Id:      SystemCasioPV1000,
+		Aliases: []string{"Casio_PV-1000"},
 	},
 	SystemChannelF: {
-		Id:         SystemChannelF,
-		Folders:    []string{"ChannelF"},
-		Extensions: []string{".rom", ".bin"},
+		Id: SystemChannelF,
 	},
 	SystemColecoVision: {
-		Id:         SystemColecoVision,
-		Aliases:    []string{"Coleco"},
-		Folders:    []string{"Coleco"},
-		Extensions: []string{".col", ".bin", ".rom"},
+		Id:      SystemColecoVision,
+		Aliases: []string{"Coleco"},
 	},
 	SystemCreatiVision: {
-		Id:         SystemCreatiVision,
-		Folders:    []string{"CreatiVision"},
-		Extensions: []string{".rom", ".bin", ".bas"},
+		Id: SystemCreatiVision,
 	},
 	SystemFDS: {
-		Id:         SystemFDS,
-		Aliases:    []string{"FamicomDiskSystem"},
-		Folders:    []string{"NES", "FDS"},
-		Extensions: []string{".fds"},
+		Id:      SystemFDS,
+		Aliases: []string{"FamicomDiskSystem"},
 	},
 	SystemGamate: {
-		Id:         SystemGamate,
-		Folders:    []string{"Gamate"},
-		Extensions: []string{".bin"},
+		Id: SystemGamate,
 	},
 	SystemGameboy: {
-		Id:         SystemGameboy,
-		Aliases:    []string{"GB"},
-		Folders:    []string{"GAMEBOY"},
-		Extensions: []string{".gb"},
+		Id:      SystemGameboy,
+		Aliases: []string{"GB"},
 	},
 	SystemGameboyColor: {
-		Id:         SystemGameboyColor,
-		Aliases:    []string{"GBC"},
-		Folders:    []string{"GAMEBOY", "GBC"},
-		Extensions: []string{".gbc"},
+		Id:      SystemGameboyColor,
+		Aliases: []string{"GBC"},
 	},
 	SystemGameboy2P: {
 		// TODO: Split 2P core into GB and GBC?
-		Id:         SystemGameboy2P,
-		Folders:    []string{"GAMEBOY2P"},
-		Extensions: []string{".gb", ".gbc"},
+		Id: SystemGameboy2P,
 	},
 	SystemGameGear: {
-		Id:         SystemGameGear,
-		Aliases:    []string{"GG"},
-		Folders:    []string{"SMS", "GameGear"},
-		Extensions: []string{".gg"},
+		Id:      SystemGameGear,
+		Aliases: []string{"GG"},
 	},
 	SystemGameNWatch: {
-		Id:         SystemGameNWatch,
-		Folders:    []string{"GameNWatch"},
-		Extensions: []string{".bin"},
+		Id: SystemGameNWatch,
 	},
 	SystemGBA: {
-		Id:         SystemGBA,
-		Aliases:    []string{"GameboyAdvance"},
-		Folders:    []string{"GBA"},
-		Extensions: []string{".gba"},
+		Id:      SystemGBA,
+		Aliases: []string{"GameboyAdvance"},
 	},
 	SystemGBA2P: {
-		Id:         SystemGBA2P,
-		Folders:    []string{"GBA2P"},
-		Extensions: []string{".gba"},
+		Id: SystemGBA2P,
 	},
 	SystemGenesis: {
-		Id:         SystemGenesis,
-		Aliases:    []string{"MegaDrive"},
-		Folders:    []string{"MegaDrive", "Genesis"},
-		Extensions: []string{".gen", ".bin", ".md"},
+		Id:      SystemGenesis,
+		Aliases: []string{"MegaDrive"},
 	},
 	SystemIntellivision: {
-		Id:         SystemIntellivision,
-		Folders:    []string{"Intellivision"},
-		Extensions: []string{".int", ".bin"},
+		Id: SystemIntellivision,
 	},
 	// TODO: Jaguar
 	SystemMasterSystem: {
-		Id:         SystemMasterSystem,
-		Aliases:    []string{"SMS"},
-		Folders:    []string{"SMS"},
-		Extensions: []string{".sms"},
+		Id:      SystemMasterSystem,
+		Aliases: []string{"SMS"},
 	},
 	SystemMegaCD: {
-		Id:         SystemMegaCD,
-		Aliases:    []string{"SegaCD"},
-		Folders:    []string{"MegaCD"},
-		Extensions: []string{".cue", ".chd"},
+		Id:      SystemMegaCD,
+		Aliases: []string{"SegaCD"},
 	},
 	SystemMegaDuck: {
-		Id:         SystemMegaDuck,
-		Folders:    []string{"GAMEBOY", "MegaDuck"},
-		Extensions: []string{".bin"},
+		Id: SystemMegaDuck,
 	},
 	SystemNeoGeo: {
-		Id:         SystemNeoGeo,
-		Folders:    []string{"NEOGEO"},
-		Extensions: []string{".neo"}, // TODO: .zip and folder support
+		Id: SystemNeoGeo,
 	},
 	SystemNeoGeoCD: {
-		Id:         SystemNeoGeo,
-		Folders:    []string{"NeoGeo-CD", "NEOGEO"},
-		Extensions: []string{".cue", ".chd"},
+		Id: SystemNeoGeo,
 	},
 	SystemNES: {
-		Id:         SystemNES,
-		Folders:    []string{"NES"},
-		Extensions: []string{".nes"},
+		Id: SystemNES,
 	},
 	SystemNESMusic: {
-		Id:         SystemNESMusic,
-		Folders:    []string{"NES"},
-		Extensions: []string{".nsf"},
+		Id: SystemNESMusic,
 	},
 	SystemNintendo64: {
-		Id:         SystemNintendo64,
-		Aliases:    []string{"N64"},
-		Folders:    []string{"N64"},
-		Extensions: []string{".n64", ".z64"},
+		Id:      SystemNintendo64,
+		Aliases: []string{"N64"},
 	},
 	SystemOdyssey2: {
-		Id:         SystemOdyssey2,
-		Folders:    []string{"ODYSSEY2"},
-		Extensions: []string{".bin"},
+		Id: SystemOdyssey2,
 	},
 	SystemPocketChallengeV2: {
-		Id:         SystemPocketChallengeV2,
-		Folders:    []string{"WonderSwan", "PocketChallengeV2"},
-		Extensions: []string{".pc2"},
+		Id: SystemPocketChallengeV2,
 	},
 	SystemPokemonMini: {
-		Id:         SystemPokemonMini,
-		Folders:    []string{"PokemonMini"},
-		Extensions: []string{".min"},
+		Id: SystemPokemonMini,
 	},
 	SystemPSX: {
-		Id:         SystemPSX,
-		Aliases:    []string{"Playstation", "PS1"},
-		Folders:    []string{"PSX"},
-		Extensions: []string{".cue", ".chd", ".exe"},
+		Id:      SystemPSX,
+		Aliases: []string{"Playstation", "PS1"},
 	},
 	SystemSega32X: {
-		Id:         SystemSega32X,
-		Aliases:    []string{"S32X", "32X"},
-		Folders:    []string{"S32X"},
-		Extensions: []string{".32x"},
+		Id:      SystemSega32X,
+		Aliases: []string{"S32X", "32X"},
 	},
 	SystemSG1000: {
-		Id:         SystemSG1000,
-		Folders:    []string{"SG1000", "Coleco", "SMS"},
-		Extensions: []string{".sg"},
+		Id: SystemSG1000,
 	},
 	SystemSuperGameboy: {
-		Id:         SystemSuperGameboy,
-		Aliases:    []string{"SGB"},
-		Folders:    []string{"SGB"},
-		Extensions: []string{".sgb", ".gb", ".gbc"},
+		Id:      SystemSuperGameboy,
+		Aliases: []string{"SGB"},
 	},
 	SystemSuperVision: {
-		Id:         SystemSuperVision,
-		Folders:    []string{"SuperVision"},
-		Extensions: []string{".bin", ".sv"},
+		Id: SystemSuperVision,
 	},
 	SystemSaturn: {
-		Id:         SystemSaturn,
-		Folders:    []string{"Saturn"},
-		Extensions: []string{".cue", ".chd"},
+		Id: SystemSaturn,
 	},
 	SystemSNES: {
-		Id:         SystemSNES,
-		Aliases:    []string{"SuperNintendo"},
-		Folders:    []string{"SNES"},
-		Extensions: []string{".sfc", ".smc", ".bin", ".bs"},
+		Id:      SystemSNES,
+		Aliases: []string{"SuperNintendo"},
 	},
 	SystemSNESMusic: {
-		Id:         SystemSNESMusic,
-		Folders:    []string{"SNES"},
-		Extensions: []string{".spc"},
+		Id: SystemSNESMusic,
 	},
 	SystemSuperGrafx: {
-		Id:         SystemSuperGrafx,
-		Folders:    []string{"TGFX16"},
-		Extensions: []string{".sgx"},
+		Id: SystemSuperGrafx,
 	},
 	SystemTurboGrafx16: {
-		Id:         SystemTurboGrafx16,
-		Aliases:    []string{"TGFX16", "PCEngine"},
-		Folders:    []string{"TGFX16"},
-		Extensions: []string{".pce", ".bin"},
+		Id:      SystemTurboGrafx16,
+		Aliases: []string{"TGFX16", "PCEngine"},
 	},
 	SystemTurboGrafx16CD: {
-		Id:         SystemTurboGrafx16CD,
-		Aliases:    []string{"TGFX16-CD", "PCEngineCD"},
-		Folders:    []string{"TGFX16-CD"},
-		Extensions: []string{".cue", ".chd"},
+		Id:      SystemTurboGrafx16CD,
+		Aliases: []string{"TGFX16-CD", "PCEngineCD"},
 	},
 	SystemVC4000: {
-		Id:         SystemVC4000,
-		Folders:    []string{"VC4000"},
-		Extensions: []string{".bin"},
+		Id: SystemVC4000,
 	},
 	SystemVectrex: {
-		Id:         SystemVectrex,
-		Folders:    []string{"VECTREX"},
-		Extensions: []string{".vec", ".bin", ".rom"}, // TODO: overlays (.ovr)
+		Id: SystemVectrex,
 	},
 	SystemWonderSwan: {
-		Id:         SystemWonderSwan,
-		Folders:    []string{"WonderSwan"},
-		Extensions: []string{".ws"},
+		Id: SystemWonderSwan,
 	},
 	SystemWonderSwanColor: {
-		Id:         SystemWonderSwanColor,
-		Folders:    []string{"WonderSwan", "WonderSwanColor"},
-		Extensions: []string{".wsc"},
+		Id: SystemWonderSwanColor,
 	},
 	// Computers
 	SystemAcornAtom: {
-		Id:         SystemAcornAtom,
-		Folders:    []string{"AcornAtom"},
-		Extensions: []string{".vhd"},
+		Id: SystemAcornAtom,
 	},
 	SystemAcornElectron: {
-		Id:         SystemAcornElectron,
-		Folders:    []string{"AcornElectron"},
-		Extensions: []string{".vhd"},
+		Id: SystemAcornElectron,
 	},
 	SystemAliceMC10: {
-		Id:         SystemAliceMC10,
-		Folders:    []string{"AliceMC10"},
-		Extensions: []string{".c10"},
+		Id: SystemAliceMC10,
 	},
 	SystemAmiga: {
-		Id:         SystemAmiga,
-		Folders:    []string{"Amiga"},
-		Aliases:    []string{"Minimig"},
-		Extensions: []string{".adf"},
+		Id:      SystemAmiga,
+		Aliases: []string{"Minimig"},
 	},
 	SystemAmstrad: {
-		Id:         SystemAmstrad,
-		Folders:    []string{"Amstrad"},
-		Extensions: []string{".dsk", ".cdt"}, // TODO: globbing support? for .e??
+		Id: SystemAmstrad,
 	},
 	SystemAmstradPCW: {
-		Id:         SystemAmstradPCW,
-		Aliases:    []string{"Amstrad-PCW"},
-		Folders:    []string{"Amstrad PCW"},
-		Extensions: []string{".dsk"},
+		Id:      SystemAmstradPCW,
+		Aliases: []string{"Amstrad-PCW"},
 	},
 	SystemAo486: {
-		Id:         SystemAo486,
-		Folders:    []string{"AO486"},
-		Extensions: []string{".img", ".ima", ".vhd", ".vfd", ".iso", ".cue", ".chd"},
+		Id: SystemAo486,
 	},
 	SystemApogee: {
-		Id:         SystemApogee,
-		Folders:    []string{"APOGEE"},
-		Extensions: []string{".rka", ".rkr", ".gam"},
+		Id: SystemApogee,
 	},
 	SystemAppleI: {
-		Id:         SystemAppleI,
-		Aliases:    []string{"Apple-I"},
-		Folders:    []string{"Apple-I"},
-		Extensions: []string{".txt"},
+		Id:      SystemAppleI,
+		Aliases: []string{"Apple-I"},
 	},
 	SystemAppleII: {
-		Id:         SystemAppleII,
-		Aliases:    []string{"Apple-II"},
-		Folders:    []string{"Apple-II"},
-		Extensions: []string{".dsk", ".do", ".po", ".nib", ".hdv"},
+		Id:      SystemAppleII,
+		Aliases: []string{"Apple-II"},
 	},
 	SystemAquarius: {
-		Id:         SystemAquarius,
-		Folders:    []string{"AQUARIUS"},
-		Extensions: []string{".bin", ".caq"},
+		Id: SystemAquarius,
 	},
 	SystemAtari800: {
-		Id:         SystemAtari800,
-		Folders:    []string{"ATARI800"},
-		Extensions: []string{".atr", ".xex", ".xfd", ".atx", ".car", ".rom", ".bin"},
+		Id: SystemAtari800,
 	},
 	SystemBBCMicro: {
-		Id:         SystemBBCMicro,
-		Folders:    []string{"BBCMicro"},
-		Extensions: []string{".ssd", ".dsd", ".vhd"},
+		Id: SystemBBCMicro,
 	},
 	SystemBK0011M: {
-		Id:         SystemBK0011M,
-		Folders:    []string{"BK0011M"},
-		Extensions: []string{".bin", ".dsk", ".vhd"},
+		Id: SystemBK0011M,
 	},
 	SystemC16: {
-		Id:         SystemC16,
-		Folders:    []string{"C16"},
-		Extensions: []string{".d64", ".g64", ".prg", ".tap", ".bin"},
+		Id: SystemC16,
 	},
 	SystemC64: {
-		Id:         SystemC64,
-		Folders:    []string{"C64"},
-		Extensions: []string{".d64", ".g64", ".t64", ".d81", ".prg", ".crt", ".reu", ".tap"},
+		Id: SystemC64,
 	},
 	SystemCasioPV2000: {
-		Id:         SystemCasioPV2000,
-		Aliases:    []string{"Casio_PV-2000"},
-		Folders:    []string{"Casio_PV-2000"},
-		Extensions: []string{".bin"},
+		Id:      SystemCasioPV2000,
+		Aliases: []string{"Casio_PV-2000"},
 	},
 	SystemCoCo2: {
-		Id:         SystemCoCo2,
-		Folders:    []string{"CoCo2"},
-		Extensions: []string{".dsk", ".cas", ".ccc", ".rom"},
+		Id: SystemCoCo2,
 	},
 	SystemEDSAC: {
-		Id:         SystemEDSAC,
-		Folders:    []string{"EDSAC"},
-		Extensions: []string{".tap"},
+		Id: SystemEDSAC,
 	},
 	SystemGalaksija: {
-		Id:         SystemGalaksija,
-		Folders:    []string{"Galaksija"},
-		Extensions: []string{".tap"},
+		Id: SystemGalaksija,
 	},
 	SystemInteract: {
-		Id:         SystemInteract,
-		Folders:    []string{"Interact"},
-		Extensions: []string{".cin", ".k7"},
+		Id: SystemInteract,
 	},
 	SystemJupiter: {
-		Id:         SystemJupiter,
-		Folders:    []string{"Jupiter"},
-		Extensions: []string{".ace"},
+		Id: SystemJupiter,
 	},
 	SystemLaser: {
-		Id:         SystemLaser,
-		Aliases:    []string{"Laser310"},
-		Folders:    []string{"Laser"},
-		Extensions: []string{".vz"},
+		Id:      SystemLaser,
+		Aliases: []string{"Laser310"},
 	},
 	SystemLynx48: {
-		Id:         SystemLynx48,
-		Folders:    []string{"Lynx48"},
-		Extensions: []string{".tap"},
+		Id: SystemLynx48,
 	},
 	SystemMacPlus: {
-		Id:         SystemMacPlus,
-		Folders:    []string{"MACPLUS"},
-		Extensions: []string{".dsk", ".img", ".vhd"},
+		Id: SystemMacPlus,
 	},
 	SystemMSX: {
-		Id:         SystemMSX,
-		Folders:    []string{"MSX"},
-		Extensions: []string{".vhd"},
+		Id: SystemMSX,
 	},
 	SystemMultiComp: {
-		Id:         SystemMultiComp,
-		Folders:    []string{"MultiComp"},
-		Extensions: []string{".img"},
+		Id: SystemMultiComp,
 	},
 	SystemOrao: {
-		Id:         SystemOrao,
-		Folders:    []string{"ORAO"},
-		Extensions: []string{".tap"},
+		Id: SystemOrao,
 	},
 	SystemOric: {
-		Id:         SystemOric,
-		Folders:    []string{"Oric"},
-		Extensions: []string{".dsk"},
+		Id: SystemOric,
 	},
 	SystemPCXT: {
-		Id:         SystemPCXT,
-		Folders:    []string{"PCXT"},
-		Extensions: []string{".img", ".vhd", ".ima", ".vfd"},
+		Id: SystemPCXT,
 	},
 	SystemPDP1: {
-		Id:         SystemPDP1,
-		Folders:    []string{"PDP1"},
-		Extensions: []string{".bin", ".rim", ".pdp"},
+		Id: SystemPDP1,
 	},
 	SystemPET2001: {
-		Id:         SystemPET2001,
-		Folders:    []string{"PET2001"},
-		Extensions: []string{".prg", ".tap"},
+		Id: SystemPET2001,
 	},
 	SystemPMD85: {
-		Id:         SystemPMD85,
-		Folders:    []string{"PMD85"},
-		Extensions: []string{".rmm"},
+		Id: SystemPMD85,
 	},
 	SystemQL: {
-		Id:         SystemQL,
-		Folders:    []string{"QL"},
-		Extensions: []string{".mdv", ".win"},
+		Id: SystemQL,
 	},
 	SystemRX78: {
-		Id:         SystemRX78,
-		Folders:    []string{"RX78"},
-		Extensions: []string{".bin"},
+		Id: SystemRX78,
 	},
 	SystemSAMCoupe: {
-		Id:         SystemSAMCoupe,
-		Folders:    []string{"SAMCOUPE"},
-		Extensions: []string{".dsk", ".mgt", ".img"},
+		Id: SystemSAMCoupe,
 	},
 	SystemSordM5: {
-		Id:         SystemSordM5,
-		Aliases:    []string{"Sord M5"},
-		Folders:    []string{"Sord M5"},
-		Extensions: []string{".bin", ".rom", ".cas"},
+		Id:      SystemSordM5,
+		Aliases: []string{"Sord M5"},
 	},
 	SystemSpecialist: {
-		Id:         SystemSpecialist,
-		Aliases:    []string{"SPMX"},
-		Folders:    []string{"SPMX"},
-		Extensions: []string{".rks", ".odi"},
+		Id:      SystemSpecialist,
+		Aliases: []string{"SPMX"},
 	},
 	SystemSVI328: {
-		Id:         SystemSVI328,
-		Folders:    []string{"SVI328"},
-		Extensions: []string{".cas", ".bin", ".rom"},
+		Id: SystemSVI328,
 	},
 	SystemTatungEinstein: {
-		Id:         SystemTatungEinstein,
-		Folders:    []string{"TatungEinstein"},
-		Extensions: []string{".dsk"},
+		Id: SystemTatungEinstein,
 	},
 	SystemTI994A: {
-		Id:         SystemTI994A,
-		Aliases:    []string{"TI-99_4A"},
-		Folders:    []string{"TI-99_4A"},
-		Extensions: []string{".bin", ".m99"},
+		Id:      SystemTI994A,
+		Aliases: []string{"TI-99_4A"},
 	},
 	SystemTomyTutor: {
-		Id:         SystemTomyTutor,
-		Folders:    []string{"TomyTutor"},
-		Extensions: []string{".bin", ".cas"},
+		Id: SystemTomyTutor,
 	},
 	SystemTRS80: {
-		Id:         SystemTRS80,
-		Folders:    []string{"TRS-80"},
-		Extensions: []string{".jvi", ".dsk", ".cas"},
+		Id: SystemTRS80,
 	},
 	SystemTSConf: {
-		Id:         SystemTSConf,
-		Folders:    []string{"TSConf"},
-		Extensions: []string{".vhf"},
+		Id: SystemTSConf,
 	},
 	SystemUK101: {
-		Id:         SystemUK101,
-		Folders:    []string{"UK101"},
-		Extensions: []string{".txt", ".bas", ".lod"},
+		Id: SystemUK101,
 	},
 	SystemVector06C: {
-		Id:         SystemVector06C,
-		Aliases:    []string{"Vector06"},
-		Folders:    []string{"VECTOR06"},
-		Extensions: []string{".rom", ".com", ".c00", ".edd", ".fdd"},
+		Id:      SystemVector06C,
+		Aliases: []string{"Vector06"},
 	},
 	SystemVIC20: {
-		Id:         SystemVIC20,
-		Folders:    []string{"VIC20"},
-		Extensions: []string{".d64", ".g64", ".prg", ".tap", ".crt"},
+		Id: SystemVIC20,
 	},
 	SystemX68000: {
-		Id:         SystemX68000,
-		Folders:    []string{"X68000"},
-		Extensions: []string{".d88", ".hdf"},
+		Id: SystemX68000,
 	},
 	SystemZX81: {
-		Id:         SystemZX81,
-		Folders:    []string{"ZX81"},
-		Extensions: []string{".p", ".0"},
+		Id: SystemZX81,
 	},
 	SystemZXSpectrum: {
-		Id:         SystemZXSpectrum,
-		Aliases:    []string{"Spectrum"},
-		Folders:    []string{"Spectrum"},
-		Extensions: []string{".tap", ".csw", ".tzx", ".sna", ".z80", ".trd", ".img", ".dsk", ".mgt"},
+		Id:      SystemZXSpectrum,
+		Aliases: []string{"Spectrum"},
 	},
 	SystemZXNext: {
-		Id:         SystemZXNext,
-		Folders:    []string{"ZXNext"},
-		Extensions: []string{".vhd"},
+		Id: SystemZXNext,
 	},
 	// Other
 	SystemArcade: {
-		Id:         SystemArcade,
-		Folders:    []string{"_Arcade"},
-		Extensions: []string{".mra"},
+		Id: SystemArcade,
 	},
 	SystemArduboy: {
-		Id:         SystemArduboy,
-		Folders:    []string{"Arduboy"},
-		Extensions: []string{".hex", ".bin"},
+		Id: SystemArduboy,
 	},
 	SystemChip8: {
-		Id:         SystemChip8,
-		Folders:    []string{"Chip8"},
-		Extensions: []string{".ch8"},
+		Id: SystemChip8,
 	},
 }

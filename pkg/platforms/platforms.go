@@ -1,6 +1,9 @@
 package platforms
 
 import (
+	"path/filepath"
+	"strings"
+
 	"github.com/wizzomafizzo/tapto/pkg/config"
 	"github.com/wizzomafizzo/tapto/pkg/readers"
 	"github.com/wizzomafizzo/tapto/pkg/tokens"
@@ -16,6 +19,33 @@ type CmdEnv struct {
 	Text          string
 	TotalCommands int
 	CurrentIndex  int
+}
+
+type Launcher struct {
+	SystemId   string
+	Folders    []string
+	Extensions []string
+}
+
+// MatchSystemFile returns true if a given file's extension is valid for a system.
+func MatchSystemFile(pl Platform, systemId string, path string) bool {
+	launcher, ok := pl.Launchers()[systemId]
+	if !ok {
+		return false
+	}
+
+	// ignore dot files
+	if strings.HasPrefix(filepath.Base(path), ".") {
+		return false
+	}
+
+	for _, ext := range launcher.Extensions {
+		if strings.HasSuffix(strings.ToLower(path), ext) {
+			return true
+		}
+	}
+
+	return false
 }
 
 type Platform interface {
@@ -49,4 +79,5 @@ type Platform interface {
 	GamepadPress(string) error
 	ForwardCmd(CmdEnv) error
 	LookupMapping(tokens.Token) (string, bool)
+	Launchers() map[string]Launcher
 }

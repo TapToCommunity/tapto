@@ -43,17 +43,22 @@ func FindPath(path string) (string, error) {
 	return "", fmt.Errorf("file match not found: %s", path)
 }
 
-func GetSystemPaths(rootFolders []string, systems []System) []PathResult {
+func GetSystemPaths(pl platforms.Platform, rootFolders []string, systems []System) []PathResult {
 	var matches []PathResult
 
 	for _, system := range systems {
+		launcher, ok := pl.Launchers()[system.Id]
+		if !ok {
+			continue
+		}
+
 		for _, folder := range rootFolders {
 			gf, err := FindPath(folder)
 			if err != nil {
 				continue
 			}
 
-			for _, folder := range system.Folders {
+			for _, folder := range launcher.Folders {
 				systemFolder := filepath.Join(gf, folder)
 				path, err := FindPath(systemFolder)
 				if err != nil {
@@ -179,14 +184,14 @@ func GetFiles(
 			}
 
 			for i := range zipFiles {
-				if MatchSystemFile(*system, zipFiles[i]) {
+				if platforms.MatchSystemFile(platform, (*system).Id, zipFiles[i]) {
 					abs := filepath.Join(path, zipFiles[i])
 					*results = append(*results, abs)
 				}
 			}
 		} else {
 			// regular files
-			if MatchSystemFile(*system, path) {
+			if platforms.MatchSystemFile(platform, (*system).Id, path) {
 				*results = append(*results, path)
 			}
 		}
