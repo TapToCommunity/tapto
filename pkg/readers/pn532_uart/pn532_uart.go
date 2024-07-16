@@ -123,6 +123,13 @@ func (r *Pn532UartReader) Open(device string, iq chan<- readers.Scan) error {
 
 			time.Sleep(250 * time.Millisecond)
 
+			err = SamConfiguration(r.port)
+			if err != nil {
+				log.Error().Err(err).Msg("failed to run sam config")
+				errors++
+				continue
+			}
+
 			tgt, err := InListPassiveTarget(r.port)
 			if err != nil {
 				log.Error().Err(err).Msg("failed to read passive target")

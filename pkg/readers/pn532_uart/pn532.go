@@ -38,10 +38,6 @@ func wakeUp(port serial.Port) error {
 		return errors.New("wakeup write error, not all bytes written")
 	}
 
-	//_ = port.Drain()
-
-	time.Sleep(2 * time.Millisecond)
-
 	return nil
 }
 
@@ -110,8 +106,6 @@ func sendFrame(port serial.Port, cmd byte, args []byte) error {
 	} else if n != len(frm) {
 		return errors.New("write error, not all bytes written")
 	}
-
-	//_ = port.Drain()
 
 	time.Sleep(2 * time.Millisecond)
 
