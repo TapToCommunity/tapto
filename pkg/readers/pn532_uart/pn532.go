@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/rs/zerolog/log"
 	"github.com/wizzomafizzo/tapto/pkg/tokens"
 	"go.bug.st/serial"
 )
@@ -22,20 +23,25 @@ const (
 )
 
 func wakeUp(port serial.Port) error {
+	log.Debug().Msg("waking up pn532")
 	// over uart, pn532 must be "woken up" by sending 2 x 0x55 and then "waiting a while"
 	// we send a bunch of 0x00 to wait
 	_, err := port.Write([]byte{0x55, 0x55, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00})
+	//_, err := port.Write([]byte{0x55, 0x55, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0x03, 0xfd, 0xd4, 0x14, 0x01, 0x17, 0x00})
 	if err != nil {
 		return err
 	}
+
+	time.Sleep(2 * time.Millisecond)
 
 	return nil
 }
 
 func waitAck(port serial.Port) error {
+	log.Debug().Msg("waiting for ACK")
 	// pn532 will send this sequence to acknowledge it received the previous command
-	start := time.Now()
-
+	tries := 0
+	maxTries := 25
 	buf := make([]byte, 6)
 	for {
 		_, err := port.Read(buf)
@@ -43,12 +49,13 @@ func waitAck(port serial.Port) error {
 			return err
 		}
 
-		if bytes.Equal(buf, []byte{0x00, 0x00, 0xFF, 0x00, 0xFF, 0x00}) {
+		if bytes.Contains(buf, []byte{0x00, 0x00, 0xFF, 0x00, 0xFF, 0x00}) {
 			return nil
 		} else {
-			if time.Since(start) > 1*time.Second {
+			if tries > maxTries {
 				return errors.New("timeout waiting for ACK")
 			} else {
+				tries++
 				continue
 			}
 		}
@@ -81,7 +88,7 @@ func sendFrame(port serial.Port, cmd byte, args []byte) error {
 	frm = append(frm, ^checksum+1) // data checksum
 	frm = append(frm, 0x00)        // postamble
 
-	// log.Debug().Msgf("sending frame: %x", frm)
+	log.Debug().Msgf("sending frame: %x", frm)
 
 	// write frame
 	err := wakeUp(port)
@@ -96,7 +103,7 @@ func sendFrame(port serial.Port, cmd byte, args []byte) error {
 		return errors.New("write error, not all bytes written")
 	}
 
-	time.Sleep(2 * time.Millisecond)
+	// time.Sleep(2 * time.Millisecond)
 
 	return waitAck(port)
 }
@@ -121,6 +128,8 @@ func receiveFrame(port serial.Port) ([]byte, error) {
 		return []byte{}, ErrNoFrameFound
 	}
 
+	//log.Debug().Msgf("received frame buffer: %x", buf)
+
 	// check frame length value and checksum (LEN)
 	off++
 	frameLen := int(buf[off])
@@ -140,13 +149,13 @@ func receiveFrame(port serial.Port) ([]byte, error) {
 	// check tfi
 	off += 2
 	if buf[off] != pn532ToHost {
-		//log.Debug().Msgf("received frame: %x", buf)
 		return []byte{}, errors.New("invalid TFI, expected PN532 to host")
 	}
 
 	// get frame data
 	off++
-	//log.Debug().Msgf("received frame: %x", buf[off:off+frameLen-1])
+
+	log.Debug().Msgf("received frame data: %x", buf[off:off+frameLen-1])
 
 	// return data part of frame
 	data := make([]byte, frameLen-1)
@@ -174,6 +183,7 @@ func callCommand(
 }
 
 func SamConfiguration(port serial.Port) error {
+	log.Debug().Msg("running sam configuration")
 	// sets pn532 to "normal" mode
 	res, err := callCommand(port, cmdSamConfiguration, []byte{0x01, 0x14, 0x01})
 	if err != nil {
@@ -193,6 +203,7 @@ type FirmwareVersion struct {
 }
 
 func GetFirmwareVersion(port serial.Port) (FirmwareVersion, error) {
+	log.Debug().Msg("running getfirmwareversion")
 	res, err := callCommand(port, cmdGetFirmwareVersion, []byte{})
 	if err != nil {
 		return FirmwareVersion{}, err
@@ -220,6 +231,7 @@ type GeneralStatus struct {
 }
 
 func GetGeneralStatus(port serial.Port) (GeneralStatus, error) {
+	log.Debug().Msg("running getgeneralstatus")
 	res, err := callCommand(port, cmdGetGeneralStatus, []byte{})
 	if err != nil {
 		return GeneralStatus{}, err
@@ -242,6 +254,7 @@ type Target struct {
 }
 
 func InListPassiveTarget(port serial.Port) (*Target, error) {
+	log.Debug().Msg("running inlistpassivetarget")
 	res, err := callCommand(port, cmdInListPassiveTarget, []byte{0x01, 0x00})
 	if errors.Is(err, ErrNoFrameFound) {
 		// no tag detected
@@ -278,6 +291,7 @@ func InListPassiveTarget(port serial.Port) (*Target, error) {
 }
 
 func InDataExchange(port serial.Port, data []byte) ([]byte, error) {
+	log.Debug().Msg("running indataexchange")
 	res, err := callCommand(port, cmdInDataExchange, append([]byte{0x01}, data...))
 	if err != nil {
 		return []byte{}, err

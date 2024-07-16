@@ -38,6 +38,43 @@ func (r *Pn532UartReader) Ids() []string {
 	return []string{"pn532_uart"}
 }
 
+func connect(name string) (serial.Port, error) {
+	log.Debug().Msgf("connecting to %s", name)
+	port, err := serial.Open(name, &serial.Mode{
+		BaudRate: 115200,
+		DataBits: 8,
+		Parity:   serial.NoParity,
+		StopBits: serial.OneStopBit,
+	})
+	if err != nil {
+		return port, err
+	}
+
+	err = port.SetReadTimeout(100 * time.Millisecond)
+	if err != nil {
+		return port, err
+	}
+
+	err = SamConfiguration(port)
+	if err != nil {
+		return port, err
+	}
+
+	fv, err := GetFirmwareVersion(port)
+	if err != nil {
+		return port, err
+	}
+	log.Debug().Msgf("firmware version: %v", fv)
+
+	gs, err := GetGeneralStatus(port)
+	if err != nil {
+		return port, err
+	}
+	log.Debug().Msgf("general status: %v", gs)
+
+	return port, nil
+}
+
 func (r *Pn532UartReader) Open(device string, iq chan<- readers.Scan) error {
 	ps := strings.SplitN(device, ":", 2)
 	if len(ps) != 2 {
@@ -56,60 +93,41 @@ func (r *Pn532UartReader) Open(device string, iq chan<- readers.Scan) error {
 		}
 	}
 
-	port, err := serial.Open(name, &serial.Mode{
-		BaudRate: 115200,
-		DataBits: 8,
-		Parity:   serial.NoParity,
-		StopBits: serial.OneStopBit,
-	})
+	port, err := connect(name)
 	if err != nil {
+		if port != nil {
+			_ = port.Close()
+		}
 		return err
 	}
-
-	err = port.SetReadTimeout(100 * time.Millisecond)
-	if err != nil {
-		return err
-	}
-
-	err = SamConfiguration(port)
-	if err != nil {
-		return err
-	}
-
-	fv, err := GetFirmwareVersion(port)
-	if err != nil {
-		return err
-	}
-	log.Info().Msgf("firmware version: %v", fv)
-
-	gs, err := GetGeneralStatus(port)
-	if err != nil {
-		return err
-	}
-	log.Info().Msgf("general status: %v", gs)
 
 	r.port = port
 	r.device = device
 	r.name = name
 	r.polling = true
 
-	exit := func() {
-		err = r.Close()
-		if err != nil {
-			log.Error().Err(err).Msg("failed to close serial port")
-		}
-		r.polling = false
-	}
-
 	go func() {
+		errors := 0
+		maxErrors := 5
+
 		for r.polling {
+			if errors >= maxErrors {
+				log.Error().Msg("too many errors, exiting")
+				err := r.Close()
+				if err != nil {
+					log.Warn().Err(err).Msg("failed to close serial port")
+				}
+				r.polling = false
+				break
+			}
+
 			time.Sleep(250 * time.Millisecond)
 
 			tgt, err := InListPassiveTarget(r.port)
 			if err != nil {
 				log.Error().Err(err).Msg("failed to read passive target")
-				exit()
-				break
+				errors++
+				continue
 			} else if tgt == nil {
 				// token was removed
 				if r.lastToken != nil {
@@ -121,6 +139,8 @@ func (r *Pn532UartReader) Open(device string, iq chan<- readers.Scan) error {
 				}
 				continue
 			}
+
+			errors = 0
 
 			if r.lastToken != nil && r.lastToken.UID == tgt.Uid {
 				// same token
@@ -196,46 +216,47 @@ func (r *Pn532UartReader) Detect(connected []string) string {
 	if err != nil {
 		log.Error().Err(err).Msg("failed to get serial ports")
 	}
+	// log.Debug().Msgf("serial ports: %v", ports)
 
 	toCheck := make([]string, 0)
-	for _, p := range ports {
+	for _, name := range ports {
 		if runtime.GOOS == "windows" {
-			if strings.HasPrefix(p, "COM") {
-				toCheck = append(toCheck, p)
+			if strings.HasPrefix(name, "COM") {
+				toCheck = append(toCheck, name)
 			}
 		} else if runtime.GOOS == "darwin" {
-			if strings.HasPrefix(p, "/dev/tty.") {
-				toCheck = append(toCheck, p)
+			if strings.HasPrefix(name, "/dev/tty.") {
+				toCheck = append(toCheck, name)
 			}
 		} else {
-			if strings.HasPrefix(p, "/dev/ttyUSB") || strings.HasPrefix(p, "/dev/ttyACM") {
-				toCheck = append(toCheck, p)
+			if strings.HasPrefix(name, "/dev/ttyUSB") || strings.HasPrefix(name, "/dev/ttyACM") {
+				toCheck = append(toCheck, name)
 			}
 		}
 	}
 
-	for _, p := range toCheck {
-		connStr := "pn532_uart:" + p
+	for _, name := range toCheck {
+		device := "pn532_uart:" + name
 
 		// ignore if device is in block list
 		serialCacheMu.RLock()
-		if utils.Contains(serialBlockList, p) {
+		if utils.Contains(serialBlockList, name) {
 			serialCacheMu.RUnlock()
 			continue
 		}
 		serialCacheMu.RUnlock()
 
 		// ignore if exact same device and reader are connected
-		if utils.Contains(connected, connStr) {
+		if utils.Contains(connected, device) {
 			continue
 		}
 
 		if runtime.GOOS != "windows" {
 			// resolve device symlink if necessary
 			realPath := ""
-			symPath, err := os.Readlink(p)
+			symPath, err := os.Readlink(name)
 			if err == nil {
-				parent := filepath.Dir(p)
+				parent := filepath.Dir(name)
 				abs, err := filepath.Abs(filepath.Join(parent, symPath))
 				if err == nil {
 					realPath = abs
@@ -255,8 +276,8 @@ func (r *Pn532UartReader) Detect(connected []string) string {
 
 		// ignore if different reader already connected
 		match := false
-		for _, c := range connected {
-			if strings.HasSuffix(c, ":"+p) {
+		for _, connDev := range connected {
+			if strings.HasSuffix(connDev, ":"+name) {
 				match = true
 				break
 			}
@@ -266,49 +287,22 @@ func (r *Pn532UartReader) Detect(connected []string) string {
 		}
 
 		// try to open the device
-		// TODO: move to a function
-		port, err := serial.Open(p, &serial.Mode{
-			BaudRate: 115200,
-			DataBits: 8,
-			Parity:   serial.NoParity,
-			StopBits: serial.OneStopBit,
-		})
+		port, err := connect(name)
 		if err != nil {
-			serialCacheMu.Lock()
-			serialBlockList = append(serialBlockList, p)
-			serialCacheMu.Unlock()
-			continue
-		}
-
-		err = port.SetReadTimeout(100 * time.Millisecond)
-		if err != nil {
-			serialCacheMu.Lock()
-			serialBlockList = append(serialBlockList, p)
-			serialCacheMu.Unlock()
+			log.Debug().Err(err).Msgf("failed to open detected serial port, blocklisting: %s", name)
 			_ = port.Close()
-			continue
-		}
-
-		err = SamConfiguration(port)
-		if err != nil {
 			serialCacheMu.Lock()
-			serialBlockList = append(serialBlockList, p)
+			serialBlockList = append(serialBlockList, name)
 			serialCacheMu.Unlock()
-			_ = port.Close()
 			continue
-		}
+		} else {
+			err = port.Close()
+			if err != nil {
+				log.Warn().Err(err).Msg("failed to close serial port")
+			}
 
-		_, err = GetFirmwareVersion(port)
-		if err != nil {
-			serialCacheMu.Lock()
-			serialBlockList = append(serialBlockList, p)
-			serialCacheMu.Unlock()
-			_ = port.Close()
-			continue
+			return device
 		}
-
-		_ = port.Close()
-		return connStr
 	}
 
 	return ""
