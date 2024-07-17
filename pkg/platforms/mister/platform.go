@@ -377,6 +377,6 @@ func (p *Platform) LookupMapping(t tokens.Token) (string, bool) {
 	return "", false
 }
 
-func (p *Platform) Launchers() map[string]platforms.Launcher {
+func (p *Platform) Launchers() []platforms.Launcher {
 	return Launchers
 }

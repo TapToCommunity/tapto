@@ -280,6 +280,6 @@ func (p *Platform) LookupMapping(_ tokens.Token) (string, bool) {
 	return "", false
 }
 
-func (p *Platform) Launchers() map[string]platforms.Launcher {
+func (p *Platform) Launchers() []platforms.Launcher {
 	return mister.Launchers
 }

@@ -47,9 +47,20 @@ func GetSystemPaths(pl platforms.Platform, rootFolders []string, systems []Syste
 	var matches []PathResult
 
 	for _, system := range systems {
-		launcher, ok := pl.Launchers()[system.Id]
-		if !ok {
-			continue
+		var launchers []platforms.Launcher
+		for _, l := range pl.Launchers() {
+			if l.SystemId == system.Id {
+				launchers = append(launchers, l)
+			}
+		}
+
+		var folders []string
+		for _, l := range launchers {
+			for _, folder := range l.Folders {
+				if !utils.Contains(folders, folder) {
+					folders = append(folders, folder)
+				}
+			}
 		}
 
 		for _, folder := range rootFolders {
@@ -58,7 +69,7 @@ func GetSystemPaths(pl platforms.Platform, rootFolders []string, systems []Syste
 				continue
 			}
 
-			for _, folder := range launcher.Folders {
+			for _, folder := range folders {
 				systemFolder := filepath.Join(gf, folder)
 				path, err := FindPath(systemFolder)
 				if err != nil {

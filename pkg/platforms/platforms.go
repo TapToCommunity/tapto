@@ -22,16 +22,25 @@ type CmdEnv struct {
 }
 
 type Launcher struct {
-	SystemId   string
-	Folders    []string
+	// System associated with this launcher
+	SystemId string
+	// Folders to scan for files, relative to the root folder
+	Folders []string
+	// Extensions to match for files
 	Extensions []string
+	// Launch function, takes absolute path to file as argument
+	Launch func(*config.UserConfig, string) error
+	// TODO: optional after scan hook to find special files or modify the
+	// standard scan results
 }
 
 // MatchSystemFile returns true if a given file's extension is valid for a system.
 func MatchSystemFile(pl Platform, systemId string, path string) bool {
-	launcher, ok := pl.Launchers()[systemId]
-	if !ok {
-		return false
+	var launchers []Launcher
+	for _, l := range pl.Launchers() {
+		if l.SystemId == systemId {
+			launchers = append(launchers, l)
+		}
 	}
 
 	// ignore dot files
@@ -39,9 +48,11 @@ func MatchSystemFile(pl Platform, systemId string, path string) bool {
 		return false
 	}
 
-	for _, ext := range launcher.Extensions {
-		if strings.HasSuffix(strings.ToLower(path), ext) {
-			return true
+	for _, l := range launchers {
+		for _, ext := range l.Extensions {
+			if strings.HasSuffix(strings.ToLower(path), ext) {
+				return true
+			}
 		}
 	}
 
@@ -79,5 +90,5 @@ type Platform interface {
 	GamepadPress(string) error
 	ForwardCmd(CmdEnv) error
 	LookupMapping(tokens.Token) (string, bool)
-	Launchers() map[string]Launcher
+	Launchers() []Launcher
 }
