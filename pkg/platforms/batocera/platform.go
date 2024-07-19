@@ -1,12 +1,15 @@
 package batocera
 
 import (
+	"errors"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 
 	"github.com/rs/zerolog/log"
 	"github.com/wizzomafizzo/tapto/pkg/config"
+	"github.com/wizzomafizzo/tapto/pkg/database/gamesdb"
 	"github.com/wizzomafizzo/tapto/pkg/platforms"
 	"github.com/wizzomafizzo/tapto/pkg/readers"
 	"github.com/wizzomafizzo/tapto/pkg/readers/file"
@@ -48,7 +51,7 @@ func (p *Platform) ReadersUpdateHook(readers map[string]*readers.Reader) error {
 
 func (p *Platform) RootFolders(cfg *config.UserConfig) []string {
 	return []string{
-		"C:\\scratch",
+		"/userdata/roms",
 	}
 }
 
@@ -130,16 +133,39 @@ func (p *Platform) LaunchSystem(cfg *config.UserConfig, id string) error {
 func (p *Platform) LaunchFile(cfg *config.UserConfig, path string) error {
 	log.Info().Msgf("launching file: %s", path)
 
-	if filepath.Ext(path) == ".txt" {
-		// get filename minus ext
+	relPath := path
+	for _, rf := range p.RootFolders(cfg) {
+		if strings.HasPrefix(relPath, rf+"/") {
+			relPath = strings.TrimPrefix(relPath, rf+"/")
+			break
+		}
+	}
+	log.Info().Msgf("relative path: %s", relPath)
 
-		fn := filepath.Base(path)
-		fn = fn[:len(fn)-4]
+	root := strings.Split(relPath, "/")[0]
+	log.Info().Msgf("root: %s", root)
 
-		return exec.Command("cmd", "/c", "C:\\Program Files (x86)\\Steam\\steam.exe", "steam://rungameid/"+fn).Start()
+	systemId := ""
+	for _, launcher := range p.Launchers() {
+		for _, folder := range launcher.Folders {
+			if folder == root {
+				systemId = launcher.SystemId
+				break
+			}
+		}
 	}
 
-	return nil
+	if systemId == "" {
+		log.Error().Msgf("system not found for path: %s", path)
+	}
+
+	for _, launcher := range p.Launchers() {
+		if launcher.SystemId == systemId {
+			return launcher.Launch(cfg, path)
+		}
+	}
+
+	return errors.New("launcher not found")
 }
 
 func (p *Platform) Shell(cmd string) error {
@@ -167,5 +193,17 @@ func (p *Platform) LookupMapping(_ tokens.Token) (string, bool) {
 }
 
 func (p *Platform) Launchers() []platforms.Launcher {
-	return nil
+	return []platforms.Launcher{
+		{
+			SystemId:   gamesdb.SystemGenesis,
+			Folders:    []string{"megadrive"},
+			Extensions: []string{".bin", ".gen", ".md", ".sg", ".smd", ".zip", ".7z"},
+			Launch: func(cfg *config.UserConfig, path string) error {
+				cmd := exec.Command("emulatorlauncher", "-system", "megadrive", "-rom", path)
+				cmd.Env = os.Environ()
+				cmd.Env = append(cmd.Env, "DISPLAY=:0.0")
+				return cmd.Start()
+			},
+		},
+	}
 }
