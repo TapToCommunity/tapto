@@ -1,8 +1,7 @@
-//go:build (linux || darwin) && cgo
-
 /*
 TapTo
 Copyright (C) 2023 Gareth Jones
+Copyright (C) 2024 Callan Barrett
 
 This file is part of TapTo.
 
@@ -20,18 +19,27 @@ You should have received a copy of the GNU General Public License
 along with TapTo.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-package tags
+package pn532_uart
 
 import (
 	"bytes"
 	"encoding/hex"
 	"errors"
-	"fmt"
 
-	"github.com/clausecker/nfc/v2"
 	"github.com/rs/zerolog/log"
 	"github.com/wizzomafizzo/tapto/pkg/tokens"
+	"go.bug.st/serial"
 )
+
+const (
+	WRITE_COMMAND = byte(0xA2)
+	READ_COMMAND  = byte(0x30)
+)
+
+type TagData struct {
+	Type  string
+	Bytes []byte
+}
 
 const (
 	NTAG_213_CAPACITY_BYTES = 114
@@ -58,18 +66,29 @@ var AMIIBO_MATCHER = []byte{
 	0x48, 0x0F, 0xE0,
 	0xF1, 0x10, 0xFF, 0xEE}
 
-func ReadNtag(pnd nfc.Device) (TagData, error) {
-	blockCount, err := getNtagBlockCount(pnd)
+func ReadNtag(port serial.Port) (TagData, error) {
+	blockCount, err := getNtagBlockCount(port)
 	if err != nil {
 		return TagData{}, err
 	}
 
 	log.Debug().Msgf("NTAG has %d blocks", blockCount)
 
-	header, _ := comm(pnd, []byte{READ_COMMAND, byte(0)}, 16)
+	header, err := InDataExchange(port, []byte{READ_COMMAND, byte(0)})
+	if err != nil {
+		return TagData{}, err
+	} else if len(header) < 10 {
+		return TagData{}, errors.New("invalid header length")
+	}
+
 	if bytes.Equal(header[9:], AMIIBO_MATCHER) {
 		log.Info().Msg("found Amiibo")
-		amiibo, _ := comm(pnd, []byte{READ_COMMAND, byte(21)}, 16)
+		amiibo, err := InDataExchange(port, []byte{READ_COMMAND, byte(21)})
+		if err != nil {
+			return TagData{}, err
+		} else if len(amiibo) < 9 {
+			return TagData{}, errors.New("invalid amiibo length")
+		}
 		amiibo = amiibo[:8]
 		log.Info().Msg("Amiibo identifier:" + hex.EncodeToString(amiibo))
 		return TagData{
@@ -82,7 +101,7 @@ func ReadNtag(pnd nfc.Device) (TagData, error) {
 	currentBlock := 4
 
 	for i := 0; i <= (blockCount / 4); i++ {
-		blocks, err := comm(pnd, []byte{READ_COMMAND, byte(currentBlock)}, 16)
+		blocks, err := InDataExchange(port, []byte{READ_COMMAND, byte(currentBlock)})
 		if err != nil {
 			return TagData{}, err
 		}
@@ -113,49 +132,14 @@ func ReadNtag(pnd nfc.Device) (TagData, error) {
 	}, nil
 }
 
-func WriteNtag(pnd nfc.Device, text string) ([]byte, error) {
-	var payload, err = BuildMessage(text)
-	if err != nil {
-		return nil, err
-	}
-
-	cardCapacity, err := getNtagCapacity(pnd)
-	if err != nil {
-		return nil, err
-	}
-
-	if len(payload) > cardCapacity {
-		return nil, errors.New(fmt.Sprintf("Payload too big for card: [%d/%d] bytes used\n", len(payload), cardCapacity))
-	}
-
-	var startingBlock byte = 0x04
-	for i, chunk := range chunkBy(payload, 4) {
-		for len(chunk) < 4 {
-			chunk = append(chunk, []byte{0x00}...)
-		}
-		var tx = []byte{WRITE_COMMAND, startingBlock + byte(i)}
-		tx = append(tx, chunk...)
-		_, err := comm(pnd, tx, 1)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return payload, nil
-}
-
-func getNtagBlockCount(pnd nfc.Device) (int, error) {
+func getNtagBlockCount(port serial.Port) (int, error) {
 	// Find tag capacity by looking in block 3 (capability container)
-	tx := []byte{READ_COMMAND, 0x03}
-	rx := make([]byte, 16)
-
-	timeout := 0
-	_, err := pnd.InitiatorTransceiveBytes(tx, rx, timeout)
+	res, err := InDataExchange(port, []byte{READ_COMMAND, 0x03})
 	if err != nil {
 		return 0, err
 	}
 
-	switch rx[2] {
+	switch res[0] {
 	case 0x12:
 		// NTAG213. (144 -4) / 4
 		return 35, nil
@@ -171,34 +155,30 @@ func getNtagBlockCount(pnd nfc.Device) (int, error) {
 	}
 }
 
-func getNtagCapacity(pnd nfc.Device) (int, error) {
-	// Find tag capacity by looking in block 3 (capability container)
-	tx := []byte{READ_COMMAND, 0x03}
-	rx := make([]byte, 16)
+// func getNtagCapacity(port serial.Port) (int, error) {
+// 	// Find tag capacity by looking in block 3 (capability container)
+// 	res, err := InDataExchange(port, []byte{READ_COMMAND, 0x03})
+// 	if err != nil {
+// 		return 0, err
+// 	}
 
-	timeout := 0
-	_, err := pnd.InitiatorTransceiveBytes(tx, rx, timeout)
-	if err != nil {
-		return 0, err
-	}
+// 	// https://github.com/adafruit/Adafruit_MFRC630/blob/master/docs/NTAG.md#capability-container
+// 	switch res[2] {
+// 	case NTAG_213_IDENTIFIER:
+// 		return NTAG_213_CAPACITY_BYTES, nil
+// 	case NTAG_215_IDENTIFIER:
+// 		return NTAG_215_CAPACITY_BYTES, nil
+// 	case NTAG_216_IDENTIFIER:
+// 		return NTAG_216_CAPACITY_BYTES, nil
+// 	default:
+// 		// fallback
+// 		return NTAG_213_CAPACITY_BYTES, nil
+// 	}
+// }
 
-	// https://github.com/adafruit/Adafruit_MFRC630/blob/master/docs/NTAG.md#capability-container
-	switch rx[2] {
-	case NTAG_213_IDENTIFIER:
-		return NTAG_213_CAPACITY_BYTES, nil
-	case NTAG_215_IDENTIFIER:
-		return NTAG_215_CAPACITY_BYTES, nil
-	case NTAG_216_IDENTIFIER:
-		return NTAG_216_CAPACITY_BYTES, nil
-	default:
-		// fallback
-		return NTAG_213_CAPACITY_BYTES, nil
-	}
-}
-
-func chunkBy[T any](items []T, chunkSize int) (chunks [][]T) {
-	for chunkSize < len(items) {
-		items, chunks = items[chunkSize:], append(chunks, items[0:chunkSize:chunkSize])
-	}
-	return append(chunks, items)
-}
+// func chunkBy[T any](items []T, chunkSize int) (chunks [][]T) {
+// 	for chunkSize < len(items) {
+// 		items, chunks = items[chunkSize:], append(chunks, items[0:chunkSize:chunkSize])
+// 	}
+// 	return append(chunks, items)
+// }

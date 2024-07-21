@@ -7,21 +7,24 @@ import (
 
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
-	"github.com/wizzomafizzo/tapto/pkg/platforms/mister"
+	"github.com/wizzomafizzo/tapto/pkg/config"
+	"github.com/wizzomafizzo/tapto/pkg/platforms"
 	"gopkg.in/natefinch/lumberjack.v2"
 )
 
-var BaseLogWriters = []io.Writer{&lumberjack.Logger{
-	Filename:   mister.LogFile,
-	MaxSize:    1,
-	MaxBackups: 1,
-}}
+func InitLogging(pl platforms.Platform) error {
+	logFile := filepath.Join(pl.LogFolder(), config.LogFilename)
 
-func InitLogging() error {
-	err := os.MkdirAll(filepath.Dir(mister.LogFile), 0755)
+	err := os.MkdirAll(filepath.Dir(logFile), 0755)
 	if err != nil {
 		return err
 	}
+
+	var BaseLogWriters = []io.Writer{&lumberjack.Logger{
+		Filename:   logFile,
+		MaxSize:    1,
+		MaxBackups: 2,
+	}}
 
 	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
 

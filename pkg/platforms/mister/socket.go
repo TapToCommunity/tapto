@@ -1,4 +1,6 @@
-package daemon
+//go:build linux || darwin
+
+package mister
 
 import (
 	"fmt"
@@ -6,13 +8,9 @@ import (
 	"strings"
 
 	"github.com/rs/zerolog/log"
-	"github.com/wizzomafizzo/tapto/pkg/daemon/state"
-	"github.com/wizzomafizzo/tapto/pkg/platforms/mister"
+	"github.com/wizzomafizzo/tapto/pkg/readers"
+	"github.com/wizzomafizzo/tapto/pkg/tokens"
 )
-
-// TODO: i want to move away from the socket server entirely, it won't work on
-//       windows and can be entirely replaced with an http server which will
-//       also allow for remote access
 
 const (
 	ReaderTypePN532   = "PN532"
@@ -20,17 +18,22 @@ const (
 	ReaderTypeUnknown = "Unknown"
 )
 
-func StartSocketServer(st *state.State) (net.Listener, error) {
-	socket, err := net.Listen("unix", mister.SocketFile)
+func StartSocketServer(
+	pl *Platform,
+	getLastScan func() *tokens.Token,
+	getReaders func() map[string]*readers.Reader,
+) (func(), error) {
+	socket, err := net.Listen("unix", SocketFile)
 	if err != nil {
 		log.Error().Msgf("error creating socket: %s", err)
 		return nil, err
 	}
 
+	running := true
 	go func() {
 		for {
-			if st.ShouldStopService() {
-				break
+			if !running {
+				return
 			}
 
 			conn, err := socket.Accept()
@@ -63,43 +66,47 @@ func StartSocketServer(st *state.State) (net.Listener, error) {
 
 				switch strings.TrimSpace(string(buf[:n])) {
 				case "status":
-					lastScanned := st.GetLastScanned()
-					if lastScanned.UID != "" {
+					lastScanned := getLastScan()
+					if lastScanned != nil {
 						payload = fmt.Sprintf(
 							"%d,%s,%t,%s",
 							lastScanned.ScanTime.Unix(),
 							lastScanned.UID,
-							!st.IsLauncherDisabled(),
+							pl.LaunchingEnabled(),
 							lastScanned.Text,
 						)
 					} else {
-						payload = fmt.Sprintf("0,,%t,", !st.IsLauncherDisabled())
+						payload = fmt.Sprintf("0,,%t,", pl.LaunchingEnabled())
 					}
 				case "disable":
-					st.DisableLauncher()
+					pl.SetLaunching(false)
 					log.Info().Msg("launcher disabled")
 				case "enable":
-					st.EnableLauncher()
+					pl.SetLaunching(true)
 					log.Info().Msg("launcher enabled")
 				case "connection":
 					connected, rt := false, ""
+					rs := getReaders()
+					rids := make([]string, 0)
+					for k := range rs {
+						rids = append(rids, k)
+					}
 
-					rs := st.ListReaders()
-					if len(rs) > 0 {
-						rid := rs[0]
+					if len(rids) > 0 {
+						rid := rids[0]
 
-						lt := st.GetLastScanned()
-						if !lt.ScanTime.IsZero() && !lt.Remote {
+						lt := getLastScan()
+						if lt != nil && !lt.ScanTime.IsZero() && !lt.Remote {
 							rid = lt.Source
 						}
 
-						reader, ok := st.GetReader(rid)
+						reader, ok := rs[rid]
 						if ok && reader != nil {
-							connected = reader.Connected()
-							info := reader.Info()
+							connected = (*reader).Connected()
+							info := (*reader).Info()
 
 							var connProto string
-							conn := strings.SplitN(strings.ToLower(reader.Device()), ":", 2)
+							conn := strings.SplitN(strings.ToLower((*reader).Device()), ":", 2)
 							if len(connProto) == 2 {
 								connProto = conn[0]
 							}
@@ -128,5 +135,11 @@ func StartSocketServer(st *state.State) (net.Listener, error) {
 		}
 	}()
 
-	return socket, nil
+	return func() {
+		running = false
+		err := socket.Close()
+		if err != nil {
+			log.Error().Msgf("error closing socket: %s", err)
+		}
+	}, nil
 }

@@ -1,0 +1,632 @@
+//go:build linux || darwin
+
+package mister
+
+import (
+	"github.com/wizzomafizzo/mrext/pkg/mister"
+	"github.com/wizzomafizzo/tapto/pkg/config"
+	"github.com/wizzomafizzo/tapto/pkg/database/gamesdb"
+	"github.com/wizzomafizzo/tapto/pkg/platforms"
+)
+
+func launch(cfg *config.UserConfig, path string) error {
+	return mister.LaunchGenericFile(UserConfigToMrext(cfg), path)
+}
+
+var Launchers = []platforms.Launcher{
+	// Consoles
+	{
+		SystemId:   gamesdb.SystemAdventureVision,
+		Folders:    []string{"AVision"},
+		Extensions: []string{".bin"},
+		Launch:     launch,
+	},
+	{
+		SystemId:   gamesdb.SystemArcadia,
+		Folders:    []string{"Arcadia"},
+		Extensions: []string{".bin"},
+		Launch:     launch,
+	},
+	{
+		SystemId:   gamesdb.SystemAstrocade,
+		Folders:    []string{"Astrocade"},
+		Extensions: []string{".bin"},
+		Launch:     launch,
+	},
+	{
+		SystemId:   gamesdb.SystemAtari2600,
+		Folders:    []string{"ATARI7800", "Atari2600"},
+		Extensions: []string{".a26"},
+		Launch:     launch,
+	},
+	{
+		SystemId:   gamesdb.SystemAtari5200,
+		Folders:    []string{"ATARI5200"},
+		Extensions: []string{".a52"},
+		Launch:     launch,
+	},
+	{
+		SystemId:   gamesdb.SystemAtari7800,
+		Folders:    []string{"ATARI7800"},
+		Extensions: []string{".a78"},
+		Launch:     launch,
+	},
+	{
+		SystemId:   gamesdb.SystemAtariLynx,
+		Folders:    []string{"AtariLynx"},
+		Extensions: []string{".lnx"},
+		Launch:     launch,
+	},
+	{
+		SystemId:   gamesdb.SystemCasioPV1000,
+		Folders:    []string{"Casio_PV-1000"},
+		Extensions: []string{".bin"},
+		Launch:     launch,
+	},
+	{
+		SystemId:   gamesdb.SystemChannelF,
+		Folders:    []string{"ChannelF"},
+		Extensions: []string{".rom", ".bin"},
+		Launch:     launch,
+	},
+	{
+		SystemId:   gamesdb.SystemColecoVision,
+		Folders:    []string{"Coleco"},
+		Extensions: []string{".col", ".bin", ".rom"},
+		Launch:     launch,
+	},
+	{
+		SystemId:   gamesdb.SystemCreatiVision,
+		Folders:    []string{"CreatiVision"},
+		Extensions: []string{".rom", ".bin", ".bas"},
+		Launch:     launch,
+	},
+	{
+		SystemId:   gamesdb.SystemFDS,
+		Folders:    []string{"NES", "FDS"},
+		Extensions: []string{".fds"},
+		Launch:     launch,
+	},
+	{
+		SystemId:   gamesdb.SystemGamate,
+		Folders:    []string{"Gamate"},
+		Extensions: []string{".bin"},
+		Launch:     launch,
+	},
+	{
+		SystemId:   gamesdb.SystemGameboy,
+		Folders:    []string{"GAMEBOY"},
+		Extensions: []string{".gb"},
+		Launch:     launch,
+	},
+	{
+		SystemId:   gamesdb.SystemGameboyColor,
+		Folders:    []string{"GAMEBOY", "GBC"},
+		Extensions: []string{".gbc"},
+		Launch:     launch,
+	},
+	{
+		SystemId:   gamesdb.SystemGameboy2P,
+		Folders:    []string{"GAMEBOY2P"},
+		Extensions: []string{".gb", ".gbc"},
+		Launch:     launch,
+	},
+	{
+		SystemId:   gamesdb.SystemGameGear,
+		Folders:    []string{"SMS", "GameGear"},
+		Extensions: []string{".gg"},
+		Launch:     launch,
+	},
+	{
+		SystemId:   gamesdb.SystemGameNWatch,
+		Folders:    []string{"GameNWatch"},
+		Extensions: []string{".bin"},
+		Launch:     launch,
+	},
+	{
+		SystemId:   gamesdb.SystemGBA,
+		Folders:    []string{"GBA"},
+		Extensions: []string{".gba"},
+		Launch:     launch,
+	},
+	{
+		SystemId:   gamesdb.SystemGBA2P,
+		Folders:    []string{"GBA2P"},
+		Extensions: []string{".gba"},
+		Launch:     launch,
+	},
+	{
+		SystemId:   gamesdb.SystemGenesis,
+		Folders:    []string{"MegaDrive", "Genesis"},
+		Extensions: []string{".gen", ".bin", ".md"},
+		Launch:     launch,
+	},
+	{
+		SystemId:   gamesdb.SystemIntellivision,
+		Folders:    []string{"Intellivision"},
+		Extensions: []string{".int", ".bin"},
+		Launch:     launch,
+	},
+	{
+		SystemId:   gamesdb.SystemMasterSystem,
+		Folders:    []string{"SMS"},
+		Extensions: []string{".sms"},
+		Launch:     launch,
+	},
+	{
+		SystemId:   gamesdb.SystemMegaCD,
+		Folders:    []string{"MegaCD"},
+		Extensions: []string{".cue", ".chd"},
+		Launch:     launch,
+	},
+	{
+		SystemId:   gamesdb.SystemMegaDuck,
+		Folders:    []string{"GAMEBOY", "MegaDuck"},
+		Extensions: []string{".bin"},
+		Launch:     launch,
+	},
+	{
+		SystemId:   gamesdb.SystemNeoGeo,
+		Folders:    []string{"NEOGEO"},
+		Extensions: []string{".neo"}, // TODO: .zip and folder support
+		Launch:     launch,
+	},
+	{
+		SystemId:   gamesdb.SystemNeoGeo,
+		Folders:    []string{"NeoGeo-CD", "NEOGEO"},
+		Extensions: []string{".cue", ".chd"},
+		Launch:     launch,
+	},
+	{
+		SystemId:   gamesdb.SystemNES,
+		Folders:    []string{"NES"},
+		Extensions: []string{".nes"},
+		Launch:     launch,
+	},
+	{
+		SystemId:   gamesdb.SystemNESMusic,
+		Folders:    []string{"NES"},
+		Extensions: []string{".nsf"},
+		Launch:     launch,
+	},
+	{
+		SystemId:   gamesdb.SystemNintendo64,
+		Folders:    []string{"N64"},
+		Extensions: []string{".n64", ".z64"},
+		Launch:     launch,
+	},
+	{
+		SystemId:   gamesdb.SystemOdyssey2,
+		Folders:    []string{"ODYSSEY2"},
+		Extensions: []string{".bin"},
+		Launch:     launch,
+	},
+	{
+		SystemId:   gamesdb.SystemPocketChallengeV2,
+		Folders:    []string{"WonderSwan", "PocketChallengeV2"},
+		Extensions: []string{".pc2"},
+		Launch:     launch,
+	},
+	{
+		SystemId:   gamesdb.SystemPokemonMini,
+		Folders:    []string{"PokemonMini"},
+		Extensions: []string{".min"},
+		Launch:     launch,
+	},
+	{
+		SystemId:   gamesdb.SystemPSX,
+		Folders:    []string{"PSX"},
+		Extensions: []string{".cue", ".chd", ".exe"},
+		Launch:     launch,
+	},
+	{
+		SystemId:   gamesdb.SystemSega32X,
+		Folders:    []string{"S32X"},
+		Extensions: []string{".32x"},
+		Launch:     launch,
+	},
+	{
+		SystemId:   gamesdb.SystemSG1000,
+		Folders:    []string{"SG1000", "Coleco", "SMS"},
+		Extensions: []string{".sg"},
+		Launch:     launch,
+	},
+	{
+		SystemId:   gamesdb.SystemSuperGameboy,
+		Folders:    []string{"SGB"},
+		Extensions: []string{".sgb", ".gb", ".gbc"},
+		Launch:     launch,
+	},
+	{
+		SystemId:   gamesdb.SystemSuperVision,
+		Folders:    []string{"SuperVision"},
+		Extensions: []string{".bin", ".sv"},
+		Launch:     launch,
+	},
+	{
+		SystemId:   gamesdb.SystemSaturn,
+		Folders:    []string{"Saturn"},
+		Extensions: []string{".cue", ".chd"},
+		Launch:     launch,
+	},
+	{
+		SystemId:   gamesdb.SystemSNES,
+		Folders:    []string{"SNES"},
+		Extensions: []string{".sfc", ".smc", ".bin", ".bs"},
+		Launch:     launch,
+	},
+	{
+		SystemId:   gamesdb.SystemSNESMusic,
+		Folders:    []string{"SNES"},
+		Extensions: []string{".spc"},
+		Launch:     launch,
+	},
+	{
+		SystemId:   gamesdb.SystemSuperGrafx,
+		Folders:    []string{"TGFX16"},
+		Extensions: []string{".sgx"},
+		Launch:     launch,
+	},
+	{
+		SystemId:   gamesdb.SystemTurboGrafx16,
+		Folders:    []string{"TGFX16"},
+		Extensions: []string{".pce", ".bin"},
+		Launch:     launch,
+	},
+	{
+		SystemId:   gamesdb.SystemTurboGrafx16CD,
+		Folders:    []string{"TGFX16-CD"},
+		Extensions: []string{".cue", ".chd"},
+		Launch:     launch,
+	},
+	{
+		SystemId:   gamesdb.SystemVC4000,
+		Folders:    []string{"VC4000"},
+		Extensions: []string{".bin"},
+		Launch:     launch,
+	},
+	{
+		SystemId:   gamesdb.SystemVectrex,
+		Folders:    []string{"VECTREX"},
+		Extensions: []string{".vec", ".bin", ".rom"}, // TODO: overlays (.ovr)
+		Launch:     launch,
+	},
+	{
+		SystemId:   gamesdb.SystemWonderSwan,
+		Folders:    []string{"WonderSwan"},
+		Extensions: []string{".ws"},
+		Launch:     launch,
+	},
+	{
+		SystemId:   gamesdb.SystemWonderSwanColor,
+		Folders:    []string{"WonderSwan", "WonderSwanColor"},
+		Extensions: []string{".wsc"},
+		Launch:     launch,
+	},
+	// Computers
+	{
+		SystemId:   gamesdb.SystemAcornAtom,
+		Folders:    []string{"AcornAtom"},
+		Extensions: []string{".vhd"},
+		Launch:     launch,
+	},
+	{
+		SystemId:   gamesdb.SystemAcornElectron,
+		Folders:    []string{"AcornElectron"},
+		Extensions: []string{".vhd"},
+		Launch:     launch,
+	},
+	{
+		SystemId:   gamesdb.SystemAliceMC10,
+		Folders:    []string{"AliceMC10"},
+		Extensions: []string{".c10"},
+		Launch:     launch,
+	},
+	{
+		SystemId:   gamesdb.SystemAmiga,
+		Folders:    []string{"Amiga"},
+		Extensions: []string{".adf"},
+		Launch:     launch,
+	},
+	{
+		SystemId:   gamesdb.SystemAmstrad,
+		Folders:    []string{"Amstrad"},
+		Extensions: []string{".dsk", ".cdt"}, // TODO: globbing support? for .e??
+		Launch:     launch,
+	},
+	{
+		SystemId:   gamesdb.SystemAmstradPCW,
+		Folders:    []string{"Amstrad PCW"},
+		Extensions: []string{".dsk"},
+		Launch:     launch,
+	},
+	{
+		SystemId:   gamesdb.SystemAo486,
+		Folders:    []string{"AO486"},
+		Extensions: []string{".img", ".ima", ".vhd", ".vfd", ".iso", ".cue", ".chd"},
+		Launch:     launch,
+	},
+	{
+		SystemId:   gamesdb.SystemApogee,
+		Folders:    []string{"APOGEE"},
+		Extensions: []string{".rka", ".rkr", ".gam"},
+		Launch:     launch,
+	},
+	{
+		SystemId:   gamesdb.SystemAppleI,
+		Folders:    []string{"Apple-I"},
+		Extensions: []string{".txt"},
+		Launch:     launch,
+	},
+	{
+		SystemId:   gamesdb.SystemAppleII,
+		Folders:    []string{"Apple-II"},
+		Extensions: []string{".dsk", ".do", ".po", ".nib", ".hdv"},
+		Launch:     launch,
+	},
+	{
+		SystemId:   gamesdb.SystemAquarius,
+		Folders:    []string{"AQUARIUS"},
+		Extensions: []string{".bin", ".caq"},
+		Launch:     launch,
+	},
+	{
+		SystemId:   gamesdb.SystemAtari800,
+		Folders:    []string{"ATARI800"},
+		Extensions: []string{".atr", ".xex", ".xfd", ".atx", ".car", ".rom", ".bin"},
+		Launch:     launch,
+	},
+	{
+		SystemId:   gamesdb.SystemBBCMicro,
+		Folders:    []string{"BBCMicro"},
+		Extensions: []string{".ssd", ".dsd", ".vhd"},
+		Launch:     launch,
+	},
+	{
+		SystemId:   gamesdb.SystemBK0011M,
+		Folders:    []string{"BK0011M"},
+		Extensions: []string{".bin", ".dsk", ".vhd"},
+		Launch:     launch,
+	},
+	{
+		SystemId:   gamesdb.SystemC16,
+		Folders:    []string{"C16"},
+		Extensions: []string{".d64", ".g64", ".prg", ".tap", ".bin"},
+		Launch:     launch,
+	},
+	{
+		SystemId:   gamesdb.SystemC64,
+		Folders:    []string{"C64"},
+		Extensions: []string{".d64", ".g64", ".t64", ".d81", ".prg", ".crt", ".reu", ".tap"},
+		Launch:     launch,
+	},
+	{
+		SystemId:   gamesdb.SystemCasioPV2000,
+		Folders:    []string{"Casio_PV-2000"},
+		Extensions: []string{".bin"},
+		Launch:     launch,
+	},
+	{
+		SystemId:   gamesdb.SystemCoCo2,
+		Folders:    []string{"CoCo2"},
+		Extensions: []string{".dsk", ".cas", ".ccc", ".rom"},
+		Launch:     launch,
+	},
+	{
+		SystemId:   gamesdb.SystemEDSAC,
+		Folders:    []string{"EDSAC"},
+		Extensions: []string{".tap"},
+		Launch:     launch,
+	},
+	{
+		SystemId:   gamesdb.SystemGalaksija,
+		Folders:    []string{"Galaksija"},
+		Extensions: []string{".tap"},
+		Launch:     launch,
+	},
+	{
+		SystemId:   gamesdb.SystemInteract,
+		Folders:    []string{"Interact"},
+		Extensions: []string{".cin", ".k7"},
+		Launch:     launch,
+	},
+	{
+		SystemId:   gamesdb.SystemJupiter,
+		Folders:    []string{"Jupiter"},
+		Extensions: []string{".ace"},
+		Launch:     launch,
+	},
+	{
+		SystemId:   gamesdb.SystemLaser,
+		Folders:    []string{"Laser"},
+		Extensions: []string{".vz"},
+		Launch:     launch,
+	},
+	{
+		SystemId:   gamesdb.SystemLynx48,
+		Folders:    []string{"Lynx48"},
+		Extensions: []string{".tap"},
+		Launch:     launch,
+	},
+	{
+		SystemId:   gamesdb.SystemMacPlus,
+		Folders:    []string{"MACPLUS"},
+		Extensions: []string{".dsk", ".img", ".vhd"},
+		Launch:     launch,
+	},
+	{
+		SystemId:   gamesdb.SystemMSX,
+		Folders:    []string{"MSX"},
+		Extensions: []string{".vhd"},
+		Launch:     launch,
+	},
+	{
+		SystemId:   gamesdb.SystemMultiComp,
+		Folders:    []string{"MultiComp"},
+		Extensions: []string{".img"},
+		Launch:     launch,
+	},
+	{
+		SystemId:   gamesdb.SystemOrao,
+		Folders:    []string{"ORAO"},
+		Extensions: []string{".tap"},
+		Launch:     launch,
+	},
+	{
+		SystemId:   gamesdb.SystemOric,
+		Folders:    []string{"Oric"},
+		Extensions: []string{".dsk"},
+		Launch:     launch,
+	},
+	{
+		SystemId:   gamesdb.SystemPCXT,
+		Folders:    []string{"PCXT"},
+		Extensions: []string{".img", ".vhd", ".ima", ".vfd"},
+		Launch:     launch,
+	},
+	{
+		SystemId:   gamesdb.SystemPDP1,
+		Folders:    []string{"PDP1"},
+		Extensions: []string{".bin", ".rim", ".pdp"},
+		Launch:     launch,
+	},
+	{
+		SystemId:   gamesdb.SystemPET2001,
+		Folders:    []string{"PET2001"},
+		Extensions: []string{".prg", ".tap"},
+		Launch:     launch,
+	},
+	{
+		SystemId:   gamesdb.SystemPMD85,
+		Folders:    []string{"PMD85"},
+		Extensions: []string{".rmm"},
+		Launch:     launch,
+	},
+	{
+		SystemId:   gamesdb.SystemQL,
+		Folders:    []string{"QL"},
+		Extensions: []string{".mdv", ".win"},
+		Launch:     launch,
+	},
+	{
+		SystemId:   gamesdb.SystemRX78,
+		Folders:    []string{"RX78"},
+		Extensions: []string{".bin"},
+		Launch:     launch,
+	},
+	{
+		SystemId:   gamesdb.SystemSAMCoupe,
+		Folders:    []string{"SAMCOUPE"},
+		Extensions: []string{".dsk", ".mgt", ".img"},
+		Launch:     launch,
+	},
+	{
+		SystemId:   gamesdb.SystemSordM5,
+		Folders:    []string{"Sord M5"},
+		Extensions: []string{".bin", ".rom", ".cas"},
+		Launch:     launch,
+	},
+	{
+		SystemId:   gamesdb.SystemSpecialist,
+		Folders:    []string{"SPMX"},
+		Extensions: []string{".rks", ".odi"},
+		Launch:     launch,
+	},
+	{
+		SystemId:   gamesdb.SystemSVI328,
+		Folders:    []string{"SVI328"},
+		Extensions: []string{".cas", ".bin", ".rom"},
+		Launch:     launch,
+	},
+	{
+		SystemId:   gamesdb.SystemTatungEinstein,
+		Folders:    []string{"TatungEinstein"},
+		Extensions: []string{".dsk"},
+		Launch:     launch,
+	},
+	{
+		SystemId:   gamesdb.SystemTI994A,
+		Folders:    []string{"TI-99_4A"},
+		Extensions: []string{".bin", ".m99"},
+		Launch:     launch,
+	},
+	{
+		SystemId:   gamesdb.SystemTomyTutor,
+		Folders:    []string{"TomyTutor"},
+		Extensions: []string{".bin", ".cas"},
+		Launch:     launch,
+	},
+	{
+		SystemId:   gamesdb.SystemTRS80,
+		Folders:    []string{"TRS-80"},
+		Extensions: []string{".jvi", ".dsk", ".cas"},
+		Launch:     launch,
+	},
+	{
+		SystemId:   gamesdb.SystemTSConf,
+		Folders:    []string{"TSConf"},
+		Extensions: []string{".vhf"},
+		Launch:     launch,
+	},
+	{
+		SystemId:   gamesdb.SystemUK101,
+		Folders:    []string{"UK101"},
+		Extensions: []string{".txt", ".bas", ".lod"},
+		Launch:     launch,
+	},
+	{
+		SystemId:   gamesdb.SystemVector06C,
+		Folders:    []string{"VECTOR06"},
+		Extensions: []string{".rom", ".com", ".c00", ".edd", ".fdd"},
+		Launch:     launch,
+	},
+	{
+		SystemId:   gamesdb.SystemVIC20,
+		Folders:    []string{"VIC20"},
+		Extensions: []string{".d64", ".g64", ".prg", ".tap", ".crt"},
+		Launch:     launch,
+	},
+	{
+		SystemId:   gamesdb.SystemX68000,
+		Folders:    []string{"X68000"},
+		Extensions: []string{".d88", ".hdf"},
+		Launch:     launch,
+	},
+	{
+		SystemId:   gamesdb.SystemZX81,
+		Folders:    []string{"ZX81"},
+		Extensions: []string{".p", ".0"},
+		Launch:     launch,
+	},
+	{
+		SystemId:   gamesdb.SystemZXSpectrum,
+		Folders:    []string{"Spectrum"},
+		Extensions: []string{".tap", ".csw", ".tzx", ".sna", ".z80", ".trd", ".img", ".dsk", ".mgt"},
+		Launch:     launch,
+	},
+	{
+		SystemId:   gamesdb.SystemZXNext,
+		Folders:    []string{"ZXNext"},
+		Extensions: []string{".vhd"},
+		Launch:     launch,
+	},
+	// Other
+	{
+		SystemId:   gamesdb.SystemArcade,
+		Folders:    []string{"_Arcade"},
+		Extensions: []string{".mra"},
+		Launch:     launch,
+	},
+	{
+		SystemId:   gamesdb.SystemArduboy,
+		Folders:    []string{"Arduboy"},
+		Extensions: []string{".hex", ".bin"},
+		Launch:     launch,
+	},
+	{
+		SystemId:   gamesdb.SystemChip8,
+		Folders:    []string{"Chip8"},
+		Extensions: []string{".ch8"},
+		Launch:     launch,
+	},
+}

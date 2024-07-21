@@ -194,7 +194,7 @@ func NewNamesIndex(
 
 	update(status)
 	systemPaths := make(map[string][]string, 0)
-	for _, v := range GetSystemPaths(platform.RootFolders(cfg), systems) {
+	for _, v := range GetSystemPaths(platform, platform.RootFolders(cfg), systems) {
 		systemPaths[v.System.Id] = append(systemPaths[v.System.Id], v.Path)
 	}
 

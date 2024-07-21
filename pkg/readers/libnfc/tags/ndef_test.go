@@ -1,3 +1,5 @@
+//go:build (linux || darwin) && cgo
+
 /*
 TapTo
 Copyright (C) 2023 Gareth Jones

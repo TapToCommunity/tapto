@@ -1,3 +1,5 @@
+//go:build linux || darwin
+
 package mistex
 
 import (
@@ -16,6 +18,10 @@ import (
 	"github.com/wizzomafizzo/tapto/pkg/config"
 	"github.com/wizzomafizzo/tapto/pkg/platforms"
 	"github.com/wizzomafizzo/tapto/pkg/platforms/mister"
+	"github.com/wizzomafizzo/tapto/pkg/readers"
+	"github.com/wizzomafizzo/tapto/pkg/readers/file"
+	"github.com/wizzomafizzo/tapto/pkg/readers/libnfc"
+	"github.com/wizzomafizzo/tapto/pkg/readers/simple_serial"
 	"github.com/wizzomafizzo/tapto/pkg/tokens"
 )
 
@@ -28,6 +34,14 @@ type Platform struct {
 
 func (p *Platform) Id() string {
 	return "mistex"
+}
+
+func (p *Platform) SupportedReaders(cfg *config.UserConfig) []readers.Reader {
+	return []readers.Reader{
+		libnfc.NewReader(cfg),
+		file.NewReader(cfg),
+		simple_serial.NewReader(cfg),
+	}
 }
 
 func (p *Platform) Setup(cfg *config.UserConfig) error {
@@ -96,6 +110,10 @@ func (p *Platform) AfterScanHook(token tokens.Token) error {
 	return nil
 }
 
+func (p *Platform) ReadersUpdateHook(readers map[string]*readers.Reader) error {
+	return nil
+}
+
 func (p *Platform) RootFolders(cfg *config.UserConfig) []string {
 	return games.GetGamesFolders(mister.UserConfigToMrext(cfg))
 }
@@ -106,6 +124,10 @@ func (p *Platform) ZipsAsFolders() bool {
 
 func (p *Platform) ConfigFolder() string {
 	return mister.ConfigFolder
+}
+
+func (p *Platform) LogFolder() string {
+	return mister.TempFolder
 }
 
 func (p *Platform) NormalizePath(cfg *config.UserConfig, path string) string {
@@ -256,4 +278,8 @@ func (p *Platform) ForwardCmd(env platforms.CmdEnv) error {
 
 func (p *Platform) LookupMapping(_ tokens.Token) (string, bool) {
 	return "", false
+}
+
+func (p *Platform) Launchers() []platforms.Launcher {
+	return mister.Launchers
 }

@@ -144,7 +144,23 @@ func cmdLaunch(pl platforms.Platform, env platforms.CmdEnv) error {
 
 	log.Info().Msgf("launching system: %s, path: %s", systemId, path)
 
-	for _, f := range system.Folders {
+	var launchers []platforms.Launcher
+	for _, l := range pl.Launchers() {
+		if l.SystemId == system.Id {
+			launchers = append(launchers, l)
+		}
+	}
+
+	var folders []string
+	for _, l := range launchers {
+		for _, folder := range l.Folders {
+			if !utils.Contains(folders, folder) {
+				folders = append(folders, folder)
+			}
+		}
+	}
+
+	for _, f := range folders {
 		systemPath := filepath.Join(f, path)
 		if fp, err := findFile(pl, env.Cfg, systemPath); err == nil {
 			log.Debug().Msgf("launching found system path: %s", fp)

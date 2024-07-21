@@ -1,3 +1,5 @@
+//go:build linux || darwin
+
 package mister
 
 import "github.com/bendahl/uinput"

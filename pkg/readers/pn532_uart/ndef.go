@@ -1,5 +1,3 @@
-//go:build (linux || darwin) && cgo
-
 /*
 TapTo
 Copyright (C) 2023 Gareth Jones
@@ -21,7 +19,7 @@ You should have received a copy of the GNU General Public License
 along with TapTo.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-package tags
+package pn532_uart
 
 import (
 	"bytes"
@@ -55,7 +53,15 @@ func ParseRecordText(blocks []byte) (string, error) {
 
 	tagText := string(blocks[startIndex+4 : endIndex])
 
-	return tagText, nil
+	// TODO: why does this happen here but not in libnfc?
+	cleaned := ""
+	for _, r := range tagText {
+		if r != '\x00' {
+			cleaned += string(r)
+		}
+	}
+
+	return cleaned, nil
 }
 
 func BuildMessage(text string) ([]byte, error) {
@@ -65,7 +71,7 @@ func BuildMessage(text string) ([]byte, error) {
 		return nil, err
 	}
 
-	var header, _ = CalculateNdefHeader(payload)
+	header, err := CalculateNdefHeader(payload)
 	if err != nil {
 		return nil, err
 	}

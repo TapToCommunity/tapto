@@ -6,7 +6,8 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/wizzomafizzo/tapto/pkg/platforms/mister"
+	"github.com/wizzomafizzo/tapto/pkg/config"
+	"github.com/wizzomafizzo/tapto/pkg/platforms"
 	bolt "go.etcd.io/bbolt"
 )
 
@@ -15,21 +16,25 @@ const (
 	BucketMappings = "mappings"
 )
 
+func dbFile(pl platforms.Platform) string {
+	return filepath.Join(pl.ConfigFolder(), config.TapToDbFilename)
+}
+
 // Check if the db exists on disk.
-func DbExists() bool {
-	_, err := os.Stat(mister.DbFile)
+func DbExists(pl platforms.Platform) bool {
+	_, err := os.Stat(dbFile(pl))
 	return err == nil
 }
 
 // Open the db with the given options. If the database does not exist it
 // will be created and the buckets will be initialized.
-func open(options *bolt.Options) (*bolt.DB, error) {
-	err := os.MkdirAll(filepath.Dir(mister.DbFile), 0755)
+func open(pl platforms.Platform, options *bolt.Options) (*bolt.DB, error) {
+	err := os.MkdirAll(filepath.Dir(dbFile(pl)), 0755)
 	if err != nil {
 		return nil, err
 	}
 
-	db, err := bolt.Open(mister.DbFile, 0600, options)
+	db, err := bolt.Open(dbFile(pl), 0600, options)
 	if err != nil {
 		return nil, err
 	}
@@ -52,8 +57,8 @@ type Database struct {
 	bdb *bolt.DB
 }
 
-func Open() (*Database, error) {
-	db, err := open(&bolt.Options{})
+func Open(pl platforms.Platform) (*Database, error) {
+	db, err := open(pl, &bolt.Options{})
 	if err != nil {
 		return nil, err
 	}
@@ -77,7 +82,7 @@ type HistoryEntry struct {
 }
 
 func HistoryKey(entry HistoryEntry) string {
-	// TODO: web has no uid, this could collide
+	// TODO: web has no uid, this could collide, use autoincrement instead
 	return entry.Time.Format(time.RFC3339) + "-" + entry.UID
 }
 

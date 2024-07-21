@@ -25,6 +25,7 @@ require (
 require (
 	github.com/ajg/form v1.5.1 // indirect
 	github.com/creack/goselect v0.1.2 // indirect
+	github.com/ebfe/scard v0.0.0-20230420082256-7db3f9b7c8a7 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/stretchr/testify v1.9.0 // indirect

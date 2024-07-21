@@ -138,7 +138,6 @@ func launchToken(
 	platform platforms.Platform,
 	cfg *config.UserConfig,
 	token tokens.Token,
-	state *state.State,
 	db *database.Database,
 	lsq chan<- *tokens.Token,
 ) error {
@@ -219,7 +218,7 @@ func processLaunchQueue(
 				continue
 			}
 
-			err = launchToken(platform, cfg, t, st, db, lsq)
+			err = launchToken(platform, cfg, t, db, lsq)
 			if err != nil {
 				log.Error().Err(err).Msgf("error launching token")
 			}
@@ -258,7 +257,7 @@ func StartDaemon(
 	log.Info().Msgf("debug = %t", cfg.GetDebug())
 
 	log.Debug().Msg("opening database")
-	db, err := database.Open()
+	db, err := database.Open(platform)
 	if err != nil {
 		log.Error().Err(err).Msgf("error opening database")
 		return nil, err
@@ -279,23 +278,9 @@ func StartDaemon(
 	go readerManager(platform, cfg, st, tq, lsq)
 	go processLaunchQueue(platform, cfg, st, tq, db, lsq)
 
-	socket, err := StartSocketServer(st)
-	if err != nil {
-		log.Error().Msgf("error starting socket server: %s", err)
-	}
-
 	return func() error {
-		if socket != nil {
-			err := socket.Close()
-			if err != nil {
-				log.Warn().Msgf("error closing socket: %s", err)
-			}
-		}
-
 		tq.Close()
-
 		st.StopService()
-
 		err = platform.Stop()
 		if err != nil {
 			log.Warn().Msgf("error stopping platform: %s", err)

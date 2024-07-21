@@ -1,3 +1,5 @@
+//go:build (linux || darwin) && cgo
+
 package libnfc
 
 import (
@@ -25,6 +27,7 @@ const (
 	timesToPoll        = 1
 	periodBetweenPolls = 250 * time.Millisecond
 	periodBetweenLoop  = 250 * time.Millisecond
+	autoConnStr        = "libnfc_auto:"
 )
 
 type WriteRequestResult struct {
@@ -54,8 +57,17 @@ func NewReader(cfg *config.UserConfig) *Reader {
 }
 
 func (r *Reader) Open(device string, iq chan<- readers.Scan) error {
-	pnd, err := openDeviceWithRetries(device)
+	connStr := device
+	if device == autoConnStr {
+		connStr = ""
+	}
+
+	pnd, err := openDeviceWithRetries(connStr)
 	if err != nil {
+		if device == autoConnStr {
+			return nil
+		}
+
 		return err
 	}
 
@@ -135,24 +147,19 @@ func (r *Reader) Ids() []string {
 
 func (r *Reader) Detect(connected []string) string {
 	if !r.cfg.GetProbeDevice() {
-		// log.Debug().Msg("device probing disabled")
 		return ""
 	}
 
 	device := detectSerialReaders(connected)
-	if device == "" {
-		// log.Debug().Msg("no serial nfc reader detected")
-		return ""
+	if device != "" && !utils.Contains(connected, device) {
+		return device
 	}
 
-	if utils.Contains(connected, device) {
-		// log.Debug().Msgf("already connected to: %s", device)
-		return ""
+	if !utils.Contains(connected, autoConnStr) {
+		return autoConnStr
 	}
 
-	log.Info().Msgf("detected nfc reader: %s", device)
-
-	return device
+	return ""
 }
 
 func (r *Reader) Device() string {
@@ -238,7 +245,14 @@ func detectSerialReaders(connected []string) string {
 		}
 
 		// ignore if different reader already connected
-		if strings.HasSuffix(device, ":"+device) {
+		match := false
+		for _, c := range connected {
+			if strings.HasSuffix(c, ":"+device) {
+				match = true
+				break
+			}
+		}
+		if match {
 			continue
 		}
 
