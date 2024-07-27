@@ -1,5 +1,5 @@
 <h1 align="left">
-  <img height="50px" title="TapTo" src="assets/images/logo/tapto_gitbhub_logo.png" />
+  <img height="100px" title="TapTo" src="assets/images/logo/tapto_logo_white.svg" />
 </h1>
 
 - [Downloads](https://github.com/wizzomafizzo/tapto/releases/latest/)
