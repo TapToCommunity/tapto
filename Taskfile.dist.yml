@@ -16,88 +16,88 @@ tasks:
   build-image-mister:
     vars:
       IMAGE_NAME: tapto/mister-build
-      DOCKERFILE: "{{.PWD}}/scripts/mister/build"
+      DOCKERFILE: "./scripts/mister/build"
     cmds:
       - docker build --platform linux/arm/v7 -t {{.IMAGE_NAME}} {{.DOCKERFILE}}
 
   build-image-mistex:
     vars:
       IMAGE_NAME: tapto/mistex-build
-      DOCKERFILE: "{{.PWD}}/scripts/linux_arm64/build"
+      DOCKERFILE: "./scripts/linux_arm64/build"
     cmds:
       - docker build --platform linux/arm/v8 -t {{.IMAGE_NAME}} {{.DOCKERFILE}}
 
   build-image-batocera-arm64:
     vars:
       IMAGE_NAME: tapto/batocera-arm64-build
-      DOCKERFILE: "{{.PWD}}/scripts/linux_arm64/build"
+      DOCKERFILE: "./scripts/linux_arm64/build"
     cmds:
       - docker build --platform linux/arm/v8 -t {{.IMAGE_NAME}} {{.DOCKERFILE}}
 
   build-image-batocera-amd64:
     vars:
       IMAGE_NAME: tapto/batocera-amd64-build
-      DOCKERFILE: "{{.PWD}}/scripts/linux_amd64/build"
+      DOCKERFILE: "./scripts/linux_amd64/build"
     cmds:
       - docker build --platform linux/amd64 -t {{.IMAGE_NAME}} {{.DOCKERFILE}}
 
   build-mister:
     vars:
-      BUILD_DIR: "{{.PWD}}/_build/mister_arm"
+      BUILD_DIR: "./_build/mister_arm"
       BUILDCACHE: "{{.BUILD_DIR}}/.go-buildcache"
       MODCACHE: "{{.BUILD_DIR}}/.go-modcache"
       IMAGE_NAME: tapto/mister-build
       IMG_BUILDCACHE: /home/build/.cache/go-build
       IMG_MODCACHE: /home/build/go/pkg/mod
     cmds:
-      - docker run --rm --platform linux/arm/v7 -v {{.BUILDCACHE}}:{{.IMG_BUILDCACHE}} -v {{.MODCACHE}}:{{.IMG_MODCACHE}} -v {{.PWD}}:/build --user 1000:1000 {{.IMAGE_NAME}} build.sh
-      - cp {{.PWD}}/scripts/taptui/taptui.sh {{.BUILD_DIR}}
+      - docker run --rm --platform linux/arm/v7 -v {{.BUILDCACHE}}:{{.IMG_BUILDCACHE}} -v {{.MODCACHE}}:{{.IMG_MODCACHE}} -v ${PWD}:/build --user 1000:1000 {{.IMAGE_NAME}} build.sh
+      - cp ./scripts/taptui/taptui.sh {{.BUILD_DIR}}
       - rm -f {{.BUILD_DIR}}/tapto-mister.zip
       - zip {{.BUILD_DIR}}/tapto-mister.zip {{.BUILD_DIR}}/tapto.sh {{.BUILD_DIR}}/taptui.sh
 
   build-mistex:
     vars:
-      BUILD_DIR: "{{.PWD}}/_build/mistex_arm64"
+      BUILD_DIR: "./_build/mistex_arm64"
       BUILDCACHE: "{{.BUILD_DIR}}/.go-buildcache"
       MODCACHE: "{{.BUILD_DIR}}/.go-modcache"
       IMAGE_NAME: tapto/mistex-build
       IMG_BUILDCACHE: /home/build/.cache/go-build
       IMG_MODCACHE: /home/build/go/pkg/mod
     cmds:
-      - docker run --rm --platform linux/arm/v8 -v {{.BUILDCACHE}}:{{.IMG_BUILDCACHE}} -v {{.MODCACHE}}:{{.IMG_MODCACHE}} -v {{.PWD}}:/build --user 1000:1000 {{.IMAGE_NAME}} bash -c "PLATFORM=mistex TAPTO_BIN=tapto.sh task build"
-      - cp {{.PWD}}/scripts/taptui/taptui.sh {{.BUILD_DIR}}
+      - docker run --rm --platform linux/arm/v8 -v {{.BUILDCACHE}}:{{.IMG_BUILDCACHE}} -v {{.MODCACHE}}:{{.IMG_MODCACHE}} -v ${PWD}:/build --user 1000:1000 {{.IMAGE_NAME}} bash -c "PLATFORM=mistex TAPTO_BIN=tapto.sh task build"
+      - cp ./scripts/taptui/taptui.sh {{.BUILD_DIR}}
       - rm -f {{.BUILD_DIR}}/tapto-mistex.zip
       - zip {{.BUILD_DIR}}/tapto-mistex.zip {{.BUILD_DIR}}/tapto.sh {{.BUILD_DIR}}/taptui.sh
 
   build-batocera-arm64:
     vars:
-      BUILD_DIR: "{{.PWD}}/_build/batocera_arm64"
+      BUILD_DIR: "./_build/batocera_arm64"
       BUILDCACHE: "{{.BUILD_DIR}}/.go-buildcache"
       MODCACHE: "{{.BUILD_DIR}}/.go-modcache"
       IMAGE_NAME: tapto/batocera-arm64-build
       IMG_BUILDCACHE: /home/build/.cache/go-build
       IMG_MODCACHE: /home/build/go/pkg/mod
     cmds:
-      - docker run --rm --platform linux/arm/v8 -v {{.BUILDCACHE}}:{{.IMG_BUILDCACHE}} -v {{.MODCACHE}}:{{.IMG_MODCACHE}} -v {{.PWD}}:/build --user 1000:1000 {{.IMAGE_NAME}} bash -c "PLATFORM=batocera TAPTO_BIN=tapto task build"
+      - docker run --rm --platform linux/arm/v8 -v {{.BUILDCACHE}}:{{.IMG_BUILDCACHE}} -v {{.MODCACHE}}:{{.IMG_MODCACHE}} -v ${PWD}:/build --user 1000:1000 {{.IMAGE_NAME}} bash -c "PLATFORM=batocera TAPTO_BIN=tapto task build"
       - rm -f {{.BUILD_DIR}}/tapto-batocera_arm64.zip
       - zip {{.BUILD_DIR}}/tapto-batocera_arm64.zip {{.BUILD_DIR}}/tapto
 
   build-batocera-amd64:
     vars:
-      BUILD_DIR: "{{.PWD}}/_build/batocera_amd64"
+      BUILD_DIR: "./_build/batocera_amd64"
       BUILDCACHE: "{{.BUILD_DIR}}/.go-buildcache"
       MODCACHE: "{{.BUILD_DIR}}/.go-modcache"
       IMAGE_NAME: tapto/batocera-amd64-build
       IMG_BUILDCACHE: /home/build/.cache/go-build
       IMG_MODCACHE: /home/build/go/pkg/mod
     cmds:
-      - docker run --rm --platform linux/amd64 -v {{.BUILDCACHE}}:{{.IMG_BUILDCACHE}} -v {{.MODCACHE}}:{{.IMG_MODCACHE}} -v {{.PWD}}:/build --user 1000:1000 {{.IMAGE_NAME}} bash -c "PLATFORM=batocera TAPTO_BIN=tapto task build"
+      - docker run --rm --platform linux/amd64 -v {{.BUILDCACHE}}:{{.IMG_BUILDCACHE}} -v {{.MODCACHE}}:{{.IMG_MODCACHE}} -v ${PWD}:/build --user 1000:1000 {{.IMAGE_NAME}} bash -c "PLATFORM=batocera TAPTO_BIN=tapto task build"
       - rm -f {{.BUILD_DIR}}/tapto-batocera_amd64.zip
       - zip {{.BUILD_DIR}}/tapto-batocera_amd64.zip {{.BUILD_DIR}}/tapto
 
   build-windows:
     vars:
-      BUILD_DIR: "{{.PWD}}/_build/windows_{{.ARCH}}"
+      BUILD_DIR: "./_build/windows_{{.ARCH}}"
     env:
       GOOS: windows
       PLATFORM: windows
@@ -108,7 +108,7 @@ tasks:
 
   build-mac:
     vars:
-      BUILD_DIR: "{{.PWD}}/_build/mac_{{.ARCH}}"
+      BUILD_DIR: "./_build/mac_{{.ARCH}}"
     env:
       GOOS: darwin
       PLATFORM: mac
