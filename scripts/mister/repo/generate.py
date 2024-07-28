@@ -6,12 +6,12 @@ import hashlib
 import sys
 import time
 from pathlib import Path
-from zipfile import ZipFile
 from typing import TypedDict, Union, Optional, List
 
 DB_ID = "mrext/tapto"
-DL_URL = "https://github.com/wizzomafizzo/tapto/releases/download/{}"
-RELEASES_FOLDER = "_bin/releases"
+DL_URL_PREFIX = "https://github.com/wizzomafizzo/tapto/releases/download/{}"
+ZIP_FILENAME = "tapto-mister_arm-{}.zip"
+SCRATCH_FOLDER = "_scratch"
 REPO_FOLDER = "scripts/mister/repo"
 FILES = [
     "tapto.sh",
@@ -47,21 +47,23 @@ class RepoDb(TypedDict):
 
 
 def create_tapto_db(tag: str) -> RepoDb:
+    zip_filename = ZIP_FILENAME.format(tag[1:])
+    
     folders: RepoDbFolders = {
         "Scripts/": RepoDbFoldersItem(tags=None),
     }
 
     files: RepoDbFiles = {}
     for file in FILES:
-        local_path = os.path.join(RELEASES_FOLDER, file)
+        local_path = os.path.join(SCRATCH_FOLDER, file)
 
         key = "Scripts/{}".format(os.path.basename(local_path))
         size = os.stat(local_path).st_size
         md5 = hashlib.md5(open(local_path, "rb").read()).hexdigest()
-        url = "{}/{}".format(DL_URL.format(tag), os.path.basename(local_path))
+        url = "{}/{}/{}".format(DL_URL_PREFIX.format(tag), zip_filename, os.path.basename(local_path))
 
         file_entry = RepoDbFilesItem(
-            hash=md5, size=size, url=url, overwrite=None, reboot=None, tags=[Path(local_path).stem]
+            hash=md5, size=size, url=url, overwrite=None, reboot=True, tags=["tapto"]
         )
 
         files[key] = file_entry
@@ -88,6 +90,12 @@ def generate_json(repo_db: RepoDb) -> str:
 
 def main():
     tag = sys.argv[1]
+    
+    # set up release files
+    Path(SCRATCH_FOLDER).mkdir(parents=True, exist_ok=True)
+    zip_filename = ZIP_FILENAME.format(tag[1:])
+    os.system("wget {}/{} -O {}/{}".format(DL_URL_PREFIX.format(tag), zip_filename, SCRATCH_FOLDER, zip_filename))
+    os.system("unzip {}/{} -d {}".format(SCRATCH_FOLDER, zip_filename, SCRATCH_FOLDER))
 
     repo_db = create_tapto_db(tag)
     with open("{}/tapto.json".format(REPO_FOLDER), "w") as f:
