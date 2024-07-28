@@ -219,30 +219,12 @@ var serialCacheMu = &sync.RWMutex{}
 var serialBlockList = []string{}
 
 func (r *Pn532UartReader) Detect(connected []string) string {
-	ports, err := serial.GetPortsList()
+	ports, err := utils.GetSerialDeviceList()
 	if err != nil {
 		log.Error().Err(err).Msg("failed to get serial ports")
 	}
-	// log.Debug().Msgf("serial ports: %v", ports)
 
-	toCheck := make([]string, 0)
 	for _, name := range ports {
-		if runtime.GOOS == "windows" {
-			if strings.HasPrefix(name, "COM") {
-				toCheck = append(toCheck, name)
-			}
-		} else if runtime.GOOS == "darwin" {
-			if strings.HasPrefix(name, "/dev/tty.") {
-				toCheck = append(toCheck, name)
-			}
-		} else {
-			if strings.HasPrefix(name, "/dev/ttyUSB") || strings.HasPrefix(name, "/dev/ttyACM") {
-				toCheck = append(toCheck, name)
-			}
-		}
-	}
-
-	for _, name := range toCheck {
 		device := "pn532_uart:" + name
 
 		// ignore if device is in block list

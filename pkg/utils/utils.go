@@ -78,37 +78,6 @@ func GetFileSize(path string) (int64, error) {
 	return size, nil
 }
 
-func GetLinuxSerialDeviceList() ([]string, error) {
-	path := "/dev/serial/by-id"
-
-	if _, err := os.Stat(path); os.IsNotExist(err) {
-		return nil, nil
-	}
-
-	f, err := os.Open(path)
-	if err != nil {
-		return nil, err
-	}
-	defer f.Close()
-
-	files, err := f.Readdir(0)
-	if err != nil {
-		return nil, err
-	}
-
-	var devices []string
-
-	for _, v := range files {
-		if v.IsDir() {
-			continue
-		}
-
-		devices = append(devices, filepath.Join(path, v.Name()))
-	}
-
-	return devices, nil
-}
-
 // Contains returns true if slice contains value.
 func Contains[T comparable](xs []T, x T) bool {
 	for _, v := range xs {

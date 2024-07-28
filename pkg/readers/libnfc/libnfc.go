@@ -204,7 +204,7 @@ var serialCacheMu = &sync.RWMutex{}
 var serialBlockList = []string{}
 
 func detectSerialReaders(connected []string) string {
-	devices, err := utils.GetLinuxSerialDeviceList()
+	devices, err := utils.GetSerialDeviceList()
 	if err != nil {
 		log.Error().Msgf("error getting serial devices: %s", err)
 		return ""
