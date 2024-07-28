@@ -1,11 +1,12 @@
 {
     "db_id": "mrext/tapto",
-    "timestamp": 1720589551,
+    "timestamp": 1722154702,
     "files": {
         "Scripts/tapto.sh": {
-            "hash": "acddf3c0ae476167548ed223380638b7",
-            "size": 8883628,
-            "url": "https://github.com/wizzomafizzo/tapto/releases/download/v1.5.0/tapto.sh",
+            "hash": "e774c55ffc4575b987c3204132b828c6",
+            "size": 8877828,
+            "url": "https://github.com/wizzomafizzo/tapto/releases/download/v1.5.1/tapto-mister_arm-1.5.1.zip/tapto.sh",
+            "reboot": true,
             "tags": [
                 "tapto"
             ]
@@ -13,9 +14,10 @@
         "Scripts/taptui.sh": {
             "hash": "3e8575b68724079046eb3387305593e4",
             "size": 78812,
-            "url": "https://github.com/wizzomafizzo/tapto/releases/download/v1.5.0/taptui.sh",
+            "url": "https://github.com/wizzomafizzo/tapto/releases/download/v1.5.1/tapto-mister_arm-1.5.1.zip/taptui.sh",
+            "reboot": true,
             "tags": [
-                "taptui"
+                "tapto"
             ]
         }
     },
