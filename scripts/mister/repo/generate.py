@@ -113,8 +113,8 @@ def create_tapto_db(tag: str) -> RepoDb:
     return RepoDb(
         db_id=DB_ID,
         timestamp=int(time.time()),
-        files=None,
-        folders=None,
+        files={},
+        folders={},
         base_files_url=None,
         zips={
             "tapto": {
