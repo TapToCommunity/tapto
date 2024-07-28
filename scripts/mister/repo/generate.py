@@ -38,19 +38,54 @@ class RepoDbFoldersItem(TypedDict):
 RepoDbFolders = dict[str, RepoDbFoldersItem]
 
 
+class RepoDbZipsContentsFile(TypedDict):
+    hash: str
+    size: int
+    url: str
+
+
+class RepoDbZipFilesItem(TypedDict):
+    hash: str
+    size: int
+    url: Optional[str]
+    overwrite: Optional[bool]
+    reboot: Optional[bool]
+    tags: List[str]
+    zip_id: str
+    zip_path: str
+    
+    
+class RepoDbZipFoldersItem(TypedDict):
+    tags: Optional[list[Union[str, int]]]
+    zip_id: str
+
+
+class RepoDbZipsInternalSummary(TypedDict):
+    files: dict[str, RepoDbZipFilesItem]
+    folders: dict[str, RepoDbZipFilesItem]
+
+
+class RepoDbZipsItem(TypedDict):
+    contents_file: RepoDbZipsContentsFile
+    description: str
+    internal_summary: RepoDbZipsInternalSummary
+    kind: str
+
+
 class RepoDb(TypedDict):
     db_id: str
     timestamp: int
     files: RepoDbFiles
     folders: RepoDbFolders
     base_files_url: Optional[str]
+    zips: dict[str, RepoDbZipsItem]
 
 
 def create_tapto_db(tag: str) -> RepoDb:
     zip_filename = ZIP_FILENAME.format(tag[1:])
     
-    folders: RepoDbFolders = {
-        "Scripts/": RepoDbFoldersItem(tags=None),
+    folders: dict[str, RepoDbZipFilesItem] = {
+        "Scripts/": RepoDbFoldersItem(tags=None, zip_id="tapto"),
     }
 
     files: RepoDbFiles = {}
@@ -60,10 +95,17 @@ def create_tapto_db(tag: str) -> RepoDb:
         key = "Scripts/{}".format(os.path.basename(local_path))
         size = os.stat(local_path).st_size
         md5 = hashlib.md5(open(local_path, "rb").read()).hexdigest()
-        url = "{}/{}/{}".format(DL_URL_PREFIX.format(tag), zip_filename, os.path.basename(local_path))
+        # url = "{}/{}/{}".format(DL_URL_PREFIX.format(tag), zip_filename, os.path.basename(local_path))
 
         file_entry = RepoDbFilesItem(
-            hash=md5, size=size, url=url, overwrite=None, reboot=True, tags=["tapto"]
+            hash=md5,
+            size=size,
+            url=None,
+            overwrite=None,
+            reboot=True,
+            tags=["tapto"],
+            zip_id="tapto",
+            zip_path=file,
         )
 
         files[key] = file_entry
@@ -71,9 +113,24 @@ def create_tapto_db(tag: str) -> RepoDb:
     return RepoDb(
         db_id=DB_ID,
         timestamp=int(time.time()),
-        files=files,
-        folders=folders,
+        files=None,
+        folders=None,
         base_files_url=None,
+        zips={
+            "tapto": {
+                "contents_file": {
+                    "hash": hashlib.md5(open("{}/{}".format(SCRATCH_FOLDER, zip_filename), "rb").read()).hexdigest(),
+                    "size": os.stat("{}/{}".format(SCRATCH_FOLDER, zip_filename)).st_size,
+                    "url": "{}/{}".format(DL_URL_PREFIX.format(tag), zip_filename),
+                },
+                "description": "Extracting TapTo release",
+                "internal_summary": {
+                    "files": files,
+                    "folders": folders,
+                },
+                "kind": "extract_single_files",   
+            }
+        }
     )
 
 
