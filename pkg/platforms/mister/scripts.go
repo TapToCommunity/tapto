@@ -6,9 +6,11 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"time"
 
+	"github.com/rs/zerolog/log"
 	"github.com/wizzomafizzo/mrext/pkg/input"
 )
 
@@ -42,7 +44,7 @@ func openConsole(kbd input.Keyboard) error {
 	tries := 0
 	tty := ""
 	for {
-		if tries > 20 {
+		if tries > 10 {
 			return fmt.Errorf("could not switch to tty1")
 		}
 		kbd.Console()
@@ -74,18 +76,22 @@ func runScript(pl Platform, bin string, args string) error {
 	}
 
 	err := openConsole(pl.kbd)
+	headless := false
 	if err != nil {
-		return err
+		headless = true
+		log.Warn().Msg("error opening console, running script headless")
 	}
 
-	// this is just to follow mister's convention, which reserves tty2 for scripts
-	err = exec.Command("chvt", "2").Run()
-	if err != nil {
-		return err
-	}
+	if !headless {
+		// this is just to follow mister's convention, which reserves
+		// tty2 for scripts
+		err = exec.Command("chvt", "2").Run()
+		if err != nil {
+			return err
+		}
 
-	// this is how mister launches scripts itself
-	launcher := fmt.Sprintf(`#!/bin/bash
+		// this is how mister launches scripts itself
+		launcher := fmt.Sprintf(`#!/bin/bash
 export LC_ALL=en_US.UTF-8
 export HOME=/root
 export LESSKEY=/media/fat/linux/lesskey
@@ -93,27 +99,36 @@ cd $(dirname "%s")
 %s
 `, bin, bin+" "+args)
 
-	err = os.WriteFile("/tmp/script", []byte(launcher), 0755)
-	if err != nil {
-		return err
+		err = os.WriteFile("/tmp/script", []byte(launcher), 0755)
+		if err != nil {
+			return err
+		}
+
+		err = exec.Command(
+			"/sbin/agetty",
+			"-a",
+			"root",
+			"-l",
+			"/tmp/script",
+			"--nohostname",
+			"-L",
+			"tty2",
+			"linux",
+		).Run()
+		if err != nil {
+			return err
+		}
+
+		pl.kbd.ExitConsole()
+
+		return nil
+	} else {
+		cmd := exec.Command(bin, args)
+		cmd.Env = os.Environ()
+		cmd.Env = append(cmd.Env, "LC_ALL=en_US.UTF-8")
+		cmd.Env = append(cmd.Env, "HOME=/root")
+		cmd.Env = append(cmd.Env, "LESSKEY=/media/fat/linux/lesskey")
+		cmd.Dir = filepath.Dir(bin)
+		return cmd.Run()
 	}
-
-	err = exec.Command(
-		"/sbin/agetty",
-		"-a",
-		"root",
-		"-l",
-		"/tmp/script",
-		"--nohostname",
-		"-L",
-		"tty2",
-		"linux",
-	).Run()
-	if err != nil {
-		return err
-	}
-
-	pl.kbd.ExitConsole()
-
-	return nil
 }
