@@ -67,7 +67,7 @@ func ReadNtag(pnd nfc.Device) (TagData, error) {
 	log.Debug().Msgf("NTAG has %d blocks", blockCount)
 
 	header, _ := comm(pnd, []byte{READ_COMMAND, byte(0)}, 16)
-	if bytes.Equal(header[9:], AMIIBO_MATCHER) {
+	if len(header) > 9 && bytes.Equal(header[9:], AMIIBO_MATCHER) {
 		log.Info().Msg("found Amiibo")
 		amiibo, _ := comm(pnd, []byte{READ_COMMAND, byte(21)}, 16)
 		amiibo = amiibo[:8]
@@ -87,7 +87,7 @@ func ReadNtag(pnd nfc.Device) (TagData, error) {
 			return TagData{}, err
 		}
 
-		if byte(currentBlock) == 0x04 && bytes.Equal(blocks[0:14], LEGO_DIMENSIONS_MATCHER) {
+		if byte(currentBlock) == 0x04 && len(blocks) >= 13 && bytes.Equal(blocks[0:14], LEGO_DIMENSIONS_MATCHER) {
 			log.Info().Msg("found Lego Dimensions tag")
 			return TagData{
 				Type:  tokens.TypeLegoDimensions,
