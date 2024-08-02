@@ -43,8 +43,6 @@ Special thanks to **Gaz** for starting the project originally, and to **[javiwww
 
 This project's source code is licensed under the [GNU General Public License v3](/LICENSE).
 
-This project's [assets](/assets) (e.g. image templates, 3D models, PCB designs) and [documentation](/docs) is licensed under the [Creative Commons Attribution-ShareAlike 4.0 International](/assets/LICENSE) license, unless explicitly noted otherwise.
-
 The TapTo logo was designed by and is © Ranny Snice. The terms of use for the logo are as follows:
 
 - The logo **MAY** be used on designs and artwork for tokens (e.g. label designs, printed stickers, pre-printed NFC cards), including those sold and held commercially, with the intent to show they're compatible with TapTo software and hardware.
