@@ -218,16 +218,19 @@ func processLaunchQueue(
 				continue
 			}
 
-			err = launchToken(platform, cfg, t, db, lsq)
-			if err != nil {
-				log.Error().Err(err).Msgf("error launching token")
-			}
+			// launch tokens in separate thread
+			go func() {
+				err = launchToken(platform, cfg, t, db, lsq)
+				if err != nil {
+					log.Error().Err(err).Msgf("error launching token")
+				}
 
-			he.Success = err == nil
-			err = db.AddHistory(he)
-			if err != nil {
-				log.Error().Err(err).Msgf("error adding history")
-			}
+				he.Success = err == nil
+				err = db.AddHistory(he)
+				if err != nil {
+					log.Error().Err(err).Msgf("error adding history")
+				}
+			}()
 		case <-time.After(100 * time.Millisecond):
 			if st.ShouldStopService() {
 				tq.Close()
