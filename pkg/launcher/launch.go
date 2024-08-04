@@ -2,7 +2,6 @@ package launcher
 
 import (
 	"fmt"
-	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -15,6 +14,8 @@ import (
 )
 
 func cmdSystem(pl platforms.Platform, env platforms.CmdEnv) error {
+	// TODO: launched named arg support
+
 	if strings.EqualFold(env.Args, "menu") {
 		return pl.KillLauncher()
 	}
@@ -27,13 +28,18 @@ func cmdRandom(pl platforms.Platform, env platforms.CmdEnv) error {
 		return fmt.Errorf("no system specified")
 	}
 
+	launch, err := getAltLauncher(pl, env)
+	if err != nil {
+		return err
+	}
+
 	if env.Args == "all" {
 		game, err := gamesdb.RandomGame(pl, gamesdb.AllSystems())
 		if err != nil {
 			return err
 		}
 
-		return pl.LaunchFile(env.Cfg, game.Path)
+		return launch(game.Path)
 	}
 
 	// absolute path, try read dir and pick random file
@@ -58,7 +64,7 @@ func cmdRandom(pl platforms.Platform, env platforms.CmdEnv) error {
 			return err
 		}
 
-		return pl.LaunchFile(env.Cfg, file)
+		return launch(file)
 	}
 
 	// perform a search similar to launch.search and pick randomly
@@ -90,7 +96,7 @@ func cmdRandom(pl platforms.Platform, env platforms.CmdEnv) error {
 			return err
 		}
 
-		return pl.LaunchFile(env.Cfg, game.Path)
+		return launch(game.Path)
 	}
 
 	systemIds := strings.Split(env.Args, ",")
@@ -111,56 +117,43 @@ func cmdRandom(pl platforms.Platform, env platforms.CmdEnv) error {
 		return err
 	}
 
-	return pl.LaunchFile(env.Cfg, game.Path)
+	return launch(game.Path)
 }
 
-func cmdLaunch(pl platforms.Platform, env platforms.CmdEnv) error {
-	// check for advanced arguments and remove them from the path
-	advArgs := make(map[string]string)
-	if i := strings.LastIndex(env.Args, "?"); i != -1 {
-		u, err := url.Parse(env.Args[i:])
-		if err != nil {
-			return err
-		}
-
-		qs, err := url.ParseQuery(u.RawQuery)
-		if err != nil {
-			return err
-		}
-
-		env.Args = env.Args[:i]
-
-		for k, v := range qs {
-			advArgs[k] = v[0]
-		}
-	}
-	log.Debug().Msgf("advanced args: %v", advArgs)
-
-	var launch func(args string) error
-
-	if advArgs["launcher"] != "" {
+func getAltLauncher(
+	pl platforms.Platform,
+	env platforms.CmdEnv,
+) (func(args string) error, error) {
+	if env.NamedArgs["launcher"] != "" {
 		var launcher platforms.Launcher
 
 		for _, l := range pl.Launchers() {
-			if l.Id == advArgs["launcher"] {
+			if l.Id == env.NamedArgs["launcher"] {
 				launcher = l
 				break
 			}
 		}
 
 		if launcher.Launch == nil {
-			return fmt.Errorf("launcher not found: %s", advArgs["launcher"])
+			return nil, fmt.Errorf("alt launcher not found: %s", env.NamedArgs["launcher"])
 		}
 
-		log.Info().Msgf("launching with alternate launcher: %s", advArgs["launcher"])
+		log.Info().Msgf("launching with alt launcher: %s", env.NamedArgs["launcher"])
 
-		launch = func(args string) error {
+		return func(args string) error {
 			return launcher.Launch(env.Cfg, args)
-		}
+		}, nil
 	} else {
-		launch = func(args string) error {
+		return func(args string) error {
 			return pl.LaunchFile(env.Cfg, args)
-		}
+		}, nil
+	}
+}
+
+func cmdLaunch(pl platforms.Platform, env platforms.CmdEnv) error {
+	launch, err := getAltLauncher(pl, env)
+	if err != nil {
+		return err
 	}
 
 	// if it's an absolute path, just try launch it
@@ -233,6 +226,11 @@ func cmdSearch(pl platforms.Platform, env platforms.CmdEnv) error {
 		return fmt.Errorf("no query specified")
 	}
 
+	launch, err := getAltLauncher(pl, env)
+	if err != nil {
+		return err
+	}
+
 	query := strings.ToLower(env.Args)
 	query = strings.TrimSpace(query)
 
@@ -247,7 +245,7 @@ func cmdSearch(pl platforms.Platform, env platforms.CmdEnv) error {
 			return fmt.Errorf("no results found for: %s", query)
 		}
 
-		return pl.LaunchFile(env.Cfg, res[0].Path)
+		return launch(res[0].Path)
 	}
 
 	ps := strings.SplitN(query, "/", 2)
@@ -283,5 +281,5 @@ func cmdSearch(pl platforms.Platform, env platforms.CmdEnv) error {
 		return fmt.Errorf("no results found for: %s", query)
 	}
 
-	return pl.LaunchFile(env.Cfg, res[0].Path)
+	return launch(res[0].Path)
 }

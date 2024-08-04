@@ -22,6 +22,7 @@ package launcher
 
 import (
 	"fmt"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -38,6 +39,7 @@ import (
 // TODO: game file by hash
 
 var commandMappings = map[string]func(platforms.Platform, platforms.CmdEnv) error{
+	"launch":        cmdLaunch,
 	"launch.system": cmdSystem,
 	"launch.random": cmdRandom,
 	"launch.search": cmdSearch,
@@ -70,6 +72,7 @@ var commandMappings = map[string]func(platforms.Platform, platforms.CmdEnv) erro
 }
 
 var softwareChangeCommands = []string{
+	"launch",
 	"launch.system",
 	"launch.random",
 	"launch.search",
@@ -127,6 +130,26 @@ func LaunchToken(
 	totalCommands int,
 	currentIndex int,
 ) (error, bool) {
+	namedArgs := make(map[string]string)
+	if i := strings.LastIndex(text, "?"); i != -1 {
+		u, err := url.Parse(text[i:])
+		if err != nil {
+			return err, false
+		}
+
+		qs, err := url.ParseQuery(u.RawQuery)
+		if err != nil {
+			return err, false
+		}
+
+		text = text[:i]
+
+		for k, v := range qs {
+			namedArgs[k] = v[0]
+		}
+	}
+	log.Debug().Msgf("named args: %v", namedArgs)
+
 	// explicit commands must begin with **
 	if strings.HasPrefix(text, "**") {
 		text = strings.TrimPrefix(text, "**")
@@ -140,6 +163,7 @@ func LaunchToken(
 		env := platforms.CmdEnv{
 			Cmd:           cmd,
 			Args:          args,
+			NamedArgs:     namedArgs,
 			Cfg:           cfg,
 			Manual:        manual,
 			Text:          text,
@@ -158,6 +182,7 @@ func LaunchToken(
 	return cmdLaunch(pl, platforms.CmdEnv{
 		Cmd:           "launch",
 		Args:          text,
+		NamedArgs:     namedArgs,
 		Cfg:           cfg,
 		Manual:        manual,
 		Text:          text,

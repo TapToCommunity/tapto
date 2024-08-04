@@ -14,6 +14,7 @@ import (
 type CmdEnv struct {
 	Cmd           string
 	Args          string
+	NamedArgs     map[string]string
 	Cfg           *config.UserConfig
 	Manual        bool
 	Text          string
