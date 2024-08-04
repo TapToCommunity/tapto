@@ -3,6 +3,7 @@
 package mister
 
 import (
+	"github.com/wizzomafizzo/mrext/pkg/games"
 	"github.com/wizzomafizzo/mrext/pkg/mister"
 	"github.com/wizzomafizzo/tapto/pkg/config"
 	"github.com/wizzomafizzo/tapto/pkg/database/gamesdb"
@@ -11,6 +12,21 @@ import (
 
 func launch(cfg *config.UserConfig, path string) error {
 	return mister.LaunchGenericFile(UserConfigToMrext(cfg), path)
+}
+
+func launchSinden(
+	systemId string,
+	rbfName string,
+) func(*config.UserConfig, string) error {
+	return func(cfg *config.UserConfig, path string) error {
+		s, err := games.GetSystem(systemId)
+		if err != nil {
+			return err
+		}
+		sn := *s
+		sn.Rbf = "_Sinden/" + rbfName + "_Sinden"
+		return mister.LaunchGame(UserConfigToMrext(cfg), sn, path)
+	}
 }
 
 var Launchers = []platforms.Launcher{
@@ -163,6 +179,16 @@ var Launchers = []platforms.Launcher{
 		Launch:     launch,
 	},
 	{
+		Id:       "SindenGenesis",
+		SystemId: gamesdb.SystemGenesis,
+		Launch:   launchSinden(gamesdb.SystemGenesis, "Genesis"),
+	},
+	{
+		Id:       "SindenMegaDrive",
+		SystemId: gamesdb.SystemGenesis,
+		Launch:   launchSinden(gamesdb.SystemGenesis, "MegaDrive"),
+	},
+	{
 		Id:         gamesdb.SystemIntellivision,
 		SystemId:   gamesdb.SystemIntellivision,
 		Folders:    []string{"Intellivision"},
@@ -177,11 +203,21 @@ var Launchers = []platforms.Launcher{
 		Launch:     launch,
 	},
 	{
+		Id:       "SindenSMS",
+		SystemId: gamesdb.SystemMasterSystem,
+		Launch:   launchSinden(gamesdb.SystemMasterSystem, "SMS"),
+	},
+	{
 		Id:         gamesdb.SystemMegaCD,
 		SystemId:   gamesdb.SystemMegaCD,
 		Folders:    []string{"MegaCD"},
 		Extensions: []string{".cue", ".chd"},
 		Launch:     launch,
+	},
+	{
+		Id:       "SindenMegaCD",
+		SystemId: gamesdb.SystemMegaCD,
+		Launch:   launchSinden(gamesdb.SystemMegaCD, "MegaCD"),
 	},
 	{
 		Id:         gamesdb.SystemMegaDuck,
@@ -210,6 +246,11 @@ var Launchers = []platforms.Launcher{
 		Folders:    []string{"NES"},
 		Extensions: []string{".nes"},
 		Launch:     launch,
+	},
+	{
+		Id:       "SindenNES",
+		SystemId: gamesdb.SystemNES,
+		Launch:   launchSinden(gamesdb.SystemNES, "NES"),
 	},
 	{
 		Id:         gamesdb.SystemNESMusic,
@@ -254,6 +295,11 @@ var Launchers = []platforms.Launcher{
 		Launch:     launch,
 	},
 	{
+		Id:       "SindenPSX",
+		SystemId: gamesdb.SystemPSX,
+		Launch:   launchSinden(gamesdb.SystemPSX, "PSX"),
+	},
+	{
 		Id:         gamesdb.SystemSega32X,
 		SystemId:   gamesdb.SystemSega32X,
 		Folders:    []string{"S32X"},
@@ -294,6 +340,11 @@ var Launchers = []platforms.Launcher{
 		Folders:    []string{"SNES"},
 		Extensions: []string{".sfc", ".smc", ".bin", ".bs"},
 		Launch:     launch,
+	},
+	{
+		Id:       "SindenSNES",
+		SystemId: gamesdb.SystemSNES,
+		Launch:   launchSinden(gamesdb.SystemSNES, "SNES"),
 	},
 	{
 		Id:         gamesdb.SystemSNESMusic,
