@@ -2,6 +2,7 @@ package launcher
 
 import (
 	"fmt"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -114,17 +115,65 @@ func cmdRandom(pl platforms.Platform, env platforms.CmdEnv) error {
 }
 
 func cmdLaunch(pl platforms.Platform, env platforms.CmdEnv) error {
+	// check for advanced arguments and remove them from the path
+	advArgs := make(map[string]string)
+	if i := strings.LastIndex(env.Args, "?"); i != -1 {
+		u, err := url.Parse(env.Args[i:])
+		if err != nil {
+			return err
+		}
+
+		qs, err := url.ParseQuery(u.RawQuery)
+		if err != nil {
+			return err
+		}
+
+		env.Args = env.Args[:i]
+
+		for k, v := range qs {
+			advArgs[k] = v[0]
+		}
+	}
+	log.Debug().Msgf("advanced args: %v", advArgs)
+
+	var launch func(args string) error
+
+	if advArgs["launcher"] != "" {
+		var launcher platforms.Launcher
+
+		for _, l := range pl.Launchers() {
+			if l.Id == advArgs["launcher"] {
+				launcher = l
+				break
+			}
+		}
+
+		if launcher.Launch == nil {
+			return fmt.Errorf("launcher not found: %s", advArgs["launcher"])
+		}
+
+		log.Info().Msgf("launching with alternate launcher: %s", advArgs["launcher"])
+
+		launch = func(args string) error {
+			return launcher.Launch(env.Cfg, args)
+		}
+	} else {
+		launch = func(args string) error {
+			return pl.LaunchFile(env.Cfg, args)
+		}
+	}
+
 	// if it's an absolute path, just try launch it
 	if filepath.IsAbs(env.Args) {
 		log.Debug().Msgf("launching absolute path: %s", env.Args)
-		return pl.LaunchFile(env.Cfg, env.Args)
+		return launch(env.Args)
 	}
 
 	// for relative paths, perform a basic check if the file exists in a games folder
 	// this always takes precedence over the system/path format (but is not totally cross platform)
 	if p, err := findFile(pl, env.Cfg, env.Args); err == nil {
 		log.Debug().Msgf("launching found relative path: %s", p)
-		return pl.LaunchFile(env.Cfg, p)
+		return launch(p)
 	} else {
 		log.Debug().Err(err).Msgf("error finding file: %s", env.Args)
 	}
@@ -164,7 +213,7 @@ func cmdLaunch(pl platforms.Platform, env platforms.CmdEnv) error {
 		systemPath := filepath.Join(f, path)
 		if fp, err := findFile(pl, env.Cfg, systemPath); err == nil {
 			log.Debug().Msgf("launching found system path: %s", fp)
-			return pl.LaunchFile(env.Cfg, fp)
+			return launch(fp)
 		} else {
 			log.Debug().Err(err).Msgf("error finding system file: %s", path)
 		}
@@ -172,6 +221,7 @@ func cmdLaunch(pl platforms.Platform, env platforms.CmdEnv) error {
 
 	// search if the path contains no / or file extensions
 	if !strings.Contains(path, "/") && filepath.Ext(path) == "" {
+		// TODO: passthrough advanced args
 		return cmdSearch(pl, env)
 	}
 

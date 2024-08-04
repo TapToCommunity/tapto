@@ -69,10 +69,12 @@ func runScript(pl Platform, bin string, args string) error {
 
 	if pl.GetActiveLauncher() != "" {
 		// menu must be open to switch tty and launch script
+		log.Debug().Msg("killing launcher...")
 		err := pl.KillLauncher()
 		if err != nil {
 			return err
 		}
+		time.Sleep(1250 * time.Millisecond)
 	}
 
 	err := openConsole(pl.kbd)

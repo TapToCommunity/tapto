@@ -3,6 +3,7 @@
 package mister
 
 import (
+	"github.com/rs/zerolog/log"
 	"github.com/wizzomafizzo/mrext/pkg/games"
 	"github.com/wizzomafizzo/mrext/pkg/mister"
 	"github.com/wizzomafizzo/tapto/pkg/config"
@@ -25,6 +26,9 @@ func launchSinden(
 		}
 		sn := *s
 		sn.Rbf = "_Sinden/" + rbfName + "_Sinden"
+		sn.SetName = rbfName + "_Sinden"
+		sn.SetNameSameDir = true
+		log.Debug().Str("rbf", sn.Rbf).Msgf("launching Sinden: %v", sn)
 		return mister.LaunchGame(UserConfigToMrext(cfg), sn, path)
 	}
 }

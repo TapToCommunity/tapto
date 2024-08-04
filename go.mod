@@ -26,6 +26,8 @@ require (
 	github.com/ajg/form v1.5.1 // indirect
 	github.com/creack/goselect v0.1.2 // indirect
 	github.com/ebfe/scard v0.0.0-20230420082256-7db3f9b7c8a7 // indirect
+	github.com/joho/godotenv v1.4.0 // indirect
+	github.com/magefile/mage v1.13.0 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/stretchr/testify v1.9.0 // indirect
@@ -42,7 +44,7 @@ require (
 	github.com/gorilla/websocket v1.5.1
 	github.com/hsanjuan/go-ndef v0.0.1
 	github.com/rs/zerolog v1.31.0
-	github.com/wizzomafizzo/mrext v0.0.0-20240705120538-5efdc40f9c08
+	github.com/wizzomafizzo/mrext v0.0.0-20240804073054-39dcc9bccc81
 	go.bug.st/serial v1.6.2
 	go.etcd.io/bbolt v1.3.9
 	golang.org/x/sync v0.7.0
