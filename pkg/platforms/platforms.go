@@ -22,6 +22,8 @@ type CmdEnv struct {
 }
 
 type Launcher struct {
+	// Id of the launcher, visible to user
+	Id string
 	// System associated with this launcher
 	SystemId string
 	// Folders to scan for files, relative to the root folder
