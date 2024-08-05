@@ -62,7 +62,7 @@ func openConsole(kbd input.Keyboard) error {
 	return nil
 }
 
-func runScript(pl Platform, bin string, args string) error {
+func runScript(pl Platform, bin string, args string, hidden bool) error {
 	if _, err := os.Stat(bin); err != nil {
 		return err
 	}
@@ -74,20 +74,21 @@ func runScript(pl Platform, bin string, args string) error {
 		if err != nil {
 			return err
 		}
-		time.Sleep(1250 * time.Millisecond)
+		time.Sleep(2 * time.Second)
 	}
 
-	err := openConsole(pl.kbd)
-	headless := false
-	if err != nil {
-		headless = true
-		log.Warn().Msg("error opening console, running script headless")
+	if !hidden {
+		err := openConsole(pl.kbd)
+		if err != nil {
+			hidden = true
+			log.Warn().Msg("error opening console, running script headless")
+		}
 	}
 
-	if !headless {
+	if !hidden {
 		// this is just to follow mister's convention, which reserves
 		// tty2 for scripts
-		err = exec.Command("chvt", "2").Run()
+		err := exec.Command("chvt", "2").Run()
 		if err != nil {
 			return err
 		}

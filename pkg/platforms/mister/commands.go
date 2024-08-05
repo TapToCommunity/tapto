@@ -54,6 +54,9 @@ func CmdLaunchCore(pl platforms.Platform, env platforms.CmdEnv) error {
 
 func cmdMisterScript(plm Platform) func(platforms.Platform, platforms.CmdEnv) error {
 	return func(pl platforms.Platform, env platforms.CmdEnv) error {
+		// TODO: generic read bool function
+		hidden := env.NamedArgs["hidden"] == "true" || env.NamedArgs["hidden"] == "yes"
+
 		args := strings.Fields(env.Args)
 
 		if len(args) == 0 {
@@ -75,7 +78,7 @@ func cmdMisterScript(plm Platform) func(platforms.Platform, platforms.CmdEnv) er
 
 		args = args[1:]
 		if len(args) == 0 {
-			return runScript(plm, script, "")
+			return runScript(plm, script, "", hidden)
 		}
 
 		cleaned := "'"
@@ -100,7 +103,7 @@ func cmdMisterScript(plm Platform) func(platforms.Platform, platforms.CmdEnv) er
 		cleaned += "'"
 
 		log.Info().Msgf("running script: %s", script+" "+cleaned)
-		return runScript(plm, script, cleaned)
+		return runScript(plm, script, cleaned, hidden)
 	}
 }
 
