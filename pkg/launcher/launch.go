@@ -14,6 +14,8 @@ import (
 )
 
 func cmdSystem(pl platforms.Platform, env platforms.CmdEnv) error {
+	// TODO: launched named arg support
+
 	if strings.EqualFold(env.Args, "menu") {
 		return pl.KillLauncher()
 	}
@@ -26,13 +28,18 @@ func cmdRandom(pl platforms.Platform, env platforms.CmdEnv) error {
 		return fmt.Errorf("no system specified")
 	}
 
+	launch, err := getAltLauncher(pl, env)
+	if err != nil {
+		return err
+	}
+
 	if env.Args == "all" {
 		game, err := gamesdb.RandomGame(pl, gamesdb.AllSystems())
 		if err != nil {
 			return err
 		}
 
-		return pl.LaunchFile(env.Cfg, game.Path)
+		return launch(game.Path)
 	}
 
 	// absolute path, try read dir and pick random file
@@ -57,7 +64,7 @@ func cmdRandom(pl platforms.Platform, env platforms.CmdEnv) error {
 			return err
 		}
 
-		return pl.LaunchFile(env.Cfg, file)
+		return launch(file)
 	}
 
 	// perform a search similar to launch.search and pick randomly
@@ -89,7 +96,7 @@ func cmdRandom(pl platforms.Platform, env platforms.CmdEnv) error {
 			return err
 		}
 
-		return pl.LaunchFile(env.Cfg, game.Path)
+		return launch(game.Path)
 	}
 
 	systemIds := strings.Split(env.Args, ",")
@@ -110,21 +117,56 @@ func cmdRandom(pl platforms.Platform, env platforms.CmdEnv) error {
 		return err
 	}
 
-	return pl.LaunchFile(env.Cfg, game.Path)
+	return launch(game.Path)
+}
+
+func getAltLauncher(
+	pl platforms.Platform,
+	env platforms.CmdEnv,
+) (func(args string) error, error) {
+	if env.NamedArgs["launcher"] != "" {
+		var launcher platforms.Launcher
+
+		for _, l := range pl.Launchers() {
+			if l.Id == env.NamedArgs["launcher"] {
+				launcher = l
+				break
+			}
+		}
+
+		if launcher.Launch == nil {
+			return nil, fmt.Errorf("alt launcher not found: %s", env.NamedArgs["launcher"])
+		}
+
+		log.Info().Msgf("launching with alt launcher: %s", env.NamedArgs["launcher"])
+
+		return func(args string) error {
+			return launcher.Launch(env.Cfg, args)
+		}, nil
+	} else {
+		return func(args string) error {
+			return pl.LaunchFile(env.Cfg, args)
+		}, nil
+	}
 }
 
 func cmdLaunch(pl platforms.Platform, env platforms.CmdEnv) error {
+	launch, err := getAltLauncher(pl, env)
+	if err != nil {
+		return err
+	}
+
 	// if it's an absolute path, just try launch it
 	if filepath.IsAbs(env.Args) {
 		log.Debug().Msgf("launching absolute path: %s", env.Args)
-		return pl.LaunchFile(env.Cfg, env.Args)
+		return launch(env.Args)
 	}
 
 	// for relative paths, perform a basic check if the file exists in a games folder
 	// this always takes precedence over the system/path format (but is not totally cross platform)
 	if p, err := findFile(pl, env.Cfg, env.Args); err == nil {
 		log.Debug().Msgf("launching found relative path: %s", p)
-		return pl.LaunchFile(env.Cfg, p)
+		return launch(p)
 	} else {
 		log.Debug().Err(err).Msgf("error finding file: %s", env.Args)
 	}
@@ -164,7 +206,7 @@ func cmdLaunch(pl platforms.Platform, env platforms.CmdEnv) error {
 		systemPath := filepath.Join(f, path)
 		if fp, err := findFile(pl, env.Cfg, systemPath); err == nil {
 			log.Debug().Msgf("launching found system path: %s", fp)
-			return pl.LaunchFile(env.Cfg, fp)
+			return launch(fp)
 		} else {
 			log.Debug().Err(err).Msgf("error finding system file: %s", path)
 		}
@@ -172,6 +214,7 @@ func cmdLaunch(pl platforms.Platform, env platforms.CmdEnv) error {
 
 	// search if the path contains no / or file extensions
 	if !strings.Contains(path, "/") && filepath.Ext(path) == "" {
+		// TODO: passthrough advanced args
 		return cmdSearch(pl, env)
 	}
 
@@ -181,6 +224,11 @@ func cmdLaunch(pl platforms.Platform, env platforms.CmdEnv) error {
 func cmdSearch(pl platforms.Platform, env platforms.CmdEnv) error {
 	if env.Args == "" {
 		return fmt.Errorf("no query specified")
+	}
+
+	launch, err := getAltLauncher(pl, env)
+	if err != nil {
+		return err
 	}
 
 	query := strings.ToLower(env.Args)
@@ -197,7 +245,7 @@ func cmdSearch(pl platforms.Platform, env platforms.CmdEnv) error {
 			return fmt.Errorf("no results found for: %s", query)
 		}
 
-		return pl.LaunchFile(env.Cfg, res[0].Path)
+		return launch(res[0].Path)
 	}
 
 	ps := strings.SplitN(query, "/", 2)
@@ -233,5 +281,5 @@ func cmdSearch(pl platforms.Platform, env platforms.CmdEnv) error {
 		return fmt.Errorf("no results found for: %s", query)
 	}
 
-	return pl.LaunchFile(env.Cfg, res[0].Path)
+	return launch(res[0].Path)
 }

@@ -14,6 +14,7 @@ import (
 type CmdEnv struct {
 	Cmd           string
 	Args          string
+	NamedArgs     map[string]string
 	Cfg           *config.UserConfig
 	Manual        bool
 	Text          string
@@ -22,6 +23,8 @@ type CmdEnv struct {
 }
 
 type Launcher struct {
+	// Id of the launcher, visible to user
+	Id string
 	// System associated with this launcher
 	SystemId string
 	// Folders to scan for files, relative to the root folder

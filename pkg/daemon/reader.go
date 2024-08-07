@@ -205,7 +205,7 @@ func readerManager(
 		select {
 		case t := <-inputQueue:
 			// a reader has sent a token for pre-processing
-			log.Debug().Msgf("processing token: %v", t)
+			log.Debug().Msgf("pre-processing token: %v", t)
 			if t.Error != nil {
 				log.Error().Msgf("error reading card: %s", err)
 				playFail()
