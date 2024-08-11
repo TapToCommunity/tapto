@@ -142,6 +142,15 @@ func (r *Acr122Pcsc) Open(device string, iq chan<- readers.Scan) error {
 				},
 			}
 
+			// check for tag type
+			res, err = tag.Transmit([]byte{0xFF, 0xEF, 0x00, 0x00, 0x01, 0x60})
+			if err != nil {
+				log.Debug().Msgf("error transmitting: %s", err)
+				continue
+			}
+
+			log.Debug().Msgf("version: %x", res)
+
 			_ = tag.Disconnect(scard.ResetCard)
 
 			for r.polling {
