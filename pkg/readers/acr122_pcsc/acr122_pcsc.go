@@ -1,6 +1,7 @@
 package acr122_pcsc
 
 import (
+	"bytes"
 	"encoding/hex"
 	"errors"
 	"strings"
@@ -70,8 +71,6 @@ func (r *Acr122Pcsc) Open(device string, iq chan<- readers.Scan) error {
 				continue
 			}
 
-			// time.Sleep(250 * time.Millisecond)
-
 			rls, err := ctx.ListReaders()
 			if err != nil {
 				log.Debug().Msgf("error listing pcsc readers: %s", err)
@@ -135,21 +134,51 @@ func (r *Acr122Pcsc) Open(device string, iq chan<- readers.Scan) error {
 
 			log.Debug().Msgf("response: %x", res)
 			uid := res[:len(res)-2]
+
+			i := 0
+			data := make([]byte, 0)
+			for {
+				res, err = tag.Transmit([]byte{0xFF, 0xB0, 0x00, byte(i), 0x04})
+				if err != nil {
+					log.Debug().Msgf("error transmitting: %s", err)
+					break
+				} else if bytes.Equal(res, []byte{0x00, 0x00, 0x00, 0x00, 0x90, 0x00}) {
+					break
+				} else if len(res) < 6 {
+					log.Debug().Msgf("invalid response")
+					break
+				} else if i >= 64 {
+					break
+				}
+
+				data = append(data, res[:len(res)-2]...)
+				i++
+			}
+
+			// data, err := ReadNtag(tag)
+			// if err != nil {
+			// 	log.Debug().Msgf("error reading ntag: %s", err)
+			// 	_ = tag.Disconnect(scard.ResetCard)
+			// 	continue
+			// }
+
+			log.Debug().Msgf("data: %x", data)
+
+			text, err := ParseRecordText(data)
+			if err != nil {
+				log.Debug().Msgf("error parsing NDEF record: %s", err)
+				text = ""
+			}
+
 			iq <- readers.Scan{
 				Source: r.device,
 				Token: &tokens.Token{
-					UID: hex.EncodeToString(uid),
+					UID:      hex.EncodeToString(uid),
+					Text:     text,
+					ScanTime: time.Now(),
+					Source:   r.device,
 				},
 			}
-
-			// check for tag type
-			res, err = tag.Transmit([]byte{0xFF, 0xEF, 0x00, 0x00, 0x01, 0x60})
-			if err != nil {
-				log.Debug().Msgf("error transmitting: %s", err)
-				continue
-			}
-
-			log.Debug().Msgf("version: %x", res)
 
 			_ = tag.Disconnect(scard.ResetCard)
 
