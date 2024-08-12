@@ -155,13 +155,6 @@ func (r *Acr122Pcsc) Open(device string, iq chan<- readers.Scan) error {
 				i++
 			}
 
-			// data, err := ReadNtag(tag)
-			// if err != nil {
-			// 	log.Debug().Msgf("error reading ntag: %s", err)
-			// 	_ = tag.Disconnect(scard.ResetCard)
-			// 	continue
-			// }
-
 			log.Debug().Msgf("data: %x", data)
 
 			text, err := ParseRecordText(data)
