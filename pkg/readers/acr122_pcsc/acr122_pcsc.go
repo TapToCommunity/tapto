@@ -147,7 +147,7 @@ func (r *Acr122Pcsc) Open(device string, iq chan<- readers.Scan) error {
 				} else if len(res) < 6 {
 					log.Debug().Msgf("invalid response")
 					break
-				} else if i >= 64 {
+				} else if i >= 221 {
 					break
 				}
 

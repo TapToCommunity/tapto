@@ -123,13 +123,6 @@ func (r *Pn532UartReader) Open(device string, iq chan<- readers.Scan) error {
 
 			time.Sleep(250 * time.Millisecond)
 
-			err = SamConfiguration(r.port)
-			if err != nil {
-				log.Error().Err(err).Msg("failed to run sam config")
-				errors++
-				continue
-			}
-
 			tgt, err := InListPassiveTarget(r.port)
 			if err != nil {
 				log.Error().Err(err).Msg("failed to read passive target")
@@ -147,6 +140,8 @@ func (r *Pn532UartReader) Open(device string, iq chan<- readers.Scan) error {
 				continue
 			}
 
+			log.Debug().Msgf("target: %s", tgt.Uid)
+
 			errors = 0
 
 			if r.lastToken != nil && r.lastToken.UID == tgt.Uid {
@@ -154,21 +149,44 @@ func (r *Pn532UartReader) Open(device string, iq chan<- readers.Scan) error {
 				continue
 			}
 
-			var td TagData
-			if tgt.Type == tokens.TypeNTAG {
-				td, err = ReadNtag(r.port)
-				if err != nil {
-					log.Error().Err(err).Msg("failed to read ntag")
-					continue
-				}
-			} else if tgt.Type == tokens.TypeMifare {
+			if tgt.Type == tokens.TypeMifare {
 				log.Error().Err(err).Msg("mifare not supported")
 				continue
 			}
 
-			log.Debug().Msgf("record bytes: %s", hex.EncodeToString(td.Bytes))
+			i := 0
+			data := make([]byte, 0)
+			for {
+				if i >= 221 {
+					break
+				}
 
-			tagText, err := ParseRecordText(td.Bytes)
+				res, err := InDataExchange(r.port, []byte{byte(i)})
+				if err != nil {
+					log.Error().Err(err).Msg("failed to run indataexchange")
+					errors++
+					break
+				}
+
+				if len(res) < 2 {
+					log.Error().Msg("unexpected data exchange response")
+					errors++
+					break
+				}
+
+				if res[1] != 0x00 {
+					log.Error().Msgf("data exchange failed: %x", res[1])
+					errors++
+					break
+				}
+
+				data = append(data, res[2:]...)
+				i++
+			}
+
+			log.Debug().Msgf("record bytes: %s", hex.EncodeToString(data))
+
+			tagText, err := ParseRecordText(data)
 			if err != nil {
 				log.Error().Err(err).Msgf("error parsing NDEF record")
 				tagText = ""
@@ -184,7 +202,7 @@ func (r *Pn532UartReader) Open(device string, iq chan<- readers.Scan) error {
 				Type:     tgt.Type,
 				UID:      tgt.Uid,
 				Text:     tagText,
-				Data:     hex.EncodeToString(td.Bytes),
+				Data:     hex.EncodeToString(data),
 				ScanTime: time.Now(),
 				Source:   r.device,
 			}

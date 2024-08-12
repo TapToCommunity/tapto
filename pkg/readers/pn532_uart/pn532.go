@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"time"
 
 	"github.com/rs/zerolog/log"
 	"github.com/wizzomafizzo/tapto/pkg/tokens"
@@ -27,10 +26,17 @@ func wakeUp(port serial.Port) error {
 	// over uart, pn532 must be "woken up" by sending 2 x 0x55 and then "waiting a while"
 	// we send a bunch of 0x00 to wait
 
-	//_, err := port.Write([]byte{0x55, 0x55, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00})
-	//_, err := port.Write([]byte{0x55, 0x55, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0x03, 0xfd, 0xd4, 0x14, 0x01, 0x17, 0x00})
+	//bs := []byte{0x55, 0x55, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0x03, 0xfd, 0xd4, 0x14, 0x01, 0x17, 0x00}
+	//bs := []byte{0x55, 0x55, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}
 
-	bs := []byte{0x55, 0x55, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}
+	bs := []byte{
+		0x55, 0x55, 0x00, 0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00,
+	}
+
 	n, err := port.Write(bs)
 	if err != nil {
 		return err
@@ -41,32 +47,52 @@ func wakeUp(port serial.Port) error {
 	return nil
 }
 
-func waitAck(port serial.Port) error {
-	log.Debug().Msg("waiting for ACK")
-	// pn532 will send this sequence to acknowledge it received the previous command
+var ErrAckTimeout = errors.New("timeout waiting for ACK")
+
+func waitAck(port serial.Port) ([]byte, error) {
+	// pn532 will send this sequence to acknowledge it received
+	// the previous command
+
 	tries := 0
-	maxTries := 25
-	buf := make([]byte, 6)
+	maxTries := 64
+	ackFrame := []byte{0x00, 0x00, 0xFF, 0x00, 0xFF, 0x00}
+
+	buf := make([]byte, 1)
+	ackBuf := make([]byte, 0)
+	preAck := make([]byte, 0)
+
 	for {
-		_, err := port.Read(buf)
-		if err != nil {
-			return err
+		if tries >= maxTries {
+			return preAck, ErrAckTimeout
 		}
 
-		if bytes.Contains(buf, []byte{0x00, 0x00, 0xFF, 0x00, 0xFF, 0x00}) {
-			return nil
+		n, err := port.Read(buf)
+		if err != nil {
+			return preAck, err
+		} else if n == 0 {
+			tries++
+			continue
+		}
+
+		ackBuf = append(ackBuf, buf[0])
+		if len(ackBuf) < 6 {
+			continue
+		}
+
+		// log.Debug().Msgf("inspecting ack: %x", ackBuf)
+
+		if bytes.Equal(ackBuf, ackFrame) {
+			return preAck, nil
 		} else {
-			if tries > maxTries {
-				return errors.New("timeout waiting for ACK")
-			} else {
-				tries++
-				continue
-			}
+			preAck = append(preAck, ackBuf[0])
+			ackBuf = ackBuf[1:]
+			tries++
+			continue
 		}
 	}
 }
 
-func sendFrame(port serial.Port, cmd byte, args []byte) error {
+func sendFrame(port serial.Port, cmd byte, args []byte) ([]byte, error) {
 	// create frame
 	frm := []byte{0x00, 0x00, 0xFF} // preamble and start code
 
@@ -75,7 +101,7 @@ func sendFrame(port serial.Port, cmd byte, args []byte) error {
 
 	if len(data) > 255 {
 		// TODO: extended frames are not implemented
-		return errors.New("data too big for frame")
+		return []byte{}, errors.New("data too big for frame")
 	}
 
 	dlen := byte(len(data))
@@ -97,28 +123,37 @@ func sendFrame(port serial.Port, cmd byte, args []byte) error {
 	// write frame
 	err := wakeUp(port)
 	if err != nil {
-		return err
+		return []byte{}, err
 	}
 
 	n, err := port.Write(frm)
 	if err != nil {
-		return err
+		return []byte{}, err
 	} else if n != len(frm) {
-		return errors.New("write error, not all bytes written")
+		return []byte{}, errors.New("write error, not all bytes written")
 	}
 
-	time.Sleep(2 * time.Millisecond)
+	err = port.Drain()
+	if err != nil {
+		return []byte{}, err
+	}
 
 	return waitAck(port)
 }
 
 var ErrNoFrameFound = errors.New("no frame found")
 
-func receiveFrame(port serial.Port) ([]byte, error) {
-	buf := make([]byte, 255+7)
+func receiveFrame(port serial.Port, pre []byte) ([]byte, error) {
+	buf := make([]byte, 255+7-len(pre))
+	// prepend any lefover response from a skipped ACK
+	buf = append(pre, buf...)
 	_, err := port.Read(buf)
 	if err != nil {
 		return []byte{}, err
+	}
+
+	if !bytes.Equal(buf, make([]byte, len(buf))) {
+		log.Debug().Msgf("received data: %x", buf)
 	}
 
 	// find middle of packet code (0x00 0xff) and skip preamble
@@ -173,12 +208,16 @@ func callCommand(
 	cmd byte,
 	data []byte,
 ) ([]byte, error) {
-	err := sendFrame(port, cmd, data)
+	ackData, err := sendFrame(port, cmd, data)
 	if err != nil {
 		return []byte{}, err
 	}
 
-	res, err := receiveFrame(port)
+	if len(ackData) > 0 {
+		log.Debug().Msgf("pre ack data: %x", ackData)
+	}
+
+	res, err := receiveFrame(port, ackData)
 	if err != nil {
 		return []byte{}, err
 	}
