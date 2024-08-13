@@ -1,6 +1,7 @@
 package pn532_uart
 
 import (
+	"bytes"
 	"encoding/hex"
 	"errors"
 	"os"
@@ -65,12 +66,6 @@ func connect(name string) (serial.Port, error) {
 		return port, err
 	}
 	log.Debug().Msgf("firmware version: %v", fv)
-
-	gs, err := GetGeneralStatus(port)
-	if err != nil {
-		return port, err
-	}
-	log.Debug().Msgf("general status: %v", gs)
 
 	return port, nil
 }
@@ -154,34 +149,33 @@ func (r *Pn532UartReader) Open(device string, iq chan<- readers.Scan) error {
 				continue
 			}
 
-			i := 0
+			i := 3
 			data := make([]byte, 0)
 			for {
-				if i >= 221 {
+				if i >= 256 {
 					break
 				}
 
-				res, err := InDataExchange(r.port, []byte{byte(i)})
+				res, err := InDataExchange(r.port, []byte{0x30, byte(i)})
 				if err != nil {
 					log.Error().Err(err).Msg("failed to run indataexchange")
 					errors++
 					break
-				}
-
-				if len(res) < 2 {
-					log.Error().Msg("unexpected data exchange response")
+				} else if len(res) < 2 {
+					log.Error().Msg("unexpected data response length")
 					errors++
 					break
-				}
-
-				if res[1] != 0x00 {
-					log.Error().Msgf("data exchange failed: %x", res[1])
-					errors++
+				} else if res[0] != 0x41 || res[1] != 0x00 {
+					log.Warn().Msgf("unexpected data format: %x", res)
+					break
+				} else if bytes.Equal(res[2:], make([]byte, 16)) {
 					break
 				}
 
 				data = append(data, res[2:]...)
-				i++
+				i += 4
+
+				time.Sleep(6 * time.Millisecond)
 			}
 
 			log.Debug().Msgf("record bytes: %s", hex.EncodeToString(data))

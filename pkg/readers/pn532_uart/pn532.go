@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/rs/zerolog/log"
 	"github.com/wizzomafizzo/tapto/pkg/tokens"
@@ -21,37 +22,40 @@ const (
 	pn532Ready             = 0x01
 )
 
+var (
+	ackFrame        = []byte{0x00, 0x00, 0xFF, 0x00, 0xFF, 0x00}
+	nackFrame       = []byte{0x00, 0x00, 0xFF, 0xFF, 0x00, 0x00}
+	ErrAckTimeout   = errors.New("timeout waiting for ACK")
+	ErrNoFrameFound = errors.New("no frame found")
+)
+
 func wakeUp(port serial.Port) error {
-	log.Debug().Msg("waking up pn532")
-	// over uart, pn532 must be "woken up" by sending 2 x 0x55 and then "waiting a while"
-	// we send a bunch of 0x00 to wait
+	// over uart, pn532 must be (to be safe) "woken up" by sending a 0x55
+	// dummy byte and then waiting for some amount of time
 
-	bs := []byte{
-		0x55, 0x55, 0x00, 0x00, 0x00, 0x00,
+	n, err := port.Write([]byte{
+		0x55, 0x00, 0x00, 0x00, 0x00, 0x00,
 		0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-		0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-		// 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-		// 0x00, 0x00, 0x00,
-	}
-
-	n, err := port.Write(bs)
+		0x00, 0x00, 0x00, 0x00,
+	})
 	if err != nil {
 		return err
-	} else if n != len(bs) {
+	} else if n != 16 {
 		return errors.New("wakeup write error, not all bytes written")
+	}
+
+	err = port.Drain()
+	if err != nil {
+		return err
 	}
 
 	return nil
 }
 
-var (
-	ackFrame      = []byte{0x00, 0x00, 0xFF, 0x00, 0xFF, 0x00}
-	nackFrame     = []byte{0x00, 0x00, 0xFF, 0xFF, 0x00, 0x00}
-	ErrAckTimeout = errors.New("timeout waiting for ACK")
-)
-
 func sendAck(port serial.Port) error {
 	// tells the PN532 the command was received ok! (optional)
+	// can also be used to immediately cancel the current processing command
+
 	n, err := port.Write(ackFrame)
 	if err != nil {
 		return err
@@ -63,13 +67,14 @@ func sendAck(port serial.Port) error {
 }
 
 // Block and wait to receive an ACK frame on the serial port, returning any
-// extra data that was received before the ACK frame.
+// extra data that was received before the ACK frame. Data before the ACK frame
+// is not to spec, but is an odd bug happening on Windows.
 func waitAck(port serial.Port) ([]byte, error) {
 	// pn532 will send this sequence to acknowledge it received
 	// the previous command
 
 	tries := 0
-	maxTries := 64
+	maxTries := 64 // bytes to scan through
 
 	buf := make([]byte, 1)
 	ackBuf := make([]byte, 0)
@@ -166,8 +171,6 @@ func sendFrame(port serial.Port, cmd byte, args []byte) ([]byte, error) {
 
 	return waitAck(port)
 }
-
-var ErrNoFrameFound = errors.New("no frame found")
 
 // Read a single frame from the serial port, returning the data part of the
 // frame. Optionally accepts data to prepend to the read buffer and
@@ -276,6 +279,8 @@ func callCommand(
 	if len(ackData) > 0 {
 		log.Debug().Msgf("pre ack data: %x", ackData)
 	}
+
+	time.Sleep(6 * time.Millisecond)
 
 	res, err := receiveFrame(port, ackData)
 	if err != nil {
@@ -403,11 +408,9 @@ func InDataExchange(port serial.Port, data []byte) ([]byte, error) {
 	res, err := callCommand(port, cmdInDataExchange, append([]byte{0x01}, data...))
 	if err != nil {
 		return []byte{}, err
-	} else if len(res) < 2 || res[0] != 0x41 {
+	} else if len(res) < 2 {
 		return []byte{}, errors.New("unexpected data exchange response")
-	} else if res[1] != 0x00 {
-		return []byte{}, errors.New("data exchange failed: " + fmt.Sprintf("%x", res[1]))
 	}
 
-	return res[1:], nil
+	return res, nil
 }
