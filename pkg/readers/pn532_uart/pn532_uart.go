@@ -104,6 +104,8 @@ func (r *Pn532UartReader) Open(device string, iq chan<- readers.Scan) error {
 	go func() {
 		errors := 0
 		maxErrors := 5
+		zeroScans := 0
+		maxZeroScans := 3
 
 		for r.polling {
 			if errors >= maxErrors {
@@ -124,20 +126,26 @@ func (r *Pn532UartReader) Open(device string, iq chan<- readers.Scan) error {
 				errors++
 				continue
 			} else if tgt == nil {
+				zeroScans++
+
 				// token was removed
-				if r.lastToken != nil {
-					iq <- readers.Scan{
-						Source: r.device,
-						Token:  nil,
+				if zeroScans == maxZeroScans && r.lastToken != nil {
+					if r.lastToken != nil {
+						iq <- readers.Scan{
+							Source: r.device,
+							Token:  nil,
+						}
+						r.lastToken = nil
 					}
-					r.lastToken = nil
 				}
+
 				continue
 			}
 
 			log.Debug().Msgf("target: %s", tgt.Uid)
 
 			errors = 0
+			zeroScans = 0
 
 			if r.lastToken != nil && r.lastToken.UID == tgt.Uid {
 				// same token
@@ -152,6 +160,7 @@ func (r *Pn532UartReader) Open(device string, iq chan<- readers.Scan) error {
 			i := 3
 			data := make([]byte, 0)
 			for {
+				// TODO: this is a random limit i picked, should detect blocks in card
 				if i >= 256 {
 					break
 				}
@@ -175,7 +184,7 @@ func (r *Pn532UartReader) Open(device string, iq chan<- readers.Scan) error {
 				data = append(data, res[2:]...)
 				i += 4
 
-				time.Sleep(6 * time.Millisecond)
+				time.Sleep(6 * time.Millisecond) // TODO: needs adjusting to a smaller safe value
 			}
 
 			log.Debug().Msgf("record bytes: %s", hex.EncodeToString(data))
@@ -183,6 +192,8 @@ func (r *Pn532UartReader) Open(device string, iq chan<- readers.Scan) error {
 			tagText, err := ParseRecordText(data)
 			if err != nil {
 				log.Error().Err(err).Msgf("error parsing NDEF record")
+				// TODO: there should be some distinction between a data
+				// transfer error and a legitimate empty/missing NDEF record
 				tagText = ""
 			}
 
