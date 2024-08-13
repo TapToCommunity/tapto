@@ -4,6 +4,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 
 	"github.com/rs/zerolog/log"
 	"github.com/wizzomafizzo/tapto/pkg/config"
@@ -133,13 +134,20 @@ func (p *Platform) LaunchSystem(cfg *config.UserConfig, id string) error {
 func (p *Platform) LaunchFile(cfg *config.UserConfig, path string) error {
 	log.Info().Msgf("launching file: %s", path)
 
-	if filepath.Ext(path) == ".txt" {
-		// get filename minus ext
-
-		fn := filepath.Base(path)
-		fn = fn[:len(fn)-4]
-
-		return exec.Command("cmd", "/c", "C:\\Program Files (x86)\\Steam\\steam.exe", "steam://rungameid/"+fn).Start()
+	// TODO: define these as launchers
+	lp := strings.ToLower(path)
+	if strings.HasSuffix(lp, ".exe") || strings.HasSuffix(lp, ".bat") {
+		return exec.Command("cmd", "/c", path).Start()
+	} else if strings.HasSuffix(lp, ".lnk") {
+		return exec.Command("cmd", "/c", "start", path).Start()
+	} else if strings.HasPrefix(path, "steam://") {
+		id := strings.TrimPrefix(path, "steam://")
+		id = strings.TrimPrefix(id, "rungameid/")
+		return exec.Command(
+			"cmd", "/c",
+			"C:\\Program Files (x86)\\Steam\\steam.exe",
+			"steam://rungameid/"+id,
+		).Start()
 	}
 
 	return nil
