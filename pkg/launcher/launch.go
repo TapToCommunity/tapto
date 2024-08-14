@@ -165,7 +165,7 @@ func cmdLaunch(pl platforms.Platform, env platforms.CmdEnv) error {
 		return launch(env.Args)
 	}
 
-	// regex match for uri
+	// match for uri style launch syntax
 	if reUri.MatchString(env.Args) {
 		log.Debug().Msgf("launching uri: %s", env.Args)
 		return launch(env.Args)
