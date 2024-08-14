@@ -137,6 +137,7 @@ const (
 	SystemMultiComp      = "MultiComp"
 	SystemOrao           = "Orao"
 	SystemOric           = "Oric"
+	SystemPC             = "PC"
 	SystemPCXT           = "PCXT"
 	SystemPDP1           = "PDP1"
 	SystemPET2001        = "PET2001"
@@ -425,6 +426,9 @@ var Systems = map[string]System{
 	},
 	SystemOric: {
 		Id: SystemOric,
+	},
+	SystemPC: {
+		Id: SystemPC,
 	},
 	SystemPCXT: {
 		Id: SystemPCXT,
