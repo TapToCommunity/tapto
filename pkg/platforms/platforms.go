@@ -32,6 +32,8 @@ type Launcher struct {
 	Folders []string
 	// Extensions to match for files during a standard scan.
 	Extensions []string
+	// Accepted schemes for URI-style launches.
+	Schemes []string
 	// Launch function, takes a direct as possible path/ID media file.
 	Launch func(*config.UserConfig, string) error
 	// Optional function to perform custom media scanning. Takes the list of

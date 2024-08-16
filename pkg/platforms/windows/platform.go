@@ -1,6 +1,7 @@
 package windows
 
 import (
+	"errors"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -8,6 +9,7 @@ import (
 
 	"github.com/rs/zerolog/log"
 	"github.com/wizzomafizzo/tapto/pkg/config"
+	"github.com/wizzomafizzo/tapto/pkg/database/gamesdb"
 	"github.com/wizzomafizzo/tapto/pkg/platforms"
 	"github.com/wizzomafizzo/tapto/pkg/readers"
 	"github.com/wizzomafizzo/tapto/pkg/readers/acr122_pcsc"
@@ -134,20 +136,50 @@ func (p *Platform) LaunchSystem(cfg *config.UserConfig, id string) error {
 func (p *Platform) LaunchFile(cfg *config.UserConfig, path string) error {
 	log.Info().Msgf("launching file: %s", path)
 
-	// TODO: define these as launchers
+	launchers := make([]platforms.Launcher, 0)
 	lp := strings.ToLower(path)
-	if strings.HasSuffix(lp, ".exe") || strings.HasSuffix(lp, ".bat") {
-		return exec.Command("cmd", "/c", path).Start()
-	} else if strings.HasSuffix(lp, ".lnk") {
-		return exec.Command("cmd", "/c", "start", path).Start()
-	} else if strings.HasPrefix(path, "steam://") {
-		id := strings.TrimPrefix(path, "steam://")
-		id = strings.TrimPrefix(id, "rungameid/")
-		return exec.Command(
-			"cmd", "/c",
-			"C:\\Program Files (x86)\\Steam\\steam.exe",
-			"steam://rungameid/"+id,
-		).Start()
+
+	// TODO: move to matchsystemfile
+	for _, l := range p.Launchers() {
+		match := false
+
+		// check for global extensions
+		for _, ext := range l.Extensions {
+			if filepath.Ext(lp) == ext && l.Folders == nil {
+				launchers = append(launchers, l)
+				match = true
+				break
+			}
+		}
+		if match {
+			continue
+		}
+
+		// check for scheme
+		for _, scheme := range l.Schemes {
+			if strings.HasPrefix(lp, scheme+"://") {
+				launchers = append(launchers, l)
+				break
+			}
+		}
+	}
+
+	if len(launchers) == 0 {
+		return errors.New("no launcher found for file")
+	}
+
+	l := launchers[0]
+
+	if l.Launch != nil {
+		if l.AllowListOnly {
+			if cfg.IsFileAllowed(path) {
+				return l.Launch(cfg, path)
+			} else {
+				return errors.New("file not in allow list: " + path)
+			}
+		}
+
+		return l.Launch(cfg, path)
 	}
 
 	return nil
@@ -178,5 +210,49 @@ func (p *Platform) LookupMapping(_ tokens.Token) (string, bool) {
 }
 
 func (p *Platform) Launchers() []platforms.Launcher {
-	return nil
+	return []platforms.Launcher{
+		{
+			Id:       "Steam",
+			SystemId: gamesdb.SystemPC,
+			Schemes:  []string{"steam"},
+			Scanner: func(cfg *config.UserConfig, results []string) ([]string, error) {
+				return results, nil
+			},
+			Launch: func(cfg *config.UserConfig, path string) error {
+				id := strings.TrimPrefix(path, "steam://")
+				id = strings.TrimPrefix(id, "rungameid/")
+				return exec.Command(
+					"cmd", "/c",
+					"start",
+					"steam://rungameid/"+id,
+				).Start()
+			},
+		},
+		{
+			Id:       "Flashpoint",
+			SystemId: gamesdb.SystemPC,
+			Schemes:  []string{"flashpoint"},
+			Launch: func(cfg *config.UserConfig, path string) error {
+				id := strings.TrimPrefix(path, "flashpoint://")
+				id = strings.TrimPrefix(id, "run/")
+				return exec.Command(
+					"cmd", "/c",
+					"start",
+					"flashpoint://run/"+id,
+				).Start()
+			},
+		},
+		{
+			Id:            "Generic",
+			Extensions:    []string{".exe", ".bat", ".cmd", ".lnk"},
+			AllowListOnly: true,
+			Launch: func(cfg *config.UserConfig, path string) error {
+				if filepath.Ext(path) == ".lnk" {
+					return exec.Command("cmd", "/c", "start", path).Start()
+				} else {
+					return exec.Command("cmd", "/c", path).Start()
+				}
+			},
+		},
+	}
 }
