@@ -199,6 +199,10 @@ func NewNamesIndex(
 	}
 
 	g := new(errgroup.Group)
+	scanned := make(map[string]bool)
+	for _, s := range AllSystems() {
+		scanned[s.Id] = false
+	}
 
 	for _, k := range utils.AlphaMapKeys(systemPaths) {
 		systemId := k
@@ -232,6 +236,7 @@ func NewNamesIndex(
 		}
 
 		status.Files += len(files)
+		scanned[systemId] = true
 
 		g.Go(func() error {
 			fis := make([]fileInfo, 0)
@@ -240,6 +245,28 @@ func NewNamesIndex(
 			}
 			return updateNames(db, fis)
 		})
+	}
+
+	// run each custom scanner at least once, even if there are no paths
+	// defined or results from regular index
+	for _, l := range platform.Launchers() {
+		systemId := l.SystemId
+		if !scanned[systemId] && l.Scanner != nil {
+			files, err := l.Scanner(cfg, []string{})
+			if err != nil {
+				return status.Files, err
+			}
+
+			if len(files) > 0 {
+				g.Go(func() error {
+					fis := make([]fileInfo, 0)
+					for _, p := range files {
+						fis = append(fis, fileInfo{SystemId: systemId, Path: p})
+					}
+					return updateNames(db, fis)
+				})
+			}
+		}
 	}
 
 	status.Step++
