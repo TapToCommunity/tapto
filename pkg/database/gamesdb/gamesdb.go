@@ -201,24 +201,29 @@ func NewNamesIndex(
 	g := new(errgroup.Group)
 
 	for _, k := range utils.AlphaMapKeys(systemPaths) {
-		status.SystemId = k
+		systemId := k
+		files := make([]string, 0)
+
+		status.SystemId = systemId
 		status.Step++
 		update(status)
-
-		files := make([]fileInfo, 0)
 
 		for _, path := range systemPaths[k] {
 			pathFiles, err := GetFiles(platform, k, path)
 			if err != nil {
 				return status.Files, fmt.Errorf("error getting files: %s", err)
 			}
+			files = append(files, pathFiles...)
+		}
 
-			if len(pathFiles) == 0 {
-				continue
-			}
-
-			for pf := range pathFiles {
-				files = append(files, fileInfo{SystemId: k, Path: pathFiles[pf]})
+		// for each system launcher in platform, run the results through its
+		// custom scan function if one exists
+		for _, l := range platform.Launchers() {
+			if l.SystemId == k && l.Scanner != nil {
+				files, err = l.Scanner(cfg, files)
+				if err != nil {
+					return status.Files, err
+				}
 			}
 		}
 
@@ -229,7 +234,11 @@ func NewNamesIndex(
 		status.Files += len(files)
 
 		g.Go(func() error {
-			return updateNames(db, files)
+			fis := make([]fileInfo, 0)
+			for _, p := range files {
+				fis = append(fis, fileInfo{SystemId: systemId, Path: p})
+			}
+			return updateNames(db, fis)
 		})
 	}
 
