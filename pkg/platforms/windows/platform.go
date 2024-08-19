@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/andygrunwald/vdf"
 	"github.com/rs/zerolog/log"
 	"github.com/wizzomafizzo/tapto/pkg/config"
 	"github.com/wizzomafizzo/tapto/pkg/database/gamesdb"
@@ -215,7 +216,56 @@ func (p *Platform) Launchers() []platforms.Launcher {
 			Id:       "Steam",
 			SystemId: gamesdb.SystemPC,
 			Schemes:  []string{"steam"},
-			Scanner: func(cfg *config.UserConfig, results []string) ([]string, error) {
+			Scanner: func(
+				cfg *config.UserConfig,
+				results []platforms.ScanResult,
+			) ([]platforms.ScanResult, error) {
+				root := "C:\\Program Files (x86)\\Steam\\steamapps"
+				f, err := os.Open(filepath.Join(root, "libraryfolders.vdf"))
+				if err != nil {
+					log.Error().Err(err).Msg("error opening libraryfolders.vdf")
+					return results, nil
+				}
+
+				p := vdf.NewParser(f)
+				m, err := p.Parse()
+				if err != nil {
+					log.Error().Err(err).Msg("error parsing libraryfolders.vdf")
+					return results, nil
+				}
+
+				log.Debug().Msgf("parsed: %v", m)
+
+				lfs := m["libraryfolders"].(map[string]interface{})
+				for l, v := range lfs {
+					log.Debug().Msgf("library id: %s", l)
+					ls := v.(map[string]interface{})
+					apps := ls["apps"].(map[string]interface{})
+					for id := range apps {
+						log.Debug().Msgf("app id: %s", id)
+						af, err := os.Open(filepath.Join(root, "appmanifest_"+id+".acf"))
+						if err != nil {
+							log.Error().Err(err).Msg("error opening libraryfolders.vdf")
+							return results, nil
+						}
+
+						ap := vdf.NewParser(af)
+						am, err := ap.Parse()
+						if err != nil {
+							log.Error().Err(err).Msg("error parsing libraryfolders.vdf")
+							return results, nil
+						}
+
+						appState := am["AppState"].(map[string]interface{})
+						log.Debug().Msgf("parsed: %v", appState["name"])
+
+						results = append(results, platforms.ScanResult{
+							Path: "steam://" + id,
+							Name: appState["name"].(string),
+						})
+					}
+				}
+
 				return results, nil
 			},
 			Launch: func(cfg *config.UserConfig, path string) error {
@@ -247,11 +297,7 @@ func (p *Platform) Launchers() []platforms.Launcher {
 			Extensions:    []string{".exe", ".bat", ".cmd", ".lnk"},
 			AllowListOnly: true,
 			Launch: func(cfg *config.UserConfig, path string) error {
-				if filepath.Ext(path) == ".lnk" {
-					return exec.Command("cmd", "/c", "start", path).Start()
-				} else {
-					return exec.Command("cmd", "/c", path).Start()
-				}
+				return exec.Command("cmd", "/c", path).Start()
 			},
 		},
 	}

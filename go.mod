@@ -24,6 +24,7 @@ require (
 
 require (
 	github.com/ajg/form v1.5.1 // indirect
+	github.com/andygrunwald/vdf v1.1.0 // indirect
 	github.com/creack/goselect v0.1.2 // indirect
 	github.com/ebfe/scard v0.0.0-20230420082256-7db3f9b7c8a7 // indirect
 	github.com/joho/godotenv v1.4.0 // indirect

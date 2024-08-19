@@ -22,6 +22,11 @@ type CmdEnv struct {
 	CurrentIndex  int
 }
 
+type ScanResult struct {
+	Path string
+	Name string
+}
+
 type Launcher struct {
 	// Unique ID of the launcher, visible to user.
 	Id string
@@ -38,7 +43,7 @@ type Launcher struct {
 	Launch func(*config.UserConfig, string) error
 	// Optional function to perform custom media scanning. Takes the list of
 	// results from the standard scan, if any, and returns the final list.
-	Scanner func(*config.UserConfig, []string) ([]string, error)
+	Scanner func(*config.UserConfig, []ScanResult) ([]ScanResult, error)
 	// If true, all resolved paths must be in the allow list before they
 	// can be launched.
 	AllowListOnly bool

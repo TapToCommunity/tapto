@@ -107,6 +107,7 @@ func writeIndexedSystems(db *bolt.DB, systems []string) error {
 type fileInfo struct {
 	SystemId string
 	Path     string
+	Name     string
 }
 
 // Delete all names in index for the given system.
@@ -133,7 +134,10 @@ func updateNames(db *bolt.DB, files []fileInfo) error {
 
 		for _, file := range files {
 			base := filepath.Base(file.Path)
-			name := strings.TrimSuffix(base, filepath.Ext(base))
+			name := file.Name
+			if name == "" {
+				name = strings.TrimSuffix(base, filepath.Ext(base))
+			}
 
 			nk := NameKey(file.SystemId, name)
 			err := bns.Put([]byte(nk), []byte(file.Path))
@@ -206,7 +210,7 @@ func NewNamesIndex(
 
 	for _, k := range utils.AlphaMapKeys(systemPaths) {
 		systemId := k
-		files := make([]string, 0)
+		files := make([]platforms.ScanResult, 0)
 
 		status.SystemId = systemId
 		status.Step++
@@ -217,7 +221,9 @@ func NewNamesIndex(
 			if err != nil {
 				return status.Files, fmt.Errorf("error getting files: %s", err)
 			}
-			files = append(files, pathFiles...)
+			for _, f := range pathFiles {
+				files = append(files, platforms.ScanResult{Path: f})
+			}
 		}
 
 		// for each system launcher in platform, run the results through its
@@ -241,7 +247,7 @@ func NewNamesIndex(
 		g.Go(func() error {
 			fis := make([]fileInfo, 0)
 			for _, p := range files {
-				fis = append(fis, fileInfo{SystemId: systemId, Path: p})
+				fis = append(fis, fileInfo{SystemId: systemId, Path: p.Path, Name: p.Name})
 			}
 			return updateNames(db, fis)
 		})
@@ -252,17 +258,24 @@ func NewNamesIndex(
 	for _, l := range platform.Launchers() {
 		systemId := l.SystemId
 		if !scanned[systemId] && l.Scanner != nil {
-			files, err := l.Scanner(cfg, []string{})
+			results, err := l.Scanner(cfg, []platforms.ScanResult{})
 			if err != nil {
 				return status.Files, err
 			}
 
-			if len(files) > 0 {
+			log.Debug().Msgf("scanned %d files for system: %s", len(results), systemId)
+			log.Debug().Msgf("files: %v", results)
+
+			status.Files += len(results)
+
+			if len(results) > 0 {
 				g.Go(func() error {
 					fis := make([]fileInfo, 0)
-					for _, p := range files {
-						fis = append(fis, fileInfo{SystemId: systemId, Path: p})
+					for _, p := range results {
+						fis = append(fis, fileInfo{SystemId: systemId, Path: p.Path, Name: p.Name})
 					}
+					log.Debug().Msgf("updating names for system: %s", systemId)
+					log.Debug().Msgf("files: %v", fis)
 					return updateNames(db, fis)
 				})
 			}
