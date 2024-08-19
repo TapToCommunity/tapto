@@ -1,6 +1,7 @@
 package pn532_uart
 
 import (
+	"bytes"
 	"encoding/hex"
 	"errors"
 	"os"
@@ -66,12 +67,6 @@ func connect(name string) (serial.Port, error) {
 	}
 	log.Debug().Msgf("firmware version: %v", fv)
 
-	gs, err := GetGeneralStatus(port)
-	if err != nil {
-		return port, err
-	}
-	log.Debug().Msgf("general status: %v", gs)
-
 	return port, nil
 }
 
@@ -109,6 +104,8 @@ func (r *Pn532UartReader) Open(device string, iq chan<- readers.Scan) error {
 	go func() {
 		errors := 0
 		maxErrors := 5
+		zeroScans := 0
+		maxZeroScans := 3
 
 		for r.polling {
 			if errors >= maxErrors {
@@ -123,54 +120,80 @@ func (r *Pn532UartReader) Open(device string, iq chan<- readers.Scan) error {
 
 			time.Sleep(250 * time.Millisecond)
 
-			err = SamConfiguration(r.port)
-			if err != nil {
-				log.Error().Err(err).Msg("failed to run sam config")
-				errors++
-				continue
-			}
-
 			tgt, err := InListPassiveTarget(r.port)
 			if err != nil {
 				log.Error().Err(err).Msg("failed to read passive target")
 				errors++
 				continue
 			} else if tgt == nil {
+				zeroScans++
+
 				// token was removed
-				if r.lastToken != nil {
-					iq <- readers.Scan{
-						Source: r.device,
-						Token:  nil,
+				if zeroScans == maxZeroScans && r.lastToken != nil {
+					if r.lastToken != nil {
+						iq <- readers.Scan{
+							Source: r.device,
+							Token:  nil,
+						}
+						r.lastToken = nil
 					}
-					r.lastToken = nil
 				}
+
 				continue
 			}
 
+			log.Debug().Msgf("target: %s", tgt.Uid)
+
 			errors = 0
+			zeroScans = 0
 
 			if r.lastToken != nil && r.lastToken.UID == tgt.Uid {
 				// same token
 				continue
 			}
 
-			var td TagData
-			if tgt.Type == tokens.TypeNTAG {
-				td, err = ReadNtag(r.port)
-				if err != nil {
-					log.Error().Err(err).Msg("failed to read ntag")
-					continue
-				}
-			} else if tgt.Type == tokens.TypeMifare {
+			if tgt.Type == tokens.TypeMifare {
 				log.Error().Err(err).Msg("mifare not supported")
 				continue
 			}
 
-			log.Debug().Msgf("record bytes: %s", hex.EncodeToString(td.Bytes))
+			i := 3
+			data := make([]byte, 0)
+			for {
+				// TODO: this is a random limit i picked, should detect blocks in card
+				if i >= 256 {
+					break
+				}
 
-			tagText, err := ParseRecordText(td.Bytes)
+				res, err := InDataExchange(r.port, []byte{0x30, byte(i)})
+				if err != nil {
+					log.Error().Err(err).Msg("failed to run indataexchange")
+					errors++
+					break
+				} else if len(res) < 2 {
+					log.Error().Msg("unexpected data response length")
+					errors++
+					break
+				} else if res[0] != 0x41 || res[1] != 0x00 {
+					log.Warn().Msgf("unexpected data format: %x", res)
+					break
+				} else if bytes.Equal(res[2:], make([]byte, 16)) {
+					break
+				}
+
+				data = append(data, res[2:]...)
+				i += 4
+
+				time.Sleep(6 * time.Millisecond) // TODO: needs adjusting to a smaller safe value
+			}
+
+			log.Debug().Msgf("record bytes: %s", hex.EncodeToString(data))
+
+			tagText, err := ParseRecordText(data)
 			if err != nil {
 				log.Error().Err(err).Msgf("error parsing NDEF record")
+				// TODO: there should be some distinction between a data
+				// transfer error and a legitimate empty/missing NDEF record
 				tagText = ""
 			}
 
@@ -184,7 +207,7 @@ func (r *Pn532UartReader) Open(device string, iq chan<- readers.Scan) error {
 				Type:     tgt.Type,
 				UID:      tgt.Uid,
 				Text:     tagText,
-				Data:     hex.EncodeToString(td.Bytes),
+				Data:     hex.EncodeToString(data),
 				ScanTime: time.Now(),
 				Source:   r.device,
 			}

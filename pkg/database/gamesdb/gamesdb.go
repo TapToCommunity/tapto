@@ -107,6 +107,7 @@ func writeIndexedSystems(db *bolt.DB, systems []string) error {
 type fileInfo struct {
 	SystemId string
 	Path     string
+	Name     string
 }
 
 // Delete all names in index for the given system.
@@ -133,7 +134,10 @@ func updateNames(db *bolt.DB, files []fileInfo) error {
 
 		for _, file := range files {
 			base := filepath.Base(file.Path)
-			name := strings.TrimSuffix(base, filepath.Ext(base))
+			name := file.Name
+			if name == "" {
+				name = strings.TrimSuffix(base, filepath.Ext(base))
+			}
 
 			nk := NameKey(file.SystemId, name)
 			err := bns.Put([]byte(nk), []byte(file.Path))
@@ -199,26 +203,37 @@ func NewNamesIndex(
 	}
 
 	g := new(errgroup.Group)
+	scanned := make(map[string]bool)
+	for _, s := range AllSystems() {
+		scanned[s.Id] = false
+	}
 
 	for _, k := range utils.AlphaMapKeys(systemPaths) {
-		status.SystemId = k
+		systemId := k
+		files := make([]platforms.ScanResult, 0)
+
+		status.SystemId = systemId
 		status.Step++
 		update(status)
-
-		files := make([]fileInfo, 0)
 
 		for _, path := range systemPaths[k] {
 			pathFiles, err := GetFiles(platform, k, path)
 			if err != nil {
 				return status.Files, fmt.Errorf("error getting files: %s", err)
 			}
-
-			if len(pathFiles) == 0 {
-				continue
+			for _, f := range pathFiles {
+				files = append(files, platforms.ScanResult{Path: f})
 			}
+		}
 
-			for pf := range pathFiles {
-				files = append(files, fileInfo{SystemId: k, Path: pathFiles[pf]})
+		// for each system launcher in platform, run the results through its
+		// custom scan function if one exists
+		for _, l := range platform.Launchers() {
+			if l.SystemId == k && l.Scanner != nil {
+				files, err = l.Scanner(cfg, files)
+				if err != nil {
+					return status.Files, err
+				}
 			}
 		}
 
@@ -227,10 +242,45 @@ func NewNamesIndex(
 		}
 
 		status.Files += len(files)
+		scanned[systemId] = true
 
 		g.Go(func() error {
-			return updateNames(db, files)
+			fis := make([]fileInfo, 0)
+			for _, p := range files {
+				fis = append(fis, fileInfo{SystemId: systemId, Path: p.Path, Name: p.Name})
+			}
+			return updateNames(db, fis)
 		})
+	}
+
+	// run each custom scanner at least once, even if there are no paths
+	// defined or results from regular index
+	for _, l := range platform.Launchers() {
+		systemId := l.SystemId
+		if !scanned[systemId] && l.Scanner != nil {
+			results, err := l.Scanner(cfg, []platforms.ScanResult{})
+			if err != nil {
+				return status.Files, err
+			}
+
+			log.Debug().Msgf("scanned %d files for system: %s", len(results), systemId)
+			log.Debug().Msgf("files: %v", results)
+
+			status.Files += len(results)
+			scanned[systemId] = true
+
+			if len(results) > 0 {
+				g.Go(func() error {
+					fis := make([]fileInfo, 0)
+					for _, p := range results {
+						fis = append(fis, fileInfo{SystemId: systemId, Path: p.Path, Name: p.Name})
+					}
+					log.Debug().Msgf("updating names for system: %s", systemId)
+					log.Debug().Msgf("files: %v", fis)
+					return updateNames(db, fis)
+				})
+			}
+		}
 	}
 
 	status.Step++
@@ -242,7 +292,16 @@ func NewNamesIndex(
 		return status.Files, fmt.Errorf("error updating names index: %s", err)
 	}
 
-	err = writeIndexedSystems(db, utils.AlphaMapKeys(systemPaths))
+	indexedSystems := make([]string, 0)
+	for k, v := range scanned {
+		if v {
+			indexedSystems = append(indexed, k)
+		}
+	}
+
+	log.Debug().Msgf("indexed systems: %v", indexedSystems)
+
+	err = writeIndexedSystems(db, indexedSystems)
 	if err != nil {
 		return status.Files, fmt.Errorf("error writing indexed systems: %s", err)
 	}

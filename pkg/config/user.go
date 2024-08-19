@@ -49,15 +49,21 @@ type TapToConfig struct {
 
 type SystemsConfig struct {
 	GamesFolder []string `ini:"games_folder,omitempty,allowshadow"`
-	SetCore     []string `ini:"set_core,omitempty,allowshadow"`
+	SetCore     []string `ini:"set_core,omitempty,allowshadow"` // TODO: deprecated?
+}
+
+type LaunchersConfig struct {
+	AllowFile []string `ini:"allow_file,omitempty,allowshadow"`
+	// TODO: allow_shell - contents of shell command
 }
 
 type UserConfig struct {
-	mu      sync.RWMutex
-	AppPath string        `ini:"-"`
-	IniPath string        `ini:"-"`
-	TapTo   TapToConfig   `ini:"tapto"`
-	Systems SystemsConfig `ini:"systems,omitempty"`
+	mu        sync.RWMutex
+	AppPath   string          `ini:"-"`
+	IniPath   string          `ini:"-"`
+	TapTo     TapToConfig     `ini:"tapto"`
+	Systems   SystemsConfig   `ini:"systems,omitempty"`
+	Launchers LaunchersConfig `ini:"launchers,omitempty"`
 }
 
 func (c *UserConfig) GetConnectionString() string {
@@ -171,6 +177,18 @@ func (c *UserConfig) SetDebug(debug bool) {
 	} else {
 		zerolog.SetGlobalLevel(zerolog.InfoLevel)
 	}
+}
+
+func (c *UserConfig) IsFileAllowed(path string) bool {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	// TODO: case insensitive on windows?
+	for _, allowed := range c.Launchers.AllowFile {
+		if filepath.FromSlash(allowed) == path {
+			return true
+		}
+	}
+	return false
 }
 
 func (c *UserConfig) LoadConfig() error {

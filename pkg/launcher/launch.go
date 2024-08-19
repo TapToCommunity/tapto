@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/rs/zerolog/log"
@@ -14,7 +15,7 @@ import (
 )
 
 func cmdSystem(pl platforms.Platform, env platforms.CmdEnv) error {
-	// TODO: launched named arg support
+	// TODO: launcher named arg support
 
 	if strings.EqualFold(env.Args, "menu") {
 		return pl.KillLauncher()
@@ -150,6 +151,8 @@ func getAltLauncher(
 	}
 }
 
+var reUri = regexp.MustCompile(`^.+://`)
+
 func cmdLaunch(pl platforms.Platform, env platforms.CmdEnv) error {
 	launch, err := getAltLauncher(pl, env)
 	if err != nil {
@@ -159,6 +162,12 @@ func cmdLaunch(pl platforms.Platform, env platforms.CmdEnv) error {
 	// if it's an absolute path, just try launch it
 	if filepath.IsAbs(env.Args) {
 		log.Debug().Msgf("launching absolute path: %s", env.Args)
+		return launch(env.Args)
+	}
+
+	// match for uri style launch syntax
+	if reUri.MatchString(env.Args) {
+		log.Debug().Msgf("launching uri: %s", env.Args)
 		return launch(env.Args)
 	}
 

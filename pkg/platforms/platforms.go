@@ -22,19 +22,31 @@ type CmdEnv struct {
 	CurrentIndex  int
 }
 
+type ScanResult struct {
+	Path string
+	Name string
+}
+
 type Launcher struct {
-	// Id of the launcher, visible to user
+	// Unique ID of the launcher, visible to user.
 	Id string
-	// System associated with this launcher
+	// System associated with this launcher.
 	SystemId string
-	// Folders to scan for files, relative to the root folder
+	// Folders to scan for files, relative to the root folders of the platform.
+	// TODO: Support absolute paths?
 	Folders []string
-	// Extensions to match for files
+	// Extensions to match for files during a standard scan.
 	Extensions []string
-	// Launch function, takes absolute path to file as argument
+	// Accepted schemes for URI-style launches.
+	Schemes []string
+	// Launch function, takes a direct as possible path/ID media file.
 	Launch func(*config.UserConfig, string) error
-	// TODO: optional after scan hook to find special files or modify the
-	// standard scan results
+	// Optional function to perform custom media scanning. Takes the list of
+	// results from the standard scan, if any, and returns the final list.
+	Scanner func(*config.UserConfig, []ScanResult) ([]ScanResult, error)
+	// If true, all resolved paths must be in the allow list before they
+	// can be launched.
+	AllowListOnly bool
 }
 
 // MatchSystemFile returns true if a given file's extension is valid for a system.
@@ -63,34 +75,61 @@ func MatchSystemFile(pl Platform, systemId string, path string) bool {
 }
 
 type Platform interface {
+	// Unique ID of the platform.
 	Id() string
+	// Any initial setup required before daemon is fully started.
 	Setup(*config.UserConfig) error
+	// TOOD: what is this?
 	Stop() error
+	// Run immediately after s successful scan, before it is processed for launching.
 	AfterScanHook(tokens.Token) error
+	// Run after the active readers have been updated.
 	ReadersUpdateHook(map[string]*readers.Reader) error
+	// List of supported readers for this platform.
 	SupportedReaders(*config.UserConfig) []readers.Reader
+	// List of root folders to scan for media files.
 	RootFolders(*config.UserConfig) []string
+	// Whether to treat zip files as folders during media scanning.
 	ZipsAsFolders() bool
+	// Path to the configuration/database data for TapTo.
 	ConfigFolder() string // TODO: rename to data folder (because that's what it is)
+	// Path to the log folder for TapTo.
 	LogFolder() string
+	// Convert a path to a normalized form for the platform, the shortest
+	// possible path that can interpreted and lanched by TapTo. For writing
+	// to tokens.
 	NormalizePath(*config.UserConfig, string) string
+	// Kill the currently running launcher process if possible.
 	KillLauncher() error
 	LaunchingEnabled() bool  // TODO: remove? should be mister only?
 	SetLaunching(bool) error // TODO: remove? should be mister only?
+	// Return the ID of the currently active launcher. Empty string if none.
 	GetActiveLauncher() string
+	// Play a sound effect for error feedback.
 	PlayFailSound(*config.UserConfig) // TODO: change to like PlaySound?
+	// Play a sound effect for success feedback.
 	PlaySuccessSound(*config.UserConfig)
+	// Returns the currently active system ID.
 	ActiveSystem() string
+	// Returns the currently active game ID.
 	ActiveGame() string // TODO: check where this is used
+	// Returns the currently active game name.
 	ActiveGameName() string
+	// Returns the currently active game path.
 	ActiveGamePath() string
+	// Function used to signal when a state change has occurred, to send to
+	// to the API websocket.
 	SetEventHook(*func())
+	// Launch a system by ID.
 	LaunchSystem(*config.UserConfig, string) error
+	// Launch a file by path.
 	LaunchFile(*config.UserConfig, string) error
+	// Launch a shell command.
 	Shell(string) error
 	KeyboardInput(string) error // DEPRECATED
 	KeyboardPress(string) error
 	GamepadPress(string) error
+	// Process a token command that has been resolved to a platform command.
 	ForwardCmd(CmdEnv) error
 	LookupMapping(tokens.Token) (string, bool)
 	Launchers() []Launcher

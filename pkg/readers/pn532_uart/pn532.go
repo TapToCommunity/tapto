@@ -22,51 +22,108 @@ const (
 	pn532Ready             = 0x01
 )
 
+var (
+	ackFrame        = []byte{0x00, 0x00, 0xFF, 0x00, 0xFF, 0x00}
+	nackFrame       = []byte{0x00, 0x00, 0xFF, 0xFF, 0x00, 0x00}
+	ErrAckTimeout   = errors.New("timeout waiting for ACK")
+	ErrNoFrameFound = errors.New("no frame found")
+)
+
 func wakeUp(port serial.Port) error {
-	log.Debug().Msg("waking up pn532")
-	// over uart, pn532 must be "woken up" by sending 2 x 0x55 and then "waiting a while"
-	// we send a bunch of 0x00 to wait
+	// over uart, pn532 must be (to be safe) "woken up" by sending a 0x55
+	// dummy byte and then waiting for some amount of time
 
-	//_, err := port.Write([]byte{0x55, 0x55, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00})
-	//_, err := port.Write([]byte{0x55, 0x55, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0x03, 0xfd, 0xd4, 0x14, 0x01, 0x17, 0x00})
-
-	bs := []byte{0x55, 0x55, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}
-	n, err := port.Write(bs)
+	n, err := port.Write([]byte{
+		0x55, 0x00, 0x00, 0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00, 0x00,
+	})
 	if err != nil {
 		return err
-	} else if n != len(bs) {
+	} else if n != 16 {
 		return errors.New("wakeup write error, not all bytes written")
+	}
+
+	err = port.Drain()
+	if err != nil {
+		return err
 	}
 
 	return nil
 }
 
-func waitAck(port serial.Port) error {
-	log.Debug().Msg("waiting for ACK")
-	// pn532 will send this sequence to acknowledge it received the previous command
+func sendAck(port serial.Port) error {
+	// tells the PN532 the command was received ok! (optional)
+	// can also be used to immediately cancel the current processing command
+
+	n, err := port.Write(ackFrame)
+	if err != nil {
+		return err
+	} else if n != len(ackFrame) {
+		return errors.New("ack write error, not all bytes written")
+	}
+
+	return port.Drain()
+}
+
+// Block and wait to receive an ACK frame on the serial port, returning any
+// extra data that was received before the ACK frame. Data before the ACK frame
+// is not to spec, but is an odd bug happening on Windows.
+func waitAck(port serial.Port) ([]byte, error) {
+	// pn532 will send this sequence to acknowledge it received
+	// the previous command
+
 	tries := 0
-	maxTries := 25
-	buf := make([]byte, 6)
+	maxTries := 64 // bytes to scan through
+
+	buf := make([]byte, 1)
+	ackBuf := make([]byte, 0)
+	preAck := make([]byte, 0)
+
 	for {
-		_, err := port.Read(buf)
-		if err != nil {
-			return err
+		if tries >= maxTries {
+			return preAck, ErrAckTimeout
 		}
 
-		if bytes.Contains(buf, []byte{0x00, 0x00, 0xFF, 0x00, 0xFF, 0x00}) {
-			return nil
+		n, err := port.Read(buf)
+		if err != nil {
+			return preAck, err
+		} else if n == 0 {
+			tries++
+			continue
+		}
+
+		ackBuf = append(ackBuf, buf[0])
+		if len(ackBuf) < 6 {
+			continue
+		}
+
+		// log.Debug().Msgf("inspecting ack: %x", ackBuf)
+
+		if bytes.Equal(ackBuf, ackFrame) {
+			return preAck, nil
 		} else {
-			if tries > maxTries {
-				return errors.New("timeout waiting for ACK")
-			} else {
-				tries++
-				continue
-			}
+			preAck = append(preAck, ackBuf[0])
+			ackBuf = ackBuf[1:]
+			tries++
+			continue
 		}
 	}
 }
 
-func sendFrame(port serial.Port, cmd byte, args []byte) error {
+func sendNack(port serial.Port) error {
+	// tells the PN532 there was a problem and to resend previous data
+	n, err := port.Write(nackFrame)
+	if err != nil {
+		return err
+	} else if n != len(nackFrame) {
+		return errors.New("nack write error, not all bytes written")
+	}
+
+	return port.Drain()
+}
+
+func sendFrame(port serial.Port, cmd byte, args []byte) ([]byte, error) {
 	// create frame
 	frm := []byte{0x00, 0x00, 0xFF} // preamble and start code
 
@@ -75,7 +132,7 @@ func sendFrame(port serial.Port, cmd byte, args []byte) error {
 
 	if len(data) > 255 {
 		// TODO: extended frames are not implemented
-		return errors.New("data too big for frame")
+		return []byte{}, errors.New("data too big for frame")
 	}
 
 	dlen := byte(len(data))
@@ -92,30 +149,44 @@ func sendFrame(port serial.Port, cmd byte, args []byte) error {
 	frm = append(frm, ^checksum+1) // data checksum
 	frm = append(frm, 0x00)        // postamble
 
-	log.Debug().Msgf("sending frame: %x", frm)
+	//log.Debug().Msgf("sending frame: %x", frm)
 
 	// write frame
 	err := wakeUp(port)
 	if err != nil {
-		return err
+		return []byte{}, err
 	}
 
 	n, err := port.Write(frm)
 	if err != nil {
-		return err
+		return []byte{}, err
 	} else if n != len(frm) {
-		return errors.New("write error, not all bytes written")
+		return []byte{}, errors.New("write error, not all bytes written")
 	}
 
-	time.Sleep(2 * time.Millisecond)
+	err = port.Drain()
+	if err != nil {
+		return []byte{}, err
+	}
 
 	return waitAck(port)
 }
 
-var ErrNoFrameFound = errors.New("no frame found")
+// Read a single frame from the serial port, returning the data part of the
+// frame. Optionally accepts data to prepend to the read buffer and
+// treat as part of the potential frame.
+func receiveFrame(port serial.Port, pre []byte) ([]byte, error) {
+	tries := 0
+	maxTries := 3
 
-func receiveFrame(port serial.Port) ([]byte, error) {
+retry:
 	buf := make([]byte, 255+7)
+	if tries == 0 {
+		// prepend any leftover response from a skipped ACK
+		buf = make([]byte, 255+7-len(pre))
+		buf = append(pre, buf...)
+	}
+
 	_, err := port.Read(buf)
 	if err != nil {
 		return []byte{}, err
@@ -138,6 +209,15 @@ func receiveFrame(port serial.Port) ([]byte, error) {
 	off++
 	frameLen := int(buf[off])
 	if ((frameLen + int(buf[off+1])) & 0xFF) != 0 {
+		if tries < maxTries {
+			tries++
+			err := sendNack(port)
+			if err != nil {
+				return []byte{}, err
+			}
+			log.Debug().Msg("invalid frame length, sending NACK")
+			goto retry
+		}
 		return []byte{}, errors.New("invalid frame length")
 	}
 
@@ -147,13 +227,31 @@ func receiveFrame(port serial.Port) ([]byte, error) {
 		chk += b
 	}
 	if chk != 0 {
+		if tries < maxTries {
+			tries++
+			err := sendNack(port)
+			if err != nil {
+				return []byte{}, err
+			}
+			log.Debug().Msg("invalid frame checksum, sending NACK")
+			goto retry
+		}
 		return []byte{}, errors.New("invalid frame checksum")
 	}
 
 	// check tfi
 	off += 2
 	if buf[off] != pn532ToHost {
-		return []byte{}, errors.New("invalid TFI, expected PN532 to host")
+		if tries < maxTries {
+			tries++
+			err := sendNack(port)
+			if err != nil {
+				return []byte{}, err
+			}
+			log.Debug().Msg("invalid TFI, sending NACK")
+			goto retry
+		}
+		return []byte{}, errors.New("invalid TFI, expected PN532 to host, got: " + fmt.Sprintf("%x", buf[off]))
 	}
 
 	// get frame data
@@ -173,12 +271,23 @@ func callCommand(
 	cmd byte,
 	data []byte,
 ) ([]byte, error) {
-	err := sendFrame(port, cmd, data)
+	ackData, err := sendFrame(port, cmd, data)
 	if err != nil {
 		return []byte{}, err
 	}
 
-	res, err := receiveFrame(port)
+	if len(ackData) > 0 {
+		log.Debug().Msgf("pre ack data: %x", ackData)
+	}
+
+	time.Sleep(6 * time.Millisecond)
+
+	res, err := receiveFrame(port, ackData)
+	if err != nil {
+		return []byte{}, err
+	}
+
+	err = sendAck(port)
 	if err != nil {
 		return []byte{}, err
 	}
@@ -258,7 +367,7 @@ type Target struct {
 }
 
 func InListPassiveTarget(port serial.Port) (*Target, error) {
-	log.Debug().Msg("running inlistpassivetarget")
+	//log.Debug().Msg("running inlistpassivetarget")
 	res, err := callCommand(port, cmdInListPassiveTarget, []byte{0x01, 0x00})
 	if errors.Is(err, ErrNoFrameFound) {
 		// no tag detected
@@ -299,11 +408,9 @@ func InDataExchange(port serial.Port, data []byte) ([]byte, error) {
 	res, err := callCommand(port, cmdInDataExchange, append([]byte{0x01}, data...))
 	if err != nil {
 		return []byte{}, err
-	} else if len(res) < 2 || res[0] != 0x41 {
+	} else if len(res) < 2 {
 		return []byte{}, errors.New("unexpected data exchange response")
-	} else if res[1] != 0x00 {
-		return []byte{}, errors.New("data exchange failed: " + fmt.Sprintf("%x", res[1]))
 	}
 
-	return res[1:], nil
+	return res, nil
 }

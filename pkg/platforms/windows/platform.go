@@ -1,12 +1,16 @@
 package windows
 
 import (
+	"errors"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 
+	"github.com/andygrunwald/vdf"
 	"github.com/rs/zerolog/log"
 	"github.com/wizzomafizzo/tapto/pkg/config"
+	"github.com/wizzomafizzo/tapto/pkg/database/gamesdb"
 	"github.com/wizzomafizzo/tapto/pkg/platforms"
 	"github.com/wizzomafizzo/tapto/pkg/readers"
 	"github.com/wizzomafizzo/tapto/pkg/readers/acr122_pcsc"
@@ -133,13 +137,50 @@ func (p *Platform) LaunchSystem(cfg *config.UserConfig, id string) error {
 func (p *Platform) LaunchFile(cfg *config.UserConfig, path string) error {
 	log.Info().Msgf("launching file: %s", path)
 
-	if filepath.Ext(path) == ".txt" {
-		// get filename minus ext
+	launchers := make([]platforms.Launcher, 0)
+	lp := strings.ToLower(path)
 
-		fn := filepath.Base(path)
-		fn = fn[:len(fn)-4]
+	// TODO: move to matchsystemfile
+	for _, l := range p.Launchers() {
+		match := false
 
-		return exec.Command("cmd", "/c", "C:\\Program Files (x86)\\Steam\\steam.exe", "steam://rungameid/"+fn).Start()
+		// check for global extensions
+		for _, ext := range l.Extensions {
+			if filepath.Ext(lp) == ext && l.Folders == nil {
+				launchers = append(launchers, l)
+				match = true
+				break
+			}
+		}
+		if match {
+			continue
+		}
+
+		// check for scheme
+		for _, scheme := range l.Schemes {
+			if strings.HasPrefix(lp, scheme+"://") {
+				launchers = append(launchers, l)
+				break
+			}
+		}
+	}
+
+	if len(launchers) == 0 {
+		return errors.New("no launcher found for file")
+	}
+
+	l := launchers[0]
+
+	if l.Launch != nil {
+		if l.AllowListOnly {
+			if cfg.IsFileAllowed(path) {
+				return l.Launch(cfg, path)
+			} else {
+				return errors.New("file not in allow list: " + path)
+			}
+		}
+
+		return l.Launch(cfg, path)
 	}
 
 	return nil
@@ -170,5 +211,94 @@ func (p *Platform) LookupMapping(_ tokens.Token) (string, bool) {
 }
 
 func (p *Platform) Launchers() []platforms.Launcher {
-	return nil
+	return []platforms.Launcher{
+		{
+			Id:       "Steam",
+			SystemId: gamesdb.SystemPC,
+			Schemes:  []string{"steam"},
+			Scanner: func(
+				cfg *config.UserConfig,
+				results []platforms.ScanResult,
+			) ([]platforms.ScanResult, error) {
+				root := "C:\\Program Files (x86)\\Steam\\steamapps"
+				f, err := os.Open(filepath.Join(root, "libraryfolders.vdf"))
+				if err != nil {
+					log.Error().Err(err).Msg("error opening libraryfolders.vdf")
+					return results, nil
+				}
+
+				p := vdf.NewParser(f)
+				m, err := p.Parse()
+				if err != nil {
+					log.Error().Err(err).Msg("error parsing libraryfolders.vdf")
+					return results, nil
+				}
+
+				log.Debug().Msgf("parsed: %v", m)
+
+				lfs := m["libraryfolders"].(map[string]interface{})
+				for l, v := range lfs {
+					log.Debug().Msgf("library id: %s", l)
+					ls := v.(map[string]interface{})
+					apps := ls["apps"].(map[string]interface{})
+					for id := range apps {
+						log.Debug().Msgf("app id: %s", id)
+						af, err := os.Open(filepath.Join(root, "appmanifest_"+id+".acf"))
+						if err != nil {
+							log.Error().Err(err).Msg("error opening libraryfolders.vdf")
+							return results, nil
+						}
+
+						ap := vdf.NewParser(af)
+						am, err := ap.Parse()
+						if err != nil {
+							log.Error().Err(err).Msg("error parsing libraryfolders.vdf")
+							return results, nil
+						}
+
+						appState := am["AppState"].(map[string]interface{})
+						log.Debug().Msgf("parsed: %v", appState["name"])
+
+						results = append(results, platforms.ScanResult{
+							Path: "steam://" + id,
+							Name: appState["name"].(string),
+						})
+					}
+				}
+
+				return results, nil
+			},
+			Launch: func(cfg *config.UserConfig, path string) error {
+				id := strings.TrimPrefix(path, "steam://")
+				id = strings.TrimPrefix(id, "rungameid/")
+				return exec.Command(
+					"cmd", "/c",
+					"start",
+					"steam://rungameid/"+id,
+				).Start()
+			},
+		},
+		{
+			Id:       "Flashpoint",
+			SystemId: gamesdb.SystemPC,
+			Schemes:  []string{"flashpoint"},
+			Launch: func(cfg *config.UserConfig, path string) error {
+				id := strings.TrimPrefix(path, "flashpoint://")
+				id = strings.TrimPrefix(id, "run/")
+				return exec.Command(
+					"cmd", "/c",
+					"start",
+					"flashpoint://run/"+id,
+				).Start()
+			},
+		},
+		{
+			Id:            "Generic",
+			Extensions:    []string{".exe", ".bat", ".cmd", ".lnk"},
+			AllowListOnly: true,
+			Launch: func(cfg *config.UserConfig, path string) error {
+				return exec.Command("cmd", "/c", path).Start()
+			},
+		},
+	}
 }

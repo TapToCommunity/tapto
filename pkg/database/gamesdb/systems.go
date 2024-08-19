@@ -114,7 +114,6 @@ const (
 	SystemAmiga          = "Amiga"
 	SystemAmstrad        = "Amstrad"
 	SystemAmstradPCW     = "AmstradPCW"
-	SystemAo486          = "ao486" // TODO: should this be PC?
 	SystemApogee         = "Apogee"
 	SystemAppleI         = "AppleI"
 	SystemAppleII        = "AppleII"
@@ -126,6 +125,7 @@ const (
 	SystemC64            = "C64"
 	SystemCasioPV2000    = "CasioPV2000"
 	SystemCoCo2          = "CoCo2"
+	SystemDOS            = "DOS"
 	SystemEDSAC          = "EDSAC"
 	SystemGalaksija      = "Galaksija"
 	SystemInteract       = "Interact"
@@ -137,6 +137,7 @@ const (
 	SystemMultiComp      = "MultiComp"
 	SystemOrao           = "Orao"
 	SystemOric           = "Oric"
+	SystemPC             = "PC"
 	SystemPCXT           = "PCXT"
 	SystemPDP1           = "PDP1"
 	SystemPET2001        = "PET2001"
@@ -352,8 +353,9 @@ var Systems = map[string]System{
 		Id:      SystemAmstradPCW,
 		Aliases: []string{"Amstrad-PCW"},
 	},
-	SystemAo486: {
-		Id: SystemAo486,
+	SystemDOS: {
+		Id:      SystemDOS,
+		Aliases: []string{"ao486", "MS-DOS"},
 	},
 	SystemApogee: {
 		Id: SystemApogee,
@@ -424,6 +426,9 @@ var Systems = map[string]System{
 	},
 	SystemOric: {
 		Id: SystemOric,
+	},
+	SystemPC: {
+		Id: SystemPC,
 	},
 	SystemPCXT: {
 		Id: SystemPCXT,
