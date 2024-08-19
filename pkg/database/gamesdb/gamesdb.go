@@ -267,6 +267,7 @@ func NewNamesIndex(
 			log.Debug().Msgf("files: %v", results)
 
 			status.Files += len(results)
+			scanned[systemId] = true
 
 			if len(results) > 0 {
 				g.Go(func() error {
@@ -291,7 +292,16 @@ func NewNamesIndex(
 		return status.Files, fmt.Errorf("error updating names index: %s", err)
 	}
 
-	err = writeIndexedSystems(db, utils.AlphaMapKeys(systemPaths))
+	indexedSystems := make([]string, 0)
+	for k, v := range scanned {
+		if v {
+			indexedSystems = append(indexed, k)
+		}
+	}
+
+	log.Debug().Msgf("indexed systems: %v", indexedSystems)
+
+	err = writeIndexedSystems(db, indexedSystems)
 	if err != nil {
 		return status.Files, fmt.Errorf("error writing indexed systems: %s", err)
 	}
