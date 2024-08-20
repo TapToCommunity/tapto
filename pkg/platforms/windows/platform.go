@@ -220,7 +220,9 @@ func (p *Platform) Launchers() []platforms.Launcher {
 				cfg *config.UserConfig,
 				results []platforms.ScanResult,
 			) ([]platforms.ScanResult, error) {
+				// TODO: detect this path from registry
 				root := "C:\\Program Files (x86)\\Steam\\steamapps"
+
 				f, err := os.Open(filepath.Join(root, "libraryfolders.vdf"))
 				if err != nil {
 					log.Error().Err(err).Msg("error opening libraryfolders.vdf")
@@ -234,30 +236,33 @@ func (p *Platform) Launchers() []platforms.Launcher {
 					return results, nil
 				}
 
-				log.Debug().Msgf("parsed: %v", m)
-
 				lfs := m["libraryfolders"].(map[string]interface{})
 				for l, v := range lfs {
 					log.Debug().Msgf("library id: %s", l)
 					ls := v.(map[string]interface{})
+
+					libraryPath := ls["path"].(string)
 					apps := ls["apps"].(map[string]interface{})
+
 					for id := range apps {
 						log.Debug().Msgf("app id: %s", id)
-						af, err := os.Open(filepath.Join(root, "appmanifest_"+id+".acf"))
+
+						manifestPath := filepath.Join(libraryPath, "steamapps", "appmanifest_"+id+".acf")
+						af, err := os.Open(manifestPath)
 						if err != nil {
-							log.Error().Err(err).Msg("error opening libraryfolders.vdf")
+							log.Error().Err(err).Msgf("error opening manifest: %s", manifestPath)
 							return results, nil
 						}
 
 						ap := vdf.NewParser(af)
 						am, err := ap.Parse()
 						if err != nil {
-							log.Error().Err(err).Msg("error parsing libraryfolders.vdf")
+							log.Error().Err(err).Msgf("error parsing manifest: %s", manifestPath)
 							return results, nil
 						}
 
 						appState := am["AppState"].(map[string]interface{})
-						log.Debug().Msgf("parsed: %v", appState["name"])
+						log.Debug().Msgf("app name: %v", appState["name"])
 
 						results = append(results, platforms.ScanResult{
 							Path: "steam://" + id,
