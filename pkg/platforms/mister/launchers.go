@@ -450,8 +450,8 @@ var Launchers = []platforms.Launcher{
 		Launch:     launch,
 	},
 	{
-		Id:         gamesdb.SystemAo486,
-		SystemId:   gamesdb.SystemAo486,
+		Id:         gamesdb.SystemDOS,
+		SystemId:   gamesdb.SystemDOS,
 		Folders:    []string{"AO486"},
 		Extensions: []string{".img", ".ima", ".vhd", ".vfd", ".iso", ".cue", ".chd"},
 		Launch:     launch,
