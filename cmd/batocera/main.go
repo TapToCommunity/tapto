@@ -35,7 +35,7 @@ import (
 	"github.com/wizzomafizzo/tapto/pkg/utils"
 
 	"github.com/wizzomafizzo/tapto/pkg/config"
-	"github.com/wizzomafizzo/tapto/pkg/daemon"
+	"github.com/wizzomafizzo/tapto/pkg/service"
 )
 
 const appName = "tapto"
@@ -78,7 +78,7 @@ func main() {
 
 	fmt.Println("TapTo v" + config.Version)
 
-	stopSvc, err := daemon.StartDaemon(pl, cfg)
+	stopSvc, err := service.Start(pl, cfg)
 	if err != nil {
 		log.Error().Msgf("error starting service: %s", err)
 		fmt.Println("Error starting service:", err)

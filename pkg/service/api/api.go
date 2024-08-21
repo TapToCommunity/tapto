@@ -1,7 +1,6 @@
 package api
 
 import (
-	"encoding/json"
 	"net/http"
 	"runtime/debug"
 	"time"
@@ -13,54 +12,11 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/wizzomafizzo/tapto/pkg/config"
-	"github.com/wizzomafizzo/tapto/pkg/daemon/api/websocket"
-	"github.com/wizzomafizzo/tapto/pkg/daemon/state"
 	"github.com/wizzomafizzo/tapto/pkg/database"
 	"github.com/wizzomafizzo/tapto/pkg/platforms"
+	"github.com/wizzomafizzo/tapto/pkg/service/state"
 	"github.com/wizzomafizzo/tapto/pkg/tokens"
 )
-
-const (
-	SubStreamStatus = "status"
-	SubStreamEvents = "events"
-)
-
-func setupWs(
-	pl platforms.Platform,
-	cfg *config.UserConfig,
-	st *state.State,
-) {
-	send := func() {
-		status, err := json.Marshal(newStatus(pl, cfg, st))
-		if err != nil {
-			log.Error().Err(err).Msg("error encoding status")
-			return
-		}
-
-		websocket.Broadcast("STATUS " + string(status))
-	}
-
-	stHook := func(_ *state.State) {
-		log.Debug().Msg("state update hook")
-		send()
-	}
-	st.SetUpdateHook(&stHook)
-
-	trHook := func() {
-		log.Debug().Msg("tracker update hook")
-		if pl.GetActiveLauncher() == "" {
-			st.SetSoftwareToken(nil)
-		}
-		send()
-	}
-	pl.SetEventHook(&trHook)
-
-	idxHook := func(_ *Index) {
-		log.Debug().Msg("index update hook")
-		send()
-	}
-	IndexInstance.SetEventHook(&idxHook)
-}
 
 // https://github.com/ironstar-io/chizerolog/blob/master/main.go
 func LoggerMiddleware(logger *zerolog.Logger) func(next http.Handler) http.Handler {
@@ -158,20 +114,6 @@ func RunApiServer(
 		r.Put("/settings", handleSettingsUpdate(cfg, st))
 		r.Post("/settings/index/games", handleIndexGames(pl, cfg))
 	})
-
-	setupWs(pl, cfg, st)
-	r.HandleFunc("/api/v1/ws", websocket.Handle(
-		func() []string {
-			status, err := json.Marshal(newStatus(pl, cfg, st))
-			if err != nil {
-				log.Error().Err(err).Msg("error encoding status")
-			}
-			return []string{"STATUS " + string(status)}
-		},
-		func(msg string) string {
-			return ""
-		},
-	))
 
 	err := http.ListenAndServe(":"+string(cfg.Api.Port), r)
 	if err != nil {

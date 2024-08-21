@@ -38,13 +38,13 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 
-	"github.com/wizzomafizzo/tapto/pkg/daemon/api"
 	"github.com/wizzomafizzo/tapto/pkg/platforms/mister"
 	"github.com/wizzomafizzo/tapto/pkg/platforms/mistex"
+	"github.com/wizzomafizzo/tapto/pkg/service"
+	"github.com/wizzomafizzo/tapto/pkg/service/api"
 	"github.com/wizzomafizzo/tapto/pkg/utils"
 
 	"github.com/wizzomafizzo/tapto/pkg/config"
-	"github.com/wizzomafizzo/tapto/pkg/daemon"
 )
 
 const appName = "tapto"
@@ -198,7 +198,7 @@ func main() {
 	svc, err := mister.NewService(mister.ServiceArgs{
 		Name: appName,
 		Entry: func() (func() error, error) {
-			return daemon.StartDaemon(pl, cfg)
+			return service.Start(pl, cfg)
 		},
 	})
 	if err != nil {

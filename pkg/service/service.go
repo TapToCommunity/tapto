@@ -19,7 +19,7 @@ You should have received a copy of the GNU General Public License
 along with TapTo.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-package daemon
+package service
 
 import (
 	"fmt"
@@ -31,11 +31,11 @@ import (
 
 	"github.com/rs/zerolog/log"
 	"github.com/wizzomafizzo/tapto/pkg/config"
-	"github.com/wizzomafizzo/tapto/pkg/daemon/api"
-	"github.com/wizzomafizzo/tapto/pkg/daemon/state"
 	"github.com/wizzomafizzo/tapto/pkg/database"
 	"github.com/wizzomafizzo/tapto/pkg/launcher"
 	"github.com/wizzomafizzo/tapto/pkg/platforms"
+	"github.com/wizzomafizzo/tapto/pkg/service/api"
+	"github.com/wizzomafizzo/tapto/pkg/service/state"
 	"github.com/wizzomafizzo/tapto/pkg/tokens"
 )
 
@@ -240,7 +240,7 @@ func processLaunchQueue(
 	}
 }
 
-func StartDaemon(
+func Start(
 	platform platforms.Platform,
 	cfg *config.UserConfig,
 ) (func() error, error) {

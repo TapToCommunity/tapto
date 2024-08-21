@@ -37,15 +37,15 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 
-	"github.com/wizzomafizzo/tapto/pkg/daemon/api"
 	"github.com/wizzomafizzo/tapto/pkg/platforms/mister"
+	"github.com/wizzomafizzo/tapto/pkg/service/api"
 	"github.com/wizzomafizzo/tapto/pkg/utils"
 
 	gc "github.com/rthornton128/goncurses"
 	"github.com/wizzomafizzo/mrext/pkg/curses"
 
 	"github.com/wizzomafizzo/tapto/pkg/config"
-	"github.com/wizzomafizzo/tapto/pkg/daemon"
+	"github.com/wizzomafizzo/tapto/pkg/service"
 
 	mrextMister "github.com/wizzomafizzo/mrext/pkg/mister"
 )
@@ -193,7 +193,7 @@ func main() {
 	svc, err := mister.NewService(mister.ServiceArgs{
 		Name: appName,
 		Entry: func() (func() error, error) {
-			return daemon.StartDaemon(pl, cfg)
+			return service.Start(pl, cfg)
 		},
 	})
 	if err != nil {

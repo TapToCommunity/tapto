@@ -8,8 +8,8 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
 	"github.com/rs/zerolog/log"
-	"github.com/wizzomafizzo/tapto/pkg/daemon/state"
 	"github.com/wizzomafizzo/tapto/pkg/platforms"
+	"github.com/wizzomafizzo/tapto/pkg/service/state"
 	"github.com/wizzomafizzo/tapto/pkg/tokens"
 )
 

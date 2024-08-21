@@ -1,4 +1,4 @@
-package daemon
+package service
 
 import (
 	"errors"
@@ -7,9 +7,9 @@ import (
 
 	"github.com/rs/zerolog/log"
 	"github.com/wizzomafizzo/tapto/pkg/config"
-	"github.com/wizzomafizzo/tapto/pkg/daemon/state"
 	"github.com/wizzomafizzo/tapto/pkg/platforms"
 	"github.com/wizzomafizzo/tapto/pkg/readers"
+	"github.com/wizzomafizzo/tapto/pkg/service/state"
 	"github.com/wizzomafizzo/tapto/pkg/tokens"
 	"github.com/wizzomafizzo/tapto/pkg/utils"
 )
