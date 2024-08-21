@@ -59,7 +59,9 @@ func main() {
 	cfg, err := config.NewUserConfig(appName, &config.UserConfig{
 		TapTo: config.TapToConfig{
 			ProbeDevice: true,
-			ApiPort:     config.DefaultApiPort,
+		},
+		Api: config.ApiConfig{
+			Port: config.DefaultApiPort,
 		},
 	})
 	if err != nil {

@@ -264,8 +264,8 @@ func displayServiceInfo(pl platforms.Platform, cfg *config.UserConfig, stdscr *g
 			ipDisplay = "Unknown"
 		} else {
 			ipDisplay = ip.String()
-			if cfg.TapTo.ApiPort != config.DefaultApiPort {
-				ipDisplay += ":" + cfg.TapTo.ApiPort
+			if cfg.Api.Port != config.DefaultApiPort {
+				ipDisplay += ":" + cfg.Api.Port
 			}
 		}
 

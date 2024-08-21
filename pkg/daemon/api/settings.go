@@ -20,7 +20,7 @@ type SettingsResponse struct {
 	DisableSounds     bool     `json:"disableSounds"`
 	ProbeDevice       bool     `json:"probeDevice"`
 	ExitGame          bool     `json:"exitGame"`
-	ExitGameDelay     int8     `json:"exitGameDelay"`
+	ExitGameDelay     int      `json:"exitGameDelay"`
 	ExitGameBlocklist []string `json:"exitGameBlocklist"`
 	Debug             bool     `json:"debug"`
 	Launching         bool     `json:"launching"`
@@ -63,7 +63,7 @@ type UpdateSettingsRequest struct {
 	DisableSounds     *bool     `json:"disableSounds"`
 	ProbeDevice       *bool     `json:"probeDevice"`
 	ExitGame          *bool     `json:"exitGame"`
-	ExitGameDelay     *int8     `json:"exitGameDelay"`
+	ExitGameDelay     *int      `json:"exitGameDelay"`
 	ExitGameBlocklist *[]string `json:"exitGameBlocklist"`
 	Debug             *bool     `json:"debug"`
 	Launching         *bool     `json:"launching"`
@@ -111,7 +111,7 @@ func handleSettingsUpdate(cfg *config.UserConfig, st *state.State) http.HandlerF
 		}
 
 		if req.ExitGameDelay != nil {
-			log.Info().Int8("exitGameDelay", *req.ExitGameDelay).Msg("updating exit game delay")
+			log.Info().Int("exitGameDelay", *req.ExitGameDelay).Msg("updating exit game delay")
 			cfg.SetExitGameDelay(*req.ExitGameDelay)
 		}
 

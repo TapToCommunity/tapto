@@ -34,22 +34,20 @@ const UserConfigEnv = "TAPTO_CONFIG"
 const UserAppPathEnv = "TAPTO_APP_PATH"
 
 type TapToConfig struct {
-	ConnectionString  string   `ini:"connection_string"` // DEPRECATED
 	Reader            []string `ini:"reader,omitempty,allowshadow"`
-	AllowCommands     bool     `ini:"allow_commands"` // TODO: rename to allow_shell
-	DisableSounds     bool     `ini:"disable_sounds"`
-	ProbeDevice       bool     `ini:"probe_device"`
-	ExitGame          bool     `ini:"exit_game"` // TODO: rename to insert_mode
-	ExitGameBlocklist []string `ini:"exit_game_blocklist"`
-	ExitGameDelay     int8     `ini:"exit_game_delay"`
+	AllowCommands     bool     `ini:"allow_commands"`      // TODO: DEPRECATED, remove and use allow_shell below
+	DisableSounds     bool     `ini:"disable_sounds"`      // TODO: rename something like audio_feedback?
+	ProbeDevice       bool     `ini:"probe_device"`        // TODO: rename to reader_detection?
+	ExitGame          bool     `ini:"exit_game"`           // TODO: rename to insert_mode
+	ExitGameBlocklist []string `ini:"exit_game_blocklist"` // TODO: rename to insert_mode_blocklist
+	ExitGameDelay     int      `ini:"exit_game_delay"`     // TODO: rename to insert_mode_delay
 	Debug             bool     `ini:"debug"`
-	ApiPort           string   `ini:"api_port"`
-	ApiBasicAuth      string   `ini:"api_basic_auth"`
+	ConnectionString  string   `ini:"connection_string,omitempty"` // DEPRECATED
 }
 
 type SystemsConfig struct {
 	GamesFolder []string `ini:"games_folder,omitempty,allowshadow"`
-	SetCore     []string `ini:"set_core,omitempty,allowshadow"` // TODO: deprecated?
+	SetCore     []string `ini:"set_core,omitempty,allowshadow"` // TODO: deprecated? change to set_launcher
 }
 
 type LaunchersConfig struct {
@@ -57,13 +55,20 @@ type LaunchersConfig struct {
 	// TODO: allow_shell - contents of shell command
 }
 
+type ApiConfig struct {
+	Port        string   `ini:"port"`
+	Client      []string `ini:"client,omitempty,allowshadow"`
+	AllowLaunch []string `ini:"allow_launch,omitempty,allowshadow"`
+}
+
 type UserConfig struct {
 	mu        sync.RWMutex
 	AppPath   string          `ini:"-"`
 	IniPath   string          `ini:"-"`
 	TapTo     TapToConfig     `ini:"tapto"`
-	Systems   SystemsConfig   `ini:"systems,omitempty"`
-	Launchers LaunchersConfig `ini:"launchers,omitempty"`
+	Systems   SystemsConfig   `ini:"systems"`
+	Launchers LaunchersConfig `ini:"launchers"`
+	Api       ApiConfig       `ini:"api"`
 }
 
 func (c *UserConfig) GetConnectionString() string {
@@ -132,7 +137,7 @@ func (c *UserConfig) GetExitGame() bool {
 	return c.TapTo.ExitGame
 }
 
-func (c *UserConfig) SetExitGameDelay(exitGameDelay int8) {
+func (c *UserConfig) SetExitGameDelay(exitGameDelay int) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.TapTo.ExitGameDelay = exitGameDelay
@@ -150,7 +155,7 @@ func (c *UserConfig) GetExitGameBlocklist() []string {
 	return c.TapTo.ExitGameBlocklist
 }
 
-func (c *UserConfig) GetExitGameDelay() int8 {
+func (c *UserConfig) GetExitGameDelay() int {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	return c.TapTo.ExitGameDelay

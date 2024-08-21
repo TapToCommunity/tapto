@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"net/http"
 	"runtime/debug"
-	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -131,17 +130,6 @@ func RunApiServer(
 		AllowCredentials: true,
 	}))
 
-	if cfg.TapTo.ApiBasicAuth != "" {
-		if !strings.Contains(cfg.TapTo.ApiBasicAuth, ":") {
-			log.Error().Msg("invalid basic auth config")
-		} else {
-			ps := strings.SplitN(cfg.TapTo.ApiBasicAuth, ":", 2)
-			username, password := ps[0], ps[1]
-			log.Info().Msgf("enabled basic auth for api with user %s", username)
-			r.Use(middleware.BasicAuth("", map[string]string{username: password}))
-		}
-	}
-
 	r.Route("/api/v1", func(r chi.Router) {
 		r.Use(render.SetContentType(render.ContentTypeJSON))
 
@@ -185,7 +173,7 @@ func RunApiServer(
 		},
 	))
 
-	err := http.ListenAndServe(":"+string(cfg.TapTo.ApiPort), r)
+	err := http.ListenAndServe(":"+string(cfg.Api.Port), r)
 	if err != nil {
 		log.Error().Msgf("error starting http server: %s", err)
 	}
