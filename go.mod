@@ -31,6 +31,7 @@ require (
 	github.com/magefile/mage v1.13.0 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
+	github.com/olahol/melody v1.2.1 // indirect
 	github.com/stretchr/testify v1.9.0 // indirect
 	golang.org/x/term v0.22.0 // indirect
 )
