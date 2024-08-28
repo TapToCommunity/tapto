@@ -1,10 +1,8 @@
 package api
 
 import (
-	"net/http"
 	"time"
 
-	"github.com/go-chi/render"
 	"github.com/rs/zerolog/log"
 	"github.com/wizzomafizzo/tapto/pkg/config"
 	"github.com/wizzomafizzo/tapto/pkg/platforms"
@@ -57,10 +55,6 @@ type StatusResponse struct {
 	Launching   bool                 `json:"launching"`
 	GamesIndex  IndexResponse        `json:"gamesIndex"`
 	Playing     PlayingResponse      `json:"playing"`
-}
-
-func (sr *StatusResponse) Render(w http.ResponseWriter, r *http.Request) error {
-	return nil
 }
 
 func newStatus(
@@ -136,23 +130,10 @@ func newStatus(
 	}
 }
 
-func handleStatus(
-	pl platforms.Platform,
-	cfg *config.UserConfig,
-	st *state.State,
-) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		log.Info().Msg("received status request")
-
-		resp := newStatus(pl, cfg, st)
-
-		err := render.Render(w, r, &resp)
-		if err != nil {
-			log.Error().Err(err).Msgf("error encoding status response")
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-	}
+func handleStatus(env RequestEnv) error {
+	log.Info().Msg("received status request")
+	status := newStatus(env.Platform, env.Config, env.State)
+	return env.SendResponse(env.Id, status)
 }
 
 type VersionResponse struct {
@@ -160,7 +141,7 @@ type VersionResponse struct {
 	Platform string `json:"platform"`
 }
 
-func requestVersion(env RequestEnv) error {
+func handleVersion(env RequestEnv) error {
 	log.Info().Msg("received version request")
 	return env.SendResponse(
 		env.Id,

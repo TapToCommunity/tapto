@@ -21,10 +21,7 @@ import (
 
 const RequestTimeout = 30 * time.Second
 
-// r.Get("/status", handleStatus(pl, cfg, st))
-// r.Get("/version", handleVersion(pl))
 // r.Post("/launch", handleLaunch(st, tq))
-// r.Get("/launch/*", handleLaunchBasic(st, tq))
 // r.Delete("/launch", HandleStopGame(pl))
 // r.Post("/readers/0/write", handleReaderWrite(st))
 // r.Get("/games", handleGames(pl, cfg))
@@ -40,11 +37,14 @@ const RequestTimeout = 30 * time.Second
 // r.Post("/settings/index/games", handleIndexGames(pl, cfg))
 
 var methodMap = map[string]func(RequestEnv) error{
-	"version": requestVersion,
+	"status":  handleStatus,
+	"version": handleVersion,
 }
 
 type RequestEnv struct {
 	Platform     platforms.Platform
+	Config       *config.UserConfig
+	State        *state.State
 	Id           uuid.UUID
 	Params       *any
 	SendResponse func(uuid.UUID, any) error
