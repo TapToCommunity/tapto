@@ -22,47 +22,35 @@ type AllMappingsResponse struct {
 	Mappings []MappingResponse `json:"mappings"`
 }
 
-func (amr *AllMappingsResponse) Render(w http.ResponseWriter, r *http.Request) error {
-	return nil
-}
+func handleMappings(env RequestEnv) error {
+	log.Info().Msg("received mappings request")
 
-func handleMappings(db *database.Database) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		log.Info().Msg("received mappings request")
-
-		resp := AllMappingsResponse{
-			Mappings: make([]MappingResponse, 0),
-		}
-
-		mappings, err := db.GetAllMappings()
-		if err != nil {
-			log.Error().Err(err).Msg("error getting mappings")
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		mrs := make([]MappingResponse, 0)
-
-		for _, m := range mappings {
-			t := time.Unix(0, m.Added*int64(time.Millisecond))
-
-			mr := MappingResponse{
-				Mapping: m,
-				Added:   t.Format(time.RFC3339),
-			}
-
-			mrs = append(mrs, mr)
-		}
-
-		resp.Mappings = mrs
-
-		err = render.Render(w, r, &resp)
-		if err != nil {
-			log.Error().Err(err).Msg("error encoding mappings response")
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
+	resp := AllMappingsResponse{
+		Mappings: make([]MappingResponse, 0),
 	}
+
+	mappings, err := env.Database.GetAllMappings()
+	if err != nil {
+		log.Error().Err(err).Msg("error getting mappings")
+		return env.SendError(env.Id, 1, "error getting mappings") // TODO: error code
+	}
+
+	mrs := make([]MappingResponse, 0)
+
+	for _, m := range mappings {
+		t := time.Unix(0, m.Added*int64(time.Millisecond))
+
+		mr := MappingResponse{
+			Mapping: m,
+			Added:   t.Format(time.RFC3339),
+		}
+
+		mrs = append(mrs, mr)
+	}
+
+	resp.Mappings = mrs
+
+	return env.SendResponse(env.Id, resp)
 }
 
 type AddMappingRequest struct {

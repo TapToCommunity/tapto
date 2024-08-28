@@ -19,32 +19,44 @@ import (
 	"github.com/wizzomafizzo/tapto/pkg/tokens"
 )
 
+// TODO: should there be a TTL for request timestamps? what about offline misters?
+// TODO: can we safely allow launch basic unrestricted for local accounts?
+// TODO: should api launches from localhost require allowlist?
+// TODO: download log file no longer works, need an alternative
+
 const RequestTimeout = 30 * time.Second
+
+/*
+{
+	"id": "123e4567-e89b-12d3-a456-426614174000",
+	"timestamp": 1612345678901,
+	"method": "status"
+}
+*/
 
 // r.Post("/launch", handleLaunch(st, tq))
 // r.Delete("/launch", HandleStopGame(pl))
 // r.Post("/readers/0/write", handleReaderWrite(st))
-// r.Get("/games", handleGames(pl, cfg))
-// r.Get("/systems", handleSystems(pl))
-// r.Get("/mappings", handleMappings(db))
 // r.Post("/mappings", handleAddMapping(db))
 // r.Delete("/mappings/{id}", handleDeleteMapping(db))
 // r.Put("/mappings/{id}", handleUpdateMapping(db))
-// r.Get("/history", handleHistory(db))
-// r.Get("/settings", handleSettings(cfg, st))
-// r.Get("/settings/log/download", handleSettingsDownloadLog(pl))
 // r.Put("/settings", handleSettingsUpdate(cfg, st))
-// r.Post("/settings/index/games", handleIndexGames(pl, cfg))
 
 var methodMap = map[string]func(RequestEnv) error{
-	"status":  handleStatus,
-	"version": handleVersion,
+	"games.index":  handleIndexGames,
+	"settings.get": handleSettings,
+	"systems":      handleSystems,
+	"history":      handleHistory,
+	"mappings.get": handleMappings,
+	"status":       handleStatus,
+	"version":      handleVersion,
 }
 
 type RequestEnv struct {
 	Platform     platforms.Platform
 	Config       *config.UserConfig
 	State        *state.State
+	Database     *database.Database
 	Id           uuid.UUID
 	Params       *any
 	SendResponse func(uuid.UUID, any) error
@@ -132,6 +144,9 @@ func RunApiServer(
 		if err == nil && req.Method != "" {
 			env := RequestEnv{
 				Platform: pl,
+				Config:   cfg,
+				State:    st,
+				Database: db,
 				SendResponse: func(id uuid.UUID, result any) error {
 					log.Debug().Interface("result", result).Msg("sending response")
 					return nil

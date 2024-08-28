@@ -1,16 +1,12 @@
 package api
 
 import (
-	"io"
 	"net/http"
-	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/go-chi/render"
 	"github.com/rs/zerolog/log"
 	"github.com/wizzomafizzo/tapto/pkg/config"
-	"github.com/wizzomafizzo/tapto/pkg/platforms"
 	"github.com/wizzomafizzo/tapto/pkg/service/state"
 )
 
@@ -26,35 +22,27 @@ type SettingsResponse struct {
 	Launching         bool     `json:"launching"`
 }
 
-func (sr *SettingsResponse) Render(w http.ResponseWriter, r *http.Request) error {
-	return nil
-}
+func handleSettings(env RequestEnv) error {
+	log.Info().Msg("received settings request")
 
-func handleSettings(cfg *config.UserConfig, st *state.State) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		log.Info().Msg("received settings request")
-
-		resp := SettingsResponse{
-			ConnectionString:  cfg.GetConnectionString(),
-			AllowCommands:     cfg.GetAllowCommands(),
-			DisableSounds:     cfg.GetDisableSounds(),
-			ProbeDevice:       cfg.GetProbeDevice(),
-			ExitGame:          cfg.GetExitGame(),
-			ExitGameDelay:     cfg.GetExitGameDelay(),
-			ExitGameBlocklist: make([]string, 0),
-			Debug:             cfg.GetDebug(),
-			Launching:         !st.IsLauncherDisabled(),
-		}
-
-		resp.ExitGameBlocklist = append(resp.ExitGameBlocklist, cfg.GetExitGameBlocklist()...)
-
-		err := render.Render(w, r, &resp)
-		if err != nil {
-			log.Error().Err(err).Msg("error encoding settings response")
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
+	resp := SettingsResponse{
+		ConnectionString:  env.Config.GetConnectionString(),
+		AllowCommands:     env.Config.GetAllowCommands(),
+		DisableSounds:     env.Config.GetDisableSounds(),
+		ProbeDevice:       env.Config.GetProbeDevice(),
+		ExitGame:          env.Config.GetExitGame(),
+		ExitGameDelay:     env.Config.GetExitGameDelay(),
+		ExitGameBlocklist: make([]string, 0),
+		Debug:             env.Config.GetDebug(),
+		Launching:         !env.State.IsLauncherDisabled(),
 	}
+
+	resp.ExitGameBlocklist = append(
+		resp.ExitGameBlocklist,
+		env.Config.GetExitGameBlocklist()...,
+	)
+
+	return env.SendResponse(env.Id, resp)
 }
 
 type UpdateSettingsRequest struct {
@@ -142,30 +130,6 @@ func handleSettingsUpdate(cfg *config.UserConfig, st *state.State) http.HandlerF
 		err = cfg.SaveConfig()
 		if err != nil {
 			log.Error().Err(err).Msg("error saving config")
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-	}
-}
-
-func handleSettingsDownloadLog(pl platforms.Platform) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		log.Info().Msg("received settings log request")
-
-		file, err := os.Open(filepath.Join(pl.LogFolder(), config.LogFilename))
-		if err != nil {
-			log.Error().Err(err).Msg("error opening log file")
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		defer file.Close()
-
-		w.Header().Set("Content-Disposition", "attachment; filename="+config.LogFilename)
-		w.Header().Set("Content-Type", "text/plain")
-
-		_, err = io.Copy(w, file)
-		if err != nil {
-			log.Error().Err(err).Msg("error copying log file")
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}

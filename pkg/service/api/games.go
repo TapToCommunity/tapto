@@ -100,15 +100,10 @@ func NewIndex() *Index {
 
 var IndexInstance = NewIndex()
 
-func handleIndexGames(
-	platform platforms.Platform,
-	cfg *config.UserConfig,
-) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		log.Info().Msg("received index games request")
-
-		IndexInstance.GenerateIndex(platform, cfg)
-	}
+func handleIndexGames(env RequestEnv) error {
+	log.Info().Msg("received index games request")
+	IndexInstance.GenerateIndex(env.Platform, env.Config)
+	return nil
 }
 
 type SearchResultGame struct {
@@ -128,7 +123,7 @@ func (sr *SearchResults) Render(w http.ResponseWriter, r *http.Request) error {
 
 func handleGames(platform platforms.Platform, cfg *config.UserConfig) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		log.Info().Msg("received games request")
+		log.Info().Msg("received games search request")
 
 		query := r.URL.Query().Get("query")
 		system := r.URL.Query().Get("system")
