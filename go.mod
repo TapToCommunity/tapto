@@ -27,6 +27,7 @@ require (
 	github.com/andygrunwald/vdf v1.1.0 // indirect
 	github.com/creack/goselect v0.1.2 // indirect
 	github.com/ebfe/scard v0.0.0-20230420082256-7db3f9b7c8a7 // indirect
+	github.com/google/uuid v1.6.0 // indirect
 	github.com/joho/godotenv v1.4.0 // indirect
 	github.com/magefile/mage v1.13.0 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
