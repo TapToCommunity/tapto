@@ -30,7 +30,7 @@ const RequestTimeout = 30 * time.Second
 {
 	"id": "123e4567-e89b-12d3-a456-426614174000",
 	"timestamp": 1612345678901,
-	"method": "status"
+	"method": "version"
 }
 */
 
@@ -45,10 +45,10 @@ const RequestTimeout = 30 * time.Second
 var methodMap = map[string]func(RequestEnv) error{
 	"games.index":  handleIndexGames,
 	"settings.get": handleSettings,
-	"systems":      handleSystems,
-	"history":      handleHistory,
+	"systems.get":  handleSystems,
+	"history.get":  handleHistory,
 	"mappings.get": handleMappings,
-	"status":       handleStatus,
+	"status":       handleStatus, // TODO: remove, convert to individual methods?
 	"version":      handleVersion,
 }
 
@@ -65,10 +65,10 @@ type RequestEnv struct {
 
 type RequestObject struct {
 	// no id means the request is a "notification" and requires no response
-	Id        *uuid.UUID `json:"id"`        // UUID v1
-	Timestamp int64      `json:"timestamp"` // unix timestamp (ms)
+	Id        *uuid.UUID `json:"id,omitempty"` // UUID v1
+	Timestamp int64      `json:"timestamp"`    // unix timestamp (ms)
 	Method    string     `json:"method"`
-	Params    *any       `json:"params"`
+	Params    *any       `json:"params,omitempty"`
 }
 
 type ErrorObject struct {
@@ -80,7 +80,7 @@ type ResponseObject struct {
 	Id        uuid.UUID    `json:"id"`        // UUID v1
 	Timestamp int64        `json:"timestamp"` // unix timestamp (ms)
 	Result    any          `json:"result"`
-	Error     *ErrorObject `json:"error"`
+	Error     *ErrorObject `json:"error,omitempty"`
 }
 
 func handleRequest(env RequestEnv, req RequestObject) error {
@@ -100,6 +100,47 @@ func handleRequest(env RequestEnv, req RequestObject) error {
 	env.Params = req.Params
 
 	return fn(env)
+}
+
+func sendResponse(s *melody.Session) func(uuid.UUID, any) error {
+	return func(id uuid.UUID, result any) error {
+		log.Debug().Interface("result", result).Msg("sending response")
+
+		resp := ResponseObject{
+			Id:        id,
+			Timestamp: time.Now().UnixNano() / int64(time.Millisecond),
+			Result:    result,
+		}
+
+		data, err := json.Marshal(resp)
+		if err != nil {
+			return err
+		}
+
+		return s.Write(data)
+	}
+}
+
+func sendError(s *melody.Session) func(uuid.UUID, int, string) error {
+	return func(id uuid.UUID, code int, message string) error {
+		log.Debug().Int("code", code).Str("message", message).Msg("sending error")
+
+		resp := ResponseObject{
+			Id:        id,
+			Timestamp: time.Now().UnixNano() / int64(time.Millisecond),
+			Error: &ErrorObject{
+				Code:    code,
+				Message: message,
+			},
+		}
+
+		data, err := json.Marshal(resp)
+		if err != nil {
+			return err
+		}
+
+		return s.Write(data)
+	}
 }
 
 func handleResponse(resp ResponseObject) error {
@@ -143,18 +184,12 @@ func RunApiServer(
 		err := json.Unmarshal(msg, &req)
 		if err == nil && req.Method != "" {
 			env := RequestEnv{
-				Platform: pl,
-				Config:   cfg,
-				State:    st,
-				Database: db,
-				SendResponse: func(id uuid.UUID, result any) error {
-					log.Debug().Interface("result", result).Msg("sending response")
-					return nil
-				},
-				SendError: func(id uuid.UUID, code int, message string) error {
-					log.Debug().Int("code", code).Str("message", message).Msg("sending error")
-					return nil
-				},
+				Platform:     pl,
+				Config:       cfg,
+				State:        st,
+				Database:     db,
+				SendResponse: sendResponse(s),
+				SendError:    sendError(s),
 			}
 
 			err := handleRequest(env, req)
