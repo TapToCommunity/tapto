@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"time"
 
@@ -18,9 +19,7 @@ import (
 	"github.com/wizzomafizzo/tapto/pkg/tokens"
 )
 
-const (
-	RequestTimeout = 30 * time.Second
-)
+const RequestTimeout = 30 * time.Second
 
 // r.Get("/status", handleStatus(pl, cfg, st))
 // r.Get("/version", handleVersion(pl))
@@ -40,10 +39,22 @@ const (
 // r.Put("/settings", handleSettingsUpdate(cfg, st))
 // r.Post("/settings/index/games", handleIndexGames(pl, cfg))
 
+var methodMap = map[string]func(RequestEnv) error{
+	"version": requestVersion,
+}
+
+type RequestEnv struct {
+	Platform     platforms.Platform
+	Id           uuid.UUID
+	Params       *any
+	SendResponse func(uuid.UUID, any) error
+	SendError    func(uuid.UUID, int, string) error
+}
+
 type RequestObject struct {
 	// no id means the request is a "notification" and requires no response
-	Id        *uuid.UUID `json:"id"`        // optional, UUID v1
-	Timestamp *int64     `json:"timestamp"` // optional, unix timestamp (ms)
+	Id        *uuid.UUID `json:"id"`        // UUID v1
+	Timestamp int64      `json:"timestamp"` // unix timestamp (ms)
 	Method    string     `json:"method"`
 	Params    *any       `json:"params"`
 }
@@ -55,16 +66,32 @@ type ErrorObject struct {
 
 type ResponseObject struct {
 	Id        uuid.UUID    `json:"id"`        // UUID v1
-	Timestamp *int64       `json:"timestamp"` // unix timestamp (ms)
+	Timestamp int64        `json:"timestamp"` // unix timestamp (ms)
 	Result    any          `json:"result"`
 	Error     *ErrorObject `json:"error"`
 }
 
-func handleRequest(req RequestObject) error {
-	return nil
+func handleRequest(env RequestEnv, req RequestObject) error {
+	log.Debug().Interface("request", req).Msg("received request")
+
+	fn, ok := methodMap[req.Method]
+	if !ok {
+		return errors.New("unknown method")
+	}
+
+	if req.Id == nil {
+		log.Debug().Msg("request is a notification")
+		return nil
+	}
+
+	env.Id = *req.Id
+	env.Params = req.Params
+
+	return fn(env)
 }
 
 func handleResponse(resp ResponseObject) error {
+	log.Debug().Interface("response", resp).Msg("received response")
 	return nil
 }
 
@@ -103,7 +130,19 @@ func RunApiServer(
 		var req RequestObject
 		err := json.Unmarshal(msg, &req)
 		if err == nil && req.Method != "" {
-			err := handleRequest(req)
+			env := RequestEnv{
+				Platform: pl,
+				SendResponse: func(id uuid.UUID, result any) error {
+					log.Debug().Interface("result", result).Msg("sending response")
+					return nil
+				},
+				SendError: func(id uuid.UUID, code int, message string) error {
+					log.Debug().Int("code", code).Str("message", message).Msg("sending error")
+					return nil
+				},
+			}
+
+			err := handleRequest(env, req)
 			if err != nil {
 				log.Error().Err(err).Msg("error handling request")
 			}
