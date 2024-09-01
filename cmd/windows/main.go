@@ -35,7 +35,7 @@ import (
 	"github.com/wizzomafizzo/tapto/pkg/utils"
 
 	"github.com/wizzomafizzo/tapto/pkg/config"
-	"github.com/wizzomafizzo/tapto/pkg/daemon"
+	"github.com/wizzomafizzo/tapto/pkg/service"
 )
 
 const appName = "tapto"
@@ -59,7 +59,9 @@ func main() {
 	cfg, err := config.NewUserConfig(appName, &config.UserConfig{
 		TapTo: config.TapToConfig{
 			ProbeDevice: true,
-			ApiPort:     config.DefaultApiPort,
+		},
+		Api: config.ApiConfig{
+			Port: config.DefaultApiPort,
 		},
 	})
 	if err != nil {
@@ -76,7 +78,7 @@ func main() {
 
 	fmt.Println("TapTo v" + config.Version)
 
-	stopSvc, err := daemon.StartDaemon(pl, cfg)
+	stopSvc, err := service.Start(pl, cfg)
 	if err != nil {
 		log.Error().Msgf("error starting service: %s", err)
 		fmt.Println("Error starting service:", err)
@@ -91,7 +93,7 @@ func main() {
 	}
 
 	fmt.Println("Press Enter to exit")
-	fmt.Scanln()
+	_, _ = fmt.Scanln()
 
 	err = stopSvc()
 	if err != nil {
