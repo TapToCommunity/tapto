@@ -41,13 +41,14 @@ type TapToConfig struct {
 	ExitGame          bool     `ini:"exit_game"`           // TODO: rename to insert_mode
 	ExitGameBlocklist []string `ini:"exit_game_blocklist"` // TODO: rename to insert_mode_blocklist
 	ExitGameDelay     int      `ini:"exit_game_delay"`     // TODO: rename to insert_mode_delay
+	ConsoleLogging    bool     `ini:"console_logging"`
 	Debug             bool     `ini:"debug"`
 	ConnectionString  string   `ini:"connection_string,omitempty"` // DEPRECATED
 }
 
 type SystemsConfig struct {
-	GamesFolder []string `ini:"games_folder,omitempty,allowshadow"`
-	SetCore     []string `ini:"set_core,omitempty,allowshadow"` // TODO: deprecated? change to set_launcher
+	GamesFolder []string `ini:"games_folder,omitempty,allowshadow"` // TODO: rename root_folder?
+	SetCore     []string `ini:"set_core,omitempty,allowshadow"`     // TODO: deprecated? change to set_launcher
 }
 
 type LaunchersConfig struct {
