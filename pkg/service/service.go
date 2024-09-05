@@ -23,7 +23,6 @@ package service
 
 import (
 	"fmt"
-	"regexp"
 	"strings"
 	"time"
 
@@ -45,93 +44,6 @@ func inExitGameBlocklist(platform platforms.Platform, cfg *config.UserConfig) bo
 		blocklist = append(blocklist, strings.ToLower(v))
 	}
 	return slices.Contains(blocklist, strings.ToLower(platform.GetActiveLauncher()))
-}
-
-func checkMappingUid(m database.Mapping, t tokens.Token) bool {
-	uid := database.NormalizeUid(t.UID)
-
-	switch {
-	case m.Match == database.MatchTypeExact:
-		return uid == m.Pattern
-	case m.Match == database.MatchTypePartial:
-		return strings.Contains(uid, m.Pattern)
-	case m.Match == database.MatchTypeRegex:
-		re, err := regexp.Compile(m.Pattern)
-		if err != nil {
-			log.Error().Err(err).Msgf("error compiling regex")
-			return false
-		}
-		return re.MatchString(uid)
-	}
-
-	return false
-}
-
-func checkMappingText(m database.Mapping, t tokens.Token) bool {
-	switch {
-	case m.Match == database.MatchTypeExact:
-		return t.Text == m.Pattern
-	case m.Match == database.MatchTypePartial:
-		return strings.Contains(t.Text, m.Pattern)
-	case m.Match == database.MatchTypeRegex:
-		re, err := regexp.Compile(m.Pattern)
-		if err != nil {
-			log.Error().Err(err).Msgf("error compiling regex")
-			return false
-		}
-		return re.MatchString(t.Text)
-	}
-
-	return false
-}
-
-func checkMappingData(m database.Mapping, t tokens.Token) bool {
-	switch {
-	case m.Match == database.MatchTypeExact:
-		return t.Data == m.Pattern
-	case m.Match == database.MatchTypePartial:
-		return strings.Contains(t.Data, m.Pattern)
-	case m.Match == database.MatchTypeRegex:
-		re, err := regexp.Compile(m.Pattern)
-		if err != nil {
-			log.Error().Err(err).Msgf("error compiling regex")
-			return false
-		}
-		return re.MatchString(t.Data)
-	}
-
-	return false
-}
-
-func getMapping(db *database.Database, pl platforms.Platform, token tokens.Token) (string, bool) {
-	// check db mappings
-	ms, err := db.GetEnabledMappings()
-	if err != nil {
-		log.Error().Err(err).Msgf("error getting db mappings")
-	}
-
-	for _, m := range ms {
-		switch {
-		case m.Type == database.MappingTypeUID:
-			if checkMappingUid(m, token) {
-				log.Info().Msg("launching with db uid match override")
-				return m.Override, true
-			}
-		case m.Type == database.MappingTypeText:
-			if checkMappingText(m, token) {
-				log.Info().Msg("launching with db text match override")
-				return m.Override, true
-			}
-		case m.Type == database.MappingTypeData:
-			if checkMappingData(m, token) {
-				log.Info().Msg("launching with db data match override")
-				return m.Override, true
-			}
-		}
-	}
-
-	// check platform mappings
-	return pl.LookupMapping(token)
 }
 
 func launchToken(
