@@ -84,6 +84,7 @@ func addToStartup() error {
 }
 
 func handleWriteCommand(textToWrite string, svc *mister.Service, cfg *config.UserConfig) {
+	// TODO: needs to use websocket
 	log.Info().Msgf("writing text to tag: %s", textToWrite)
 
 	if !svc.Running() {
@@ -92,7 +93,7 @@ func handleWriteCommand(textToWrite string, svc *mister.Service, cfg *config.Use
 		os.Exit(1)
 	}
 
-	body, err := json.Marshal(api.ReaderWriteRequest{Text: textToWrite})
+	body, err := json.Marshal(api.ReaderWriteParams{Text: textToWrite})
 	if err != nil {
 		_, _ = fmt.Fprintln(os.Stderr, "Error encoding request:", err)
 		log.Error().Msgf("error encoding request: %s", err)

@@ -1,70 +1,53 @@
 package api
 
 import (
+	"encoding/json"
 	"errors"
-	"net/http"
-
-	"github.com/go-chi/render"
 	"github.com/rs/zerolog/log"
-	"github.com/wizzomafizzo/tapto/pkg/service/state"
 )
 
-type ReaderWriteRequest struct {
+type ReaderWriteParams struct {
 	Text string `json:"text"`
 }
 
-func (rwr *ReaderWriteRequest) Bind(r *http.Request) error {
-	if rwr.Text == "" {
-		return errors.New("missing text")
+func handleReaderWrite(env RequestEnv) error {
+	log.Info().Msg("received reader write request")
+
+	if len(env.Params) == 0 {
+		return errors.New("missing params")
 	}
 
-	return nil
-}
-
-func handleReaderWrite(st *state.State) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		log.Info().Msg("received reader write request")
-
-		var req ReaderWriteRequest
-		err := render.Bind(r, &req)
-		if err != nil {
-			log.Error().Err(err).Msg("error decoding request")
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-
-		rs := st.ListReaders()
-		if len(rs) == 0 {
-			log.Error().Msg("no readers connected")
-			http.Error(w, "no readers connected", http.StatusServiceUnavailable)
-			return
-		}
-
-		rid := rs[0]
-		lt := st.GetLastScanned()
-
-		if !lt.ScanTime.IsZero() && !lt.Remote {
-			rid = lt.Source
-		}
-
-		reader, ok := st.GetReader(rid)
-		if !ok || reader == nil {
-			log.Error().Msg("reader not connected: " + rs[0])
-			http.Error(w, "reader not connected", http.StatusServiceUnavailable)
-			return
-		}
-
-		t, err := reader.Write(req.Text)
-		if err != nil {
-			log.Error().Err(err).Msg("error writing to reader")
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		if t != nil {
-			st.SetWroteToken(t)
-		}
-
-		w.WriteHeader(http.StatusOK)
+	var params ReaderWriteParams
+	err := json.Unmarshal(env.Params, &params)
+	if err != nil {
+		return errors.New("invalid params: " + err.Error())
 	}
+
+	rs := env.State.ListReaders()
+	if len(rs) == 0 {
+		return errors.New("no readers connected")
+	}
+
+	rid := rs[0]
+	lt := env.State.GetLastScanned()
+
+	if !lt.ScanTime.IsZero() && !lt.Remote {
+		rid = lt.Source
+	}
+
+	reader, ok := env.State.GetReader(rid)
+	if !ok || reader == nil {
+		return errors.New("reader not connected: " + rs[0])
+	}
+
+	t, err := reader.Write(params.Text)
+	if err != nil {
+		return errors.New("error writing to reader")
+	}
+
+	if t != nil {
+		env.State.SetWroteToken(t)
+	}
+
+	return env.SendResponse(env.Id, true)
 }

@@ -1,13 +1,9 @@
 package api
 
 import (
-	"net/http"
-	"strings"
-
-	"github.com/go-chi/render"
+	"encoding/json"
+	"errors"
 	"github.com/rs/zerolog/log"
-	"github.com/wizzomafizzo/tapto/pkg/config"
-	"github.com/wizzomafizzo/tapto/pkg/service/state"
 )
 
 type SettingsResponse struct {
@@ -26,6 +22,7 @@ func handleSettings(env RequestEnv) error {
 	log.Info().Msg("received settings request")
 
 	resp := SettingsResponse{
+		// TODO: this is very out of date
 		ConnectionString:  env.Config.GetConnectionString(),
 		AllowCommands:     env.Config.GetAllowCommands(),
 		DisableSounds:     env.Config.GetDisableSounds(),
@@ -45,7 +42,7 @@ func handleSettings(env RequestEnv) error {
 	return env.SendResponse(env.Id, resp)
 }
 
-type UpdateSettingsRequest struct {
+type UpdateSettingsParams struct {
 	ConnectionString  *string   `json:"connectionString"`
 	AllowCommands     *bool     `json:"allowCommands"`
 	DisableSounds     *bool     `json:"disableSounds"`
@@ -57,81 +54,72 @@ type UpdateSettingsRequest struct {
 	Launching         *bool     `json:"launching"`
 }
 
-func (usr *UpdateSettingsRequest) Bind(r *http.Request) error {
-	return nil
-}
+func handleSettingsUpdate(env RequestEnv) error {
+	log.Info().Msg("received settings update request")
 
-func handleSettingsUpdate(cfg *config.UserConfig, st *state.State) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		log.Info().Msg("received settings update request")
+	if len(env.Params) == 0 {
+		return errors.New("missing params")
+	}
 
-		var req UpdateSettingsRequest
-		err := render.Bind(r, &req)
-		if err != nil {
-			log.Error().Err(err).Msg("error decoding request")
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
+	var params UpdateSettingsParams
+	err := json.Unmarshal(env.Params, &params)
+	if err != nil {
+		return errors.New("invalid params: " + err.Error())
+	}
 
-		if req.ConnectionString != nil {
-			log.Info().Str("connectionString", *req.ConnectionString).Msg("updating connection string")
-			cfg.SetConnectionString(*req.ConnectionString)
-		}
+	if params.ConnectionString != nil {
+		log.Info().Str("connectionString", *params.ConnectionString).Msg("updating connection string")
+		env.Config.SetConnectionString(*params.ConnectionString)
+	}
 
-		if req.AllowCommands != nil {
-			if !strings.HasPrefix(r.RemoteAddr, "127.0.0.1:") {
-				http.Error(w, "allow_commands can only be changed from localhost", http.StatusForbidden)
-				log.Info().Str("remoteAddr", r.RemoteAddr).Bool("allowCommands", *req.AllowCommands).Msg("allow_commands can only be changed from localhost")
-			} else {
-				log.Info().Bool("allowCommands", *req.AllowCommands).Msg("updating allow commands")
-				cfg.SetAllowCommands(*req.AllowCommands)
-			}
-		}
+	//if req.AllowCommands != nil {
+	//	if !strings.HasPrefix(r.RemoteAddr, "127.0.0.1:") {
+	//		http.Error(w, "allow_commands can only be changed from localhost", http.StatusForbidden)
+	//		log.Info().Str("remoteAddr", r.RemoteAddr).Bool("allowCommands", *req.AllowCommands).Msg("allow_commands can only be changed from localhost")
+	//	} else {
+	//		log.Info().Bool("allowCommands", *req.AllowCommands).Msg("updating allow commands")
+	//		cfg.SetAllowCommands(*req.AllowCommands)
+	//	}
+	//}
 
-		if req.DisableSounds != nil {
-			log.Info().Bool("disableSounds", *req.DisableSounds).Msg("updating disable sounds")
-			cfg.SetDisableSounds(*req.DisableSounds)
-		}
+	if params.DisableSounds != nil {
+		log.Info().Bool("disableSounds", *params.DisableSounds).Msg("updating disable sounds")
+		env.Config.SetDisableSounds(*params.DisableSounds)
+	}
 
-		if req.ProbeDevice != nil {
-			log.Info().Bool("probeDevice", *req.ProbeDevice).Msg("updating probe device")
-			cfg.SetProbeDevice(*req.ProbeDevice)
-		}
+	if params.ProbeDevice != nil {
+		log.Info().Bool("probeDevice", *params.ProbeDevice).Msg("updating probe device")
+		env.Config.SetProbeDevice(*params.ProbeDevice)
+	}
 
-		if req.ExitGameDelay != nil {
-			log.Info().Int("exitGameDelay", *req.ExitGameDelay).Msg("updating exit game delay")
-			cfg.SetExitGameDelay(*req.ExitGameDelay)
-		}
+	if params.ExitGameDelay != nil {
+		log.Info().Int("exitGameDelay", *params.ExitGameDelay).Msg("updating exit game delay")
+		env.Config.SetExitGameDelay(*params.ExitGameDelay)
+	}
 
-		if req.ExitGame != nil {
-			log.Info().Bool("exitGame", *req.ExitGame).Msg("updating exit game")
-			cfg.SetExitGame(*req.ExitGame)
-		}
+	if params.ExitGame != nil {
+		log.Info().Bool("exitGame", *params.ExitGame).Msg("updating exit game")
+		env.Config.SetExitGame(*params.ExitGame)
+	}
 
-		if req.ExitGameBlocklist != nil {
-			log.Info().Strs("exitGameBlocklist", *req.ExitGameBlocklist).Msg("updating exit game blocklist")
-			cfg.SetExitGameBlocklist(*req.ExitGameBlocklist)
-		}
+	if params.ExitGameBlocklist != nil {
+		log.Info().Strs("exitGameBlocklist", *params.ExitGameBlocklist).Msg("updating exit game blocklist")
+		env.Config.SetExitGameBlocklist(*params.ExitGameBlocklist)
+	}
 
-		if req.Debug != nil {
-			log.Info().Bool("debug", *req.Debug).Msg("updating debug")
-			cfg.SetDebug(*req.Debug)
-		}
+	if params.Debug != nil {
+		log.Info().Bool("debug", *params.Debug).Msg("updating debug")
+		env.Config.SetDebug(*params.Debug)
+	}
 
-		if req.Launching != nil {
-			log.Info().Bool("launching", *req.Launching).Msg("updating launching")
-			if *req.Launching {
-				st.EnableLauncher()
-			} else {
-				st.DisableLauncher()
-			}
-		}
-
-		err = cfg.SaveConfig()
-		if err != nil {
-			log.Error().Err(err).Msg("error saving config")
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
+	if params.Launching != nil {
+		log.Info().Bool("launching", *params.Launching).Msg("updating launching")
+		if *params.Launching {
+			env.State.EnableLauncher()
+		} else {
+			env.State.DisableLauncher()
 		}
 	}
+
+	return env.Config.SaveConfig()
 }

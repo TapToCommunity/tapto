@@ -34,23 +34,22 @@ const RequestTimeout = 30 * time.Second
 }
 */
 
-// r.Delete("/launch", HandleStopGame(pl))
-// r.Post("/readers/0/write", handleReaderWrite(st))
 // r.Post("/mappings", handleAddMapping(db))
 // r.Delete("/mappings/{id}", handleDeleteMapping(db))
 // r.Put("/mappings/{id}", handleUpdateMapping(db))
-// r.Put("/settings", handleSettingsUpdate(cfg, st))
 
 var methodMap = map[string]func(RequestEnv) error{
-	"launch":      handleLaunch,
-	"stop":        handleStopGame,
-	"media.index": handleIndexGames,
-	"settings":    handleSettings,
-	"systems":     handleSystems,
-	"history":     handleHistory,
-	"mappings":    handleMappings,
-	"status":      handleStatus, // TODO: remove, convert to individual methods?
-	"version":     handleVersion,
+	"launch":          handleLaunch,
+	"stop":            handleStopGame,
+	"media.index":     handleIndexGames,
+	"settings":        handleSettings,
+	"settings.update": handleSettingsUpdate,
+	"systems":         handleSystems,
+	"history":         handleHistory,
+	"mappings":        handleMappings,
+	"readers.write":   handleReaderWrite,
+	"status":          handleStatus, // TODO: remove, convert to individual methods?
+	"version":         handleVersion,
 }
 
 type RequestEnv struct {
@@ -85,6 +84,8 @@ type ResponseObject struct {
 	Error     *ErrorObject `json:"error,omitempty"`
 }
 
+// TODO: request function should return a response and error, not be
+// handed the sendResponse and sendError functions
 func handleRequest(env RequestEnv, req RequestObject) error {
 	log.Debug().Interface("request", req).Msg("received request")
 
@@ -111,7 +112,15 @@ func handleRequest(env RequestEnv, req RequestObject) error {
 	env.Id = *req.Id
 	env.Params = params
 
-	return fn(env)
+	err := fn(env)
+	if err != nil {
+		err := env.SendError(env.Id, 0, err.Error())
+		if err != nil {
+			log.Error().Err(err).Msg("problem sending error response")
+		}
+	}
+
+	return err
 }
 
 func sendResponse(s *melody.Session) func(uuid.UUID, any) error {
