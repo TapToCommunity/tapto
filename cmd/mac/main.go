@@ -45,7 +45,7 @@ func main() {
 	flag.Parse()
 
 	if *versionOpt {
-		fmt.Println("TapTo v" + config.Version + " (mistex)")
+		fmt.Println("TapTo v" + config.Version + " (mac)")
 		os.Exit(0)
 	}
 
