@@ -163,13 +163,6 @@ func main() {
 		os.Exit(0)
 	}
 
-	pl := &mister.Platform{}
-	err := utils.InitLogging(pl)
-	if err != nil {
-		fmt.Println("Error initializing logging:", err)
-		os.Exit(1)
-	}
-
 	cfg, err := config.NewUserConfig(appName, &config.UserConfig{
 		TapTo: config.TapToConfig{
 			ProbeDevice: true,
@@ -181,6 +174,13 @@ func main() {
 	if err != nil {
 		log.Error().Msgf("error loading user config: %s", err)
 		fmt.Println("Error loading config:", err)
+		os.Exit(1)
+	}
+
+	pl := &mister.Platform{}
+	err = utils.InitLogging(cfg, pl)
+	if err != nil {
+		fmt.Println("Error initializing logging:", err)
 		os.Exit(1)
 	}
 

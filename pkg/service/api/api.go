@@ -34,7 +34,6 @@ const RequestTimeout = 30 * time.Second
 }
 */
 
-// r.Post("/launch", handleLaunch(st, tq))
 // r.Delete("/launch", HandleStopGame(pl))
 // r.Post("/readers/0/write", handleReaderWrite(st))
 // r.Post("/mappings", handleAddMapping(db))
@@ -43,13 +42,15 @@ const RequestTimeout = 30 * time.Second
 // r.Put("/settings", handleSettingsUpdate(cfg, st))
 
 var methodMap = map[string]func(RequestEnv) error{
-	"games.index":  handleIndexGames,
-	"settings.get": handleSettings,
-	"systems.get":  handleSystems,
-	"history.get":  handleHistory,
-	"mappings.get": handleMappings,
-	"status":       handleStatus, // TODO: remove, convert to individual methods?
-	"version":      handleVersion,
+	"launch":      handleLaunch,
+	"stop":        handleStopGame,
+	"media.index": handleIndexGames,
+	"settings":    handleSettings,
+	"systems":     handleSystems,
+	"history":     handleHistory,
+	"mappings":    handleMappings,
+	"status":      handleStatus, // TODO: remove, convert to individual methods?
+	"version":     handleVersion,
 }
 
 type RequestEnv struct {
@@ -57,8 +58,9 @@ type RequestEnv struct {
 	Config       *config.UserConfig
 	State        *state.State
 	Database     *database.Database
+	TokenQueue   *tokens.TokenQueue
 	Id           uuid.UUID
-	Params       *any
+	Params       []byte
 	SendResponse func(uuid.UUID, any) error
 	SendError    func(uuid.UUID, int, string) error
 }
@@ -96,8 +98,18 @@ func handleRequest(env RequestEnv, req RequestObject) error {
 		return nil
 	}
 
+	var params []byte
+	if req.Params != nil {
+		var err error
+		// double unmarshal to use json decode on params later
+		params, err = json.Marshal(req.Params)
+		if err != nil {
+			return err
+		}
+	}
+
 	env.Id = *req.Id
-	env.Params = req.Params
+	env.Params = params
 
 	return fn(env)
 }
@@ -170,12 +182,15 @@ func RunApiServer(
 	m := melody.New()
 	m.Upgrader.CheckOrigin = func(r *http.Request) bool { return true }
 	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
-		m.HandleRequest(w, r)
+		err := m.HandleRequest(w, r)
+		if err != nil {
+			log.Error().Err(err).Msg("error handling websocket request")
+		}
 	})
 
 	m.HandleMessage(func(s *melody.Session, msg []byte) {
 		if !json.Valid(msg) {
-			log.Error().Msg("invalid json message")
+			log.Error().Msg("data not valid json")
 			return
 		}
 
@@ -188,6 +203,7 @@ func RunApiServer(
 				Config:       cfg,
 				State:        st,
 				Database:     db,
+				TokenQueue:   tq,
 				SendResponse: sendResponse(s),
 				SendError:    sendError(s),
 			}
@@ -210,12 +226,14 @@ func RunApiServer(
 			return
 		}
 
-		// fall through for no matching type
-		log.Error().Msg("invalid json message format")
+		log.Error().Err(err).Msg("message does not match known types")
 	})
 
 	r.Get("/version", func(w http.ResponseWriter, _ *http.Request) {
-		w.Write([]byte(config.Version))
+		_, err := w.Write([]byte(config.Version))
+		if err != nil {
+			log.Error().Err(err).Msg("error writing version request")
+		}
 	})
 
 	r.Get("/launch/*", handleLaunchBasic(st, tq))
