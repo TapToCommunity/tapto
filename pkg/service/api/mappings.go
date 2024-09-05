@@ -1,13 +1,11 @@
 package api
 
 import (
+	"encoding/json"
 	"errors"
-	"net/http"
 	"regexp"
 	"time"
 
-	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/render"
 	"github.com/rs/zerolog/log"
 	"github.com/wizzomafizzo/tapto/pkg/database"
 	"github.com/wizzomafizzo/tapto/pkg/utils"
@@ -53,7 +51,7 @@ func handleMappings(env RequestEnv) error {
 	return env.SendResponse(env.Id, resp)
 }
 
-type AddMappingRequest struct {
+type AddMappingParams struct {
 	Label    string `json:"label"`
 	Enabled  bool   `json:"enabled"`
 	Type     string `json:"type"`
@@ -62,7 +60,7 @@ type AddMappingRequest struct {
 	Override string `json:"override"`
 }
 
-func (amr *AddMappingRequest) Bind(r *http.Request) error {
+func validateAddMappingParams(amr *AddMappingParams) error {
 	if !utils.Contains(database.AllowedMappingTypes, amr.Type) {
 		return errors.New("invalid type")
 	}
@@ -85,60 +83,68 @@ func (amr *AddMappingRequest) Bind(r *http.Request) error {
 	return nil
 }
 
-func handleAddMapping(db *database.Database) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		log.Info().Msg("received add mapping request")
+func handleAddMapping(env RequestEnv) error {
+	log.Info().Msg("received add mapping request")
 
-		var req AddMappingRequest
-		err := render.Bind(r, &req)
-		if err != nil {
-			log.Error().Err(err).Msg("error decoding request")
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-
-		m := database.Mapping{
-			Label:    req.Label,
-			Enabled:  req.Enabled,
-			Type:     req.Type,
-			Match:    req.Match,
-			Pattern:  req.Pattern,
-			Override: req.Override,
-		}
-
-		err = db.AddMapping(m)
-		if err != nil {
-			log.Error().Err(err).Msg("error adding mapping")
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		w.WriteHeader(http.StatusCreated)
+	if len(env.Params) == 0 {
+		return errors.New("missing params")
 	}
+
+	var params AddMappingParams
+	err := json.Unmarshal(env.Params, &params)
+	if err != nil {
+		return errors.New("invalid params: " + err.Error())
+	}
+
+	err = validateAddMappingParams(&params)
+	if err != nil {
+		return errors.New("invalid params: " + err.Error())
+	}
+
+	m := database.Mapping{
+		Label:    params.Label,
+		Enabled:  params.Enabled,
+		Type:     params.Type,
+		Match:    params.Match,
+		Pattern:  params.Pattern,
+		Override: params.Override,
+	}
+
+	err = env.Database.AddMapping(m)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
-func handleDeleteMapping(db *database.Database) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		log.Info().Msg("received delete mapping request")
-
-		id := chi.URLParam(r, "id")
-		if id == "" {
-			http.Error(w, "missing id", http.StatusBadRequest)
-			return
-		}
-
-		err := db.DeleteMapping(id)
-		if err != nil {
-			log.Error().Err(err).Msg("error deleting mapping")
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		w.WriteHeader(http.StatusOK)
-	}
+type DeleteMappingParams struct {
+	Id string `json:"id"`
 }
 
-type UpdateMappingRequest struct {
+func handleDeleteMapping(env RequestEnv) error {
+	log.Info().Msg("received delete mapping request")
+
+	if len(env.Params) == 0 {
+		return errors.New("missing params")
+	}
+
+	var params DeleteMappingParams
+	err := json.Unmarshal(env.Params, &params)
+	if err != nil {
+		return errors.New("invalid params: " + err.Error())
+	}
+
+	err = env.Database.DeleteMapping(params.Id)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+type UpdateMappingParams struct {
+	Id       string  `json:"id"`
 	Label    *string `json:"label"`
 	Enabled  *bool   `json:"enabled"`
 	Type     *string `json:"type"`
@@ -147,7 +153,7 @@ type UpdateMappingRequest struct {
 	Override *string `json:"override"`
 }
 
-func (umr *UpdateMappingRequest) Bind(r *http.Request) error {
+func validateUpdateMappingParams(umr *UpdateMappingParams) error {
 	if umr.Label == nil && umr.Enabled == nil && umr.Type == nil && umr.Match == nil && umr.Pattern == nil && umr.Override == nil {
 		return errors.New("missing fields")
 	}
@@ -174,69 +180,59 @@ func (umr *UpdateMappingRequest) Bind(r *http.Request) error {
 	return nil
 }
 
-func handleUpdateMapping(db *database.Database) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		log.Info().Msg("received update mapping request")
+func handleUpdateMapping(env RequestEnv) error {
+	log.Info().Msg("received update mapping request")
 
-		id := chi.URLParam(r, "id")
-		if id == "" {
-			http.Error(w, "missing id", http.StatusBadRequest)
-			return
-		}
-
-		var req UpdateMappingRequest
-		err := render.Bind(r, &req)
-		if err != nil {
-			log.Error().Err(err).Msg("error decoding request")
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-
-		oldMapping, err := db.GetMapping(id)
-		if err != nil {
-			log.Error().Err(err).Msg("error getting mapping")
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		newMapping := oldMapping
-
-		if req.Label != nil {
-			newMapping.Label = *req.Label
-		}
-
-		if req.Enabled != nil {
-			newMapping.Enabled = *req.Enabled
-		}
-
-		if req.Type != nil {
-			newMapping.Type = *req.Type
-		}
-
-		if req.Match != nil {
-			newMapping.Match = *req.Match
-		}
-
-		if req.Pattern != nil {
-			newMapping.Pattern = *req.Pattern
-		}
-
-		if req.Override != nil {
-			newMapping.Override = *req.Override
-		}
-
-		if oldMapping == newMapping {
-			w.WriteHeader(http.StatusNoContent)
-			return
-		}
-
-		err = db.UpdateMapping(id, newMapping)
-		if err != nil {
-			log.Error().Err(err).Msg("error updating mapping")
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		w.WriteHeader(http.StatusOK)
+	if len(env.Params) == 0 {
+		return errors.New("missing params")
 	}
+
+	var params UpdateMappingParams
+	err := json.Unmarshal(env.Params, &params)
+	if err != nil {
+		return errors.New("invalid params: " + err.Error())
+	}
+
+	err = validateUpdateMappingParams(&params)
+	if err != nil {
+		return errors.New("invalid params: " + err.Error())
+	}
+
+	oldMapping, err := env.Database.GetMapping(params.Id)
+	if err != nil {
+		return err
+	}
+
+	newMapping := oldMapping
+
+	if params.Label != nil {
+		newMapping.Label = *params.Label
+	}
+
+	if params.Enabled != nil {
+		newMapping.Enabled = *params.Enabled
+	}
+
+	if params.Type != nil {
+		newMapping.Type = *params.Type
+	}
+
+	if params.Match != nil {
+		newMapping.Match = *params.Match
+	}
+
+	if params.Pattern != nil {
+		newMapping.Pattern = *params.Pattern
+	}
+
+	if params.Override != nil {
+		newMapping.Override = *params.Override
+	}
+
+	err = env.Database.UpdateMapping(params.Id, newMapping)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

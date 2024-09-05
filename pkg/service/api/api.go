@@ -26,18 +26,6 @@ import (
 
 const RequestTimeout = 30 * time.Second
 
-/*
-{
-	"id": "123e4567-e89b-12d3-a456-426614174000",
-	"timestamp": 1612345678901,
-	"method": "version"
-}
-*/
-
-// r.Post("/mappings", handleAddMapping(db))
-// r.Delete("/mappings/{id}", handleDeleteMapping(db))
-// r.Put("/mappings/{id}", handleUpdateMapping(db))
-
 var methodMap = map[string]func(RequestEnv) error{
 	"launch":          handleLaunch,
 	"stop":            handleStopGame,
@@ -47,6 +35,9 @@ var methodMap = map[string]func(RequestEnv) error{
 	"systems":         handleSystems,
 	"history":         handleHistory,
 	"mappings":        handleMappings,
+	"mappings.new":    handleAddMapping,
+	"mappings.delete": handleDeleteMapping,
+	"mappings.update": handleUpdateMapping,
 	"readers.write":   handleReaderWrite,
 	"status":          handleStatus, // TODO: remove, convert to individual methods?
 	"version":         handleVersion,
@@ -80,7 +71,7 @@ type ErrorObject struct {
 type ResponseObject struct {
 	Id        uuid.UUID    `json:"id"`        // UUID v1
 	Timestamp int64        `json:"timestamp"` // unix timestamp (ms)
-	Result    any          `json:"result"`
+	Result    any          `json:"result,omitempty"`
 	Error     *ErrorObject `json:"error,omitempty"`
 }
 
