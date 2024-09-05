@@ -1,6 +1,7 @@
 package platforms
 
 import (
+	"github.com/wizzomafizzo/tapto/pkg/service/state"
 	"path/filepath"
 	"strings"
 
@@ -9,8 +10,6 @@ import (
 	"github.com/wizzomafizzo/tapto/pkg/tokens"
 )
 
-// FIXME: i don't like where this is, but it's currently resolving
-// a circular dependency between the launcher and platforms packages
 type CmdEnv struct {
 	Cmd           string
 	Args          string
@@ -78,10 +77,10 @@ type Platform interface {
 	// Unique ID of the platform.
 	Id() string
 	// Any initial setup required before daemon is fully started.
-	Setup(*config.UserConfig) error
+	Setup(*config.UserConfig, chan<- state.Notification) error
 	// TOOD: what is this?
 	Stop() error
-	// Run immediately after s successful scan, before it is processed for launching.
+	// Run immediately after a successful scan, before it is processed for launching.
 	AfterScanHook(tokens.Token) error
 	// Run after the active readers have been updated.
 	ReadersUpdateHook(map[string]*readers.Reader) error
@@ -117,9 +116,6 @@ type Platform interface {
 	ActiveGameName() string
 	// Returns the currently active game path.
 	ActiveGamePath() string
-	// Function used to signal when a state change has occurred, to send to
-	// to the API websocket.
-	SetEventHook(*func())
 	// Launch a system by ID.
 	LaunchSystem(*config.UserConfig, string) error
 	// Launch a file by path.

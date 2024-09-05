@@ -179,7 +179,7 @@ func Start(
 	}
 
 	log.Debug().Msg("running platform setup")
-	err = platform.Setup(cfg)
+	err = platform.Setup(cfg, st.Notifications)
 	if err != nil {
 		log.Error().Msgf("error setting up platform: %s", err)
 		return nil, err

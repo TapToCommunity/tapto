@@ -4,6 +4,7 @@ package mistex
 
 import (
 	"fmt"
+	"github.com/wizzomafizzo/tapto/pkg/service/state"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -44,7 +45,7 @@ func (p *Platform) SupportedReaders(cfg *config.UserConfig) []readers.Reader {
 	}
 }
 
-func (p *Platform) Setup(cfg *config.UserConfig) error {
+func (p *Platform) Setup(cfg *config.UserConfig, ns chan<- state.Notification) error {
 	kbd, err := input.NewKeyboard()
 	if err != nil {
 		return err
@@ -201,10 +202,6 @@ func (p *Platform) ActiveGameName() string {
 
 func (p *Platform) ActiveGamePath() string {
 	return p.tr.ActiveGamePath
-}
-
-func (p *Platform) SetEventHook(f *func()) {
-	p.tr.SetEventHook(f)
 }
 
 func (p *Platform) LaunchSystem(cfg *config.UserConfig, id string) error {

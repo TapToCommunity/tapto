@@ -16,23 +16,23 @@ type Notification struct {
 }
 
 type State struct {
-	mu               sync.RWMutex
-	activeCard       tokens.Token
-	lastScanned      tokens.Token
-	stopService      bool
-	disableLauncher  bool
-	platform         platforms.Platform
-	readers          map[string]readers.Reader
-	softwareToken    *tokens.Token
-	wroteToken       *tokens.Token
-	notificationChan chan<- Notification
+	mu              sync.RWMutex
+	activeCard      tokens.Token
+	lastScanned     tokens.Token
+	stopService     bool
+	disableLauncher bool
+	platform        platforms.Platform
+	readers         map[string]readers.Reader
+	softwareToken   *tokens.Token
+	wroteToken      *tokens.Token
+	Notifications   chan<- Notification
 }
 
 func NewState(platform platforms.Platform) *State {
 	return &State{
-		platform:         platform,
-		readers:          make(map[string]readers.Reader),
-		notificationChan: make(chan<- Notification),
+		platform:      platform,
+		readers:       make(map[string]readers.Reader),
+		Notifications: make(chan<- Notification),
 	}
 }
 
@@ -50,7 +50,7 @@ func (s *State) SetActiveCard(card tokens.Token) {
 		s.lastScanned = card
 	}
 
-	s.notificationChan <- Notification{
+	s.Notifications <- Notification{
 		Method: "state.activeCard",
 		Params: card,
 	}
@@ -87,7 +87,7 @@ func (s *State) DisableLauncher() {
 	if err := s.platform.SetLaunching(false); err != nil {
 		log.Error().Msgf("cannot create disable launch file: %s", err)
 	}
-	s.notificationChan <- Notification{
+	s.Notifications <- Notification{
 		Method: "state.launching",
 		Params: false,
 	}
@@ -100,7 +100,7 @@ func (s *State) EnableLauncher() {
 	if err := s.platform.SetLaunching(true); err != nil {
 		log.Error().Msgf("cannot remove disable launch file: %s", err)
 	}
-	s.notificationChan <- Notification{
+	s.Notifications <- Notification{
 		Method: "state.launching",
 		Params: true,
 	}
@@ -132,7 +132,7 @@ func (s *State) SetReader(device string, reader readers.Reader) {
 	}
 
 	s.readers[device] = reader
-	s.notificationChan <- Notification{
+	s.Notifications <- Notification{
 		Method: "state.readerChanged",
 		Params: device,
 	}
@@ -149,7 +149,7 @@ func (s *State) RemoveReader(device string) {
 		}
 	}
 	delete(s.readers, device)
-	s.notificationChan <- Notification{
+	s.Notifications <- Notification{
 		Method: "state.readerRemoved",
 		Params: device,
 	}

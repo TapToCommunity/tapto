@@ -4,6 +4,7 @@ package mister
 
 import (
 	"fmt"
+	"github.com/wizzomafizzo/tapto/pkg/service/state"
 	"os"
 	"path/filepath"
 	"strings"
@@ -32,7 +33,7 @@ type NameMapping struct {
 type Tracker struct {
 	Config           *config.UserConfig
 	mu               sync.Mutex
-	eventHook        *func()
+	ns               chan<- state.Notification
 	ActiveCore       string
 	ActiveSystem     string
 	ActiveSystemName string
@@ -97,18 +98,6 @@ func NewTracker(cfg *config.UserConfig) (*Tracker, error) {
 		ActiveGamePath:   "",
 		NameMap:          nameMap,
 	}, nil
-}
-
-func (tr *Tracker) SetEventHook(hook *func()) {
-	tr.mu.Lock()
-	defer tr.mu.Unlock()
-	tr.eventHook = hook
-}
-
-func (tr *Tracker) runEventHook() {
-	if tr.eventHook != nil {
-		(*tr.eventHook)()
-	}
 }
 
 func (tr *Tracker) ReloadNameMap() {
@@ -200,7 +189,9 @@ func (tr *Tracker) LoadCore() {
 
 		if coreName == "" {
 			tr.stopGame()
-			tr.runEventHook()
+			tr.ns <- state.Notification{
+				Method: "system.stopped",
+			}
 			return
 		}
 
@@ -216,7 +207,10 @@ func (tr *Tracker) LoadCore() {
 			}
 		}
 
-		tr.runEventHook()
+		tr.ns <- state.Notification{
+			Method: "system.started",
+			Params: coreName,
+		}
 	}
 }
 
@@ -227,6 +221,9 @@ func (tr *Tracker) stopGame() bool {
 		tr.ActiveGameName = ""
 		tr.ActiveSystem = ""
 		tr.ActiveSystemName = ""
+		tr.ns <- state.Notification{
+			Method: "media.stopped",
+		}
 		return true
 	} else {
 		return false
@@ -289,7 +286,14 @@ func (tr *Tracker) loadGame() {
 		tr.ActiveSystem = system.Id
 		tr.ActiveSystemName = system.Name
 
-		tr.runEventHook()
+		tr.ns <- state.Notification{
+			Method: "system.started",
+			Params: system.Name,
+		}
+		tr.ns <- state.Notification{
+			Method: "media.started",
+			Params: name,
+		}
 	}
 }
 
