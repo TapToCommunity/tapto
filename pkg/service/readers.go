@@ -192,7 +192,7 @@ func readerManager(
 
 				err := connectReaders(pl, cfg, st, inputQueue)
 				if err != nil {
-					log.Error().Msgf("error connecting readers: %s", err)
+					log.Error().Msgf("error connecting rs: %s", err)
 				}
 			}
 		}
@@ -273,8 +273,8 @@ func readerManager(
 
 	// daemon shutdown
 	stopService <- true
-	readers := st.ListReaders()
-	for _, device := range readers {
+	rs := st.ListReaders()
+	for _, device := range rs {
 		r, ok := st.GetReader(device)
 		if ok && r != nil {
 			err := r.Close()

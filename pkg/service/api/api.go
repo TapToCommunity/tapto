@@ -3,6 +3,7 @@ package api
 import (
 	"encoding/json"
 	"errors"
+	"github.com/wizzomafizzo/tapto/pkg/service/notifications"
 	"net/http"
 	"time"
 
@@ -160,12 +161,13 @@ func handleResponse(resp ResponseObject) error {
 	return nil
 }
 
-func RunApiServer(
+func Start(
 	pl platforms.Platform,
 	cfg *config.UserConfig,
 	st *state.State,
 	tq *tokens.TokenQueue,
 	db *database.Database,
+	ns <-chan notifications.Notification,
 ) {
 	r := chi.NewRouter()
 
@@ -181,10 +183,38 @@ func RunApiServer(
 
 	m := melody.New()
 	m.Upgrader.CheckOrigin = func(r *http.Request) bool { return true }
+
+	// consume and broadcast notifications
+	go func(ns <-chan notifications.Notification) {
+		for !st.ShouldStopService() {
+			select {
+			case n := <-ns:
+				ro := RequestObject{
+					Timestamp: time.Now().UnixNano() / int64(time.Millisecond),
+					Method:    n.Method,
+					Params:    &n.Params,
+				}
+
+				data, err := json.Marshal(ro)
+				if err != nil {
+					log.Error().Err(err).Msg("marshalling notification request")
+					continue
+				}
+
+				err = m.Broadcast(data)
+				if err != nil {
+					log.Error().Err(err).Msg("broadcasting notification")
+				}
+			case <-time.After(500 * time.Millisecond):
+				continue
+			}
+		}
+	}(ns)
+
 	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
 		err := m.HandleRequest(w, r)
 		if err != nil {
-			log.Error().Err(err).Msg("error handling websocket request")
+			log.Error().Err(err).Msg("handling websocket request")
 		}
 	})
 

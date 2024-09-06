@@ -2,9 +2,12 @@
 
 package mister
 
+// TODO: i don't think it's actually useful to track if a system is running,
+// it should probably be completely removed and just report game playing state
+
 import (
 	"fmt"
-	"github.com/wizzomafizzo/tapto/pkg/service/state"
+	"github.com/wizzomafizzo/tapto/pkg/service/notifications"
 	"os"
 	"path/filepath"
 	"strings"
@@ -33,7 +36,7 @@ type NameMapping struct {
 type Tracker struct {
 	Config           *config.UserConfig
 	mu               sync.Mutex
-	ns               chan<- state.Notification
+	ns               chan<- notifications.Notification
 	ActiveCore       string
 	ActiveSystem     string
 	ActiveSystemName string
@@ -81,7 +84,7 @@ func generateNameMap() []NameMapping {
 	return nameMap
 }
 
-func NewTracker(cfg *config.UserConfig) (*Tracker, error) {
+func NewTracker(cfg *config.UserConfig, ns chan<- notifications.Notification) (*Tracker, error) {
 	log.Info().Msg("starting tracker")
 
 	nameMap := generateNameMap()
@@ -90,6 +93,7 @@ func NewTracker(cfg *config.UserConfig) (*Tracker, error) {
 
 	return &Tracker{
 		Config:           cfg,
+		ns:               ns,
 		ActiveCore:       "",
 		ActiveSystem:     "",
 		ActiveSystemName: "",
@@ -189,8 +193,8 @@ func (tr *Tracker) LoadCore() {
 
 		if coreName == "" {
 			tr.stopGame()
-			tr.ns <- state.Notification{
-				Method: "system.stopped",
+			tr.ns <- notifications.Notification{
+				Method: notifications.SystemStopped,
 			}
 			return
 		}
@@ -198,7 +202,11 @@ func (tr *Tracker) LoadCore() {
 		result := tr.LookupCoreName(coreName, tr.ActiveGamePath)
 		if result != (NameMapping{}) {
 			if result.ArcadeName != "" {
-				mister.SetActiveGame(result.CoreName)
+				err := mister.SetActiveGame(result.CoreName)
+				if err != nil {
+					log.Warn().Err(err).Msg("error setting active game")
+				}
+
 				tr.ActiveGameId = coreName
 				tr.ActiveGameName = result.ArcadeName
 				tr.ActiveGamePath = "" // TODO: any way to find this?
@@ -207,8 +215,8 @@ func (tr *Tracker) LoadCore() {
 			}
 		}
 
-		tr.ns <- state.Notification{
-			Method: "system.started",
+		tr.ns <- notifications.Notification{
+			Method: notifications.SystemStarted,
 			Params: coreName,
 		}
 	}
@@ -221,8 +229,8 @@ func (tr *Tracker) stopGame() bool {
 		tr.ActiveGameName = ""
 		tr.ActiveSystem = ""
 		tr.ActiveSystemName = ""
-		tr.ns <- state.Notification{
-			Method: "media.stopped",
+		tr.ns <- notifications.Notification{
+			Method: notifications.MediaStopped,
 		}
 		return true
 	} else {
@@ -286,12 +294,12 @@ func (tr *Tracker) loadGame() {
 		tr.ActiveSystem = system.Id
 		tr.ActiveSystemName = system.Name
 
-		tr.ns <- state.Notification{
-			Method: "system.started",
+		tr.ns <- notifications.Notification{
+			Method: notifications.SystemStarted,
 			Params: system.Name,
 		}
-		tr.ns <- state.Notification{
-			Method: "media.started",
+		tr.ns <- notifications.Notification{
+			Method: notifications.MediaStarted,
 			Params: name,
 		}
 	}
@@ -448,8 +456,8 @@ func StartFileWatch(tr *Tracker) (*fsnotify.Watcher, error) {
 	return watcher, nil
 }
 
-func StartTracker(cfg config.UserConfig) (*Tracker, func() error, error) {
-	tr, err := NewTracker(&cfg)
+func StartTracker(cfg config.UserConfig, ns chan<- notifications.Notification) (*Tracker, func() error, error) {
+	tr, err := NewTracker(&cfg, ns)
 	if err != nil {
 		log.Error().Msgf("error creating tracker: %s", err)
 		return nil, nil, err

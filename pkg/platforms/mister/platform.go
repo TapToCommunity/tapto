@@ -4,7 +4,7 @@ package mister
 
 import (
 	"fmt"
-	"github.com/wizzomafizzo/tapto/pkg/service/state"
+	"github.com/wizzomafizzo/tapto/pkg/service/notifications"
 	"os"
 	"os/exec"
 	"regexp"
@@ -75,7 +75,7 @@ func (p *Platform) SupportedReaders(cfg *config.UserConfig) []readers.Reader {
 	}
 }
 
-func (p *Platform) Setup(cfg *config.UserConfig, ns chan<- state.Notification) error {
+func (p *Platform) Setup(cfg *config.UserConfig, ns chan<- notifications.Notification) error {
 	kbd, err := input.NewKeyboard()
 	if err != nil {
 		return err
@@ -94,7 +94,7 @@ func (p *Platform) Setup(cfg *config.UserConfig, ns chan<- state.Notification) e
 	}
 	p.gpd = gpd
 
-	tr, stopTr, err := StartTracker(*UserConfigToMrext(cfg))
+	tr, stopTr, err := StartTracker(*UserConfigToMrext(cfg), ns)
 	if err != nil {
 		return err
 	}

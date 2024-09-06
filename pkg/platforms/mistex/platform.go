@@ -4,7 +4,7 @@ package mistex
 
 import (
 	"fmt"
-	"github.com/wizzomafizzo/tapto/pkg/service/state"
+	"github.com/wizzomafizzo/tapto/pkg/service/notifications"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -45,7 +45,7 @@ func (p *Platform) SupportedReaders(cfg *config.UserConfig) []readers.Reader {
 	}
 }
 
-func (p *Platform) Setup(cfg *config.UserConfig, ns chan<- state.Notification) error {
+func (p *Platform) Setup(cfg *config.UserConfig, ns chan<- notifications.Notification) error {
 	kbd, err := input.NewKeyboard()
 	if err != nil {
 		return err
@@ -63,7 +63,7 @@ func (p *Platform) Setup(cfg *config.UserConfig, ns chan<- state.Notification) e
 	}
 	p.gpd = gpd
 
-	tr, stopTr, err := mister.StartTracker(*mister.UserConfigToMrext(cfg))
+	tr, stopTr, err := mister.StartTracker(*mister.UserConfigToMrext(cfg), ns)
 	if err != nil {
 		return err
 	}

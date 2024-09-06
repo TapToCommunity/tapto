@@ -156,8 +156,9 @@ func Start(
 	platform platforms.Platform,
 	cfg *config.UserConfig,
 ) (func() error, error) {
-	st := state.NewState(platform)
-	tq := tokens.NewTokenQueue()
+	// TODO: define the notifications chan here instead of in state
+	st, ns := state.NewState(platform)
+	tq := tokens.NewTokenQueue() // TODO: convert this to a *token channel
 	lsq := make(chan *tokens.Token)
 
 	log.Info().Msgf("TapTo v%s", config.Version)
@@ -189,7 +190,7 @@ func Start(
 		st.DisableLauncher()
 	}
 
-	go api.RunApiServer(platform, cfg, st, tq, db)
+	go api.Start(platform, cfg, st, tq, db, ns)
 	go readerManager(platform, cfg, st, tq, lsq)
 	go processLaunchQueue(platform, cfg, st, tq, db, lsq)
 

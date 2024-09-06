@@ -1,6 +1,7 @@
 package api
 
 import (
+	"github.com/wizzomafizzo/tapto/pkg/service/notifications"
 	"net/http"
 	"strconv"
 	"sync"
@@ -17,25 +18,22 @@ const defaultMaxResults = 250
 
 type Index struct {
 	mu          sync.Mutex
-	eventHook   *func(st *Index)
-	Indexing    bool
-	TotalSteps  int
-	CurrentStep int
-	CurrentDesc string
-	TotalFiles  int
+	Indexing    bool   `json:"indexing"`
+	TotalSteps  int    `json:"totalSteps"`
+	CurrentStep int    `json:"currentStep"`
+	CurrentDesc string `json:"currentDesc"`
+	TotalFiles  int    `json:"totalFiles"`
 }
 
 func (s *Index) Exists(platform platforms.Platform) bool {
 	return gamesdb.DbExists(platform)
 }
 
-func (s *Index) SetEventHook(hook *func(st *Index)) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	s.eventHook = hook
-}
-
-func (s *Index) GenerateIndex(platform platforms.Platform, cfg *config.UserConfig) {
+func (s *Index) GenerateIndex(
+	pl platforms.Platform,
+	cfg *config.UserConfig,
+	ns chan<- notifications.Notification,
+) {
 	if s.Indexing {
 		return
 	}
@@ -45,14 +43,15 @@ func (s *Index) GenerateIndex(platform platforms.Platform, cfg *config.UserConfi
 	s.TotalFiles = 0
 
 	log.Info().Msg("generating games index")
-	if s.eventHook != nil {
-		(*s.eventHook)(s)
+	ns <- notifications.Notification{
+		Method: notifications.MediaIndexing,
+		Params: s,
 	}
 
 	go func() {
 		defer s.mu.Unlock()
 
-		_, err := gamesdb.NewNamesIndex(platform, cfg, gamesdb.AllSystems(), func(status gamesdb.IndexStatus) {
+		_, err := gamesdb.NewNamesIndex(pl, cfg, gamesdb.AllSystems(), func(status gamesdb.IndexStatus) {
 			s.TotalSteps = status.Total
 			s.CurrentStep = status.Step
 			s.TotalFiles = status.Files
@@ -74,8 +73,9 @@ func (s *Index) GenerateIndex(platform platforms.Platform, cfg *config.UserConfi
 				}
 			}
 			log.Info().Msgf("indexing status: %s", s.CurrentDesc)
-			if s.eventHook != nil {
-				(*s.eventHook)(s)
+			ns <- notifications.Notification{
+				Method: notifications.MediaIndexing,
+				Params: s,
 			}
 		})
 		if err != nil {
@@ -88,8 +88,9 @@ func (s *Index) GenerateIndex(platform platforms.Platform, cfg *config.UserConfi
 		s.CurrentDesc = ""
 
 		log.Info().Msg("finished generating games index")
-		if s.eventHook != nil {
-			(*s.eventHook)(s)
+		ns <- notifications.Notification{
+			Method: notifications.MediaIndexing,
+			Params: s,
 		}
 	}()
 }
@@ -102,7 +103,7 @@ var IndexInstance = NewIndex()
 
 func handleIndexGames(env RequestEnv) error {
 	log.Info().Msg("received index games request")
-	IndexInstance.GenerateIndex(env.Platform, env.Config)
+	IndexInstance.GenerateIndex(env.Platform, env.Config, env.State.Notifications)
 	return nil
 }
 

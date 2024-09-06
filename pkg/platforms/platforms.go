@@ -1,7 +1,7 @@
 package platforms
 
 import (
-	"github.com/wizzomafizzo/tapto/pkg/service/state"
+	"github.com/wizzomafizzo/tapto/pkg/service/notifications"
 	"path/filepath"
 	"strings"
 
@@ -77,7 +77,7 @@ type Platform interface {
 	// Unique ID of the platform.
 	Id() string
 	// Any initial setup required before daemon is fully started.
-	Setup(*config.UserConfig, chan<- state.Notification) error
+	Setup(*config.UserConfig, chan<- notifications.Notification) error
 	// TOOD: what is this?
 	Stop() error
 	// Run immediately after a successful scan, before it is processed for launching.

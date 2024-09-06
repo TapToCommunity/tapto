@@ -1,6 +1,7 @@
 package state
 
 import (
+	"github.com/wizzomafizzo/tapto/pkg/service/notifications"
 	"sync"
 
 	"github.com/rs/zerolog/log"
@@ -10,30 +11,26 @@ import (
 	"github.com/wizzomafizzo/tapto/pkg/utils"
 )
 
-type Notification struct {
-	Method string `json:"method"`
-	Params any    `json:"params,omitempty"`
-}
-
 type State struct {
 	mu              sync.RWMutex
-	activeCard      tokens.Token
+	activeCard      tokens.Token // TODO: rename activeToken
 	lastScanned     tokens.Token
-	stopService     bool
+	stopService     bool // TODO: make a channel outside state
 	disableLauncher bool
 	platform        platforms.Platform
 	readers         map[string]readers.Reader
 	softwareToken   *tokens.Token
 	wroteToken      *tokens.Token
-	Notifications   chan<- Notification
+	Notifications   chan<- notifications.Notification
 }
 
-func NewState(platform platforms.Platform) *State {
+func NewState(platform platforms.Platform) (*State, <-chan notifications.Notification) {
+	ns := make(chan notifications.Notification)
 	return &State{
 		platform:      platform,
 		readers:       make(map[string]readers.Reader),
-		Notifications: make(chan<- Notification),
-	}
+		Notifications: ns,
+	}, ns
 }
 
 func (s *State) SetActiveCard(card tokens.Token) {
@@ -50,8 +47,8 @@ func (s *State) SetActiveCard(card tokens.Token) {
 		s.lastScanned = card
 	}
 
-	s.Notifications <- Notification{
-		Method: "state.activeCard",
+	s.Notifications <- notifications.Notification{
+		Method: notifications.ActiveCardState,
 		Params: card,
 	}
 	s.mu.Unlock()
@@ -87,8 +84,8 @@ func (s *State) DisableLauncher() {
 	if err := s.platform.SetLaunching(false); err != nil {
 		log.Error().Msgf("cannot create disable launch file: %s", err)
 	}
-	s.Notifications <- Notification{
-		Method: "state.launching",
+	s.Notifications <- notifications.Notification{
+		Method: notifications.LaunchingState,
 		Params: false,
 	}
 	s.mu.Unlock()
@@ -100,8 +97,8 @@ func (s *State) EnableLauncher() {
 	if err := s.platform.SetLaunching(true); err != nil {
 		log.Error().Msgf("cannot remove disable launch file: %s", err)
 	}
-	s.Notifications <- Notification{
-		Method: "state.launching",
+	s.Notifications <- notifications.Notification{
+		Method: notifications.LaunchingState,
 		Params: true,
 	}
 	s.mu.Unlock()
@@ -132,8 +129,8 @@ func (s *State) SetReader(device string, reader readers.Reader) {
 	}
 
 	s.readers[device] = reader
-	s.Notifications <- Notification{
-		Method: "state.readerChanged",
+	s.Notifications <- notifications.Notification{
+		Method: notifications.ReaderChanged,
 		Params: device,
 	}
 	s.mu.Unlock()
@@ -149,8 +146,8 @@ func (s *State) RemoveReader(device string) {
 		}
 	}
 	delete(s.readers, device)
-	s.Notifications <- Notification{
-		Method: "state.readerRemoved",
+	s.Notifications <- notifications.Notification{
+		Method: notifications.ReaderRemoved,
 		Params: device,
 	}
 	s.mu.Unlock()

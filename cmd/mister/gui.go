@@ -149,6 +149,7 @@ func generateIndexWindow(pl platforms.Platform, cfg *config.UserConfig, stdscr *
 		DisplayText: "Finding games folders...",
 	}
 
+	// TODO: this should index via the API as well
 	go func() {
 		_, err = gamesdb.NewNamesIndex(pl, cfg, gamesdb.AllSystems(), func(is gamesdb.IndexStatus) {
 			systemName := is.SystemId
