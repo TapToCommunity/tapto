@@ -108,14 +108,18 @@ func connectReaders(
 	}
 
 	ids := st.ListReaders()
-	readers := make(map[string]*readers.Reader, 0)
+	rsm := make(map[string]*readers.Reader)
 	for _, id := range ids {
 		r, ok := st.GetReader(id)
 		if ok && r != nil {
-			readers[id] = &r
+			rsm[id] = &r
 		}
 	}
-	pl.ReadersUpdateHook(readers)
+
+	err := pl.ReadersUpdateHook(rsm)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -181,8 +185,8 @@ func readerManager(
 			case <-stopService:
 				return
 			case <-readerTicker.C:
-				readers := st.ListReaders()
-				for _, device := range readers {
+				rs := st.ListReaders()
+				for _, device := range rs {
 					r, ok := st.GetReader(device)
 					if ok && r != nil && !r.Connected() {
 						log.Debug().Msgf("pruning disconnected reader: %s", device)

@@ -48,7 +48,7 @@ func open(platform platforms.Platform, options *bolt.Options) (*bolt.DB, error) 
 		return nil, err
 	}
 
-	db.Update(func(txn *bolt.Tx) error {
+	err = db.Update(func(txn *bolt.Tx) error {
 		for _, bucket := range []string{BucketNames} {
 			_, err := txn.CreateBucketIfNotExists([]byte(bucket))
 			if err != nil {
@@ -58,6 +58,9 @@ func open(platform platforms.Platform, options *bolt.Options) (*bolt.DB, error) 
 
 		return nil
 	})
+	if err != nil {
+		return nil, err
+	}
 
 	return db, nil
 }
@@ -180,7 +183,12 @@ func NewNamesIndex(
 	if err != nil {
 		return status.Files, fmt.Errorf("error opening gamesdb: %s", err)
 	}
-	defer db.Close()
+	defer func(db *bolt.DB) {
+		err := db.Close()
+		if err != nil {
+			log.Warn().Err(err).Msg("closing gamesdb")
+		}
+	}(db)
 
 	indexed, err := readIndexedSystems(db)
 	if err != nil {
@@ -197,7 +205,7 @@ func NewNamesIndex(
 	}
 
 	update(status)
-	systemPaths := make(map[string][]string, 0)
+	systemPaths := make(map[string][]string)
 	for _, v := range GetSystemPaths(platform, platform.RootFolders(cfg), systems) {
 		systemPaths[v.System.Id] = append(systemPaths[v.System.Id], v.Path)
 	}
@@ -335,7 +343,12 @@ func searchNamesGeneric(
 	if err != nil {
 		return nil, err
 	}
-	defer db.Close()
+	defer func(db *bolt.DB) {
+		err := db.Close()
+		if err != nil {
+			log.Warn().Err(err).Msg("closing database")
+		}
+	}(db)
 
 	var results []SearchResult
 
@@ -347,7 +360,7 @@ func searchNamesGeneric(
 			nameIdx := bytes.Index(pre, []byte(":"))
 
 			c := bn.Cursor()
-			for k, v := c.Seek([]byte(pre)); k != nil && bytes.HasPrefix(k, pre); k, v = c.Next() {
+			for k, v := c.Seek(pre); k != nil && bytes.HasPrefix(k, pre); k, v = c.Next() {
 				keyName := string(k[nameIdx+1:])
 
 				if test(query, keyName) {
@@ -449,7 +462,12 @@ func SystemIndexed(platform platforms.Platform, system System) bool {
 	if err != nil {
 		return false
 	}
-	defer db.Close()
+	defer func(db *bolt.DB) {
+		err := db.Close()
+		if err != nil {
+			log.Warn().Err(err).Msg("closing database")
+		}
+	}(db)
 
 	systems, err := readIndexedSystems(db)
 	if err != nil {
@@ -469,7 +487,12 @@ func IndexedSystems(platform platforms.Platform) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer db.Close()
+	defer func(db *bolt.DB) {
+		err := db.Close()
+		if err != nil {
+			log.Warn().Err(err).Msg("closing database")
+		}
+	}(db)
 
 	systems, err := readIndexedSystems(db)
 	if err != nil {
@@ -489,7 +512,12 @@ func RandomGame(platform platforms.Platform, systems []System) (SearchResult, er
 	if err != nil {
 		return SearchResult{}, err
 	}
-	defer db.Close()
+	defer func(db *bolt.DB) {
+		err := db.Close()
+		if err != nil {
+			log.Warn().Err(err).Msg("closing database")
+		}
+	}(db)
 
 	var result SearchResult
 
@@ -507,7 +535,7 @@ func RandomGame(platform platforms.Platform, systems []System) (SearchResult, er
 		nameIdx := bytes.Index(pre, []byte(":"))
 
 		c := bn.Cursor()
-		for k, v := c.Seek([]byte(pre)); k != nil && bytes.HasPrefix(k, pre); k, v = c.Next() {
+		for k, v := c.Seek(pre); k != nil && bytes.HasPrefix(k, pre); k, v = c.Next() {
 			keyName := string(k[nameIdx+1:])
 			possible = append(possible, SearchResult{
 				SystemId: system.Id,

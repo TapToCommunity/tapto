@@ -29,16 +29,16 @@ import (
 	"github.com/hsanjuan/go-ndef"
 )
 
-var NDEF_END = []byte{0xFE}
-var NDEF_START = []byte{0x54, 0x02, 0x65, 0x6E}
+var NdefEnd = []byte{0xFE}
+var NdefStart = []byte{0x54, 0x02, 0x65, 0x6E}
 
 func ParseRecordText(blocks []byte) (string, error) {
-	startIndex := bytes.Index(blocks, NDEF_START)
+	startIndex := bytes.Index(blocks, NdefStart)
 	if startIndex == -1 {
 		return "", fmt.Errorf("NDEF start not found: %x", blocks)
 	}
 
-	endIndex := bytes.Index(blocks, NDEF_END)
+	endIndex := bytes.Index(blocks, NdefEnd)
 	if endIndex == -1 {
 		return "", fmt.Errorf("NDEF end not found: %x", blocks)
 	}

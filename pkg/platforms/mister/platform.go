@@ -327,9 +327,17 @@ func (p *Platform) GamepadPress(name string) error {
 		return fmt.Errorf("unknown button: %s", name)
 	}
 
-	p.gpd.ButtonDown(code)
+	err := p.gpd.ButtonDown(code)
+	if err != nil {
+		return err
+	}
+
 	time.Sleep(40 * time.Millisecond)
-	p.gpd.ButtonUp(code)
+
+	err = p.gpd.ButtonUp(code)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -362,6 +370,8 @@ func (p *Platform) LookupMapping(t tokens.Token) (string, bool) {
 				log.Info().Msg("launching with csv text match override")
 				return pattern, true
 			}
+
+			return "", false
 		}
 
 		// regex

@@ -15,7 +15,7 @@ import (
 	"github.com/wizzomafizzo/tapto/pkg/platforms"
 )
 
-func CmdIni(pl platforms.Platform, env platforms.CmdEnv) error {
+func CmdIni(_ platforms.Platform, env platforms.CmdEnv) error {
 	inis, err := mister.GetAllMisterIni()
 	if err != nil {
 		return err
@@ -48,7 +48,7 @@ func CmdIni(pl platforms.Platform, env platforms.CmdEnv) error {
 	return nil
 }
 
-func CmdLaunchCore(pl platforms.Platform, env platforms.CmdEnv) error {
+func CmdLaunchCore(_ platforms.Platform, env platforms.CmdEnv) error {
 	return mister.LaunchShortCore(env.Args)
 }
 
@@ -107,7 +107,7 @@ func cmdMisterScript(plm Platform) func(platforms.Platform, platforms.CmdEnv) er
 	}
 }
 
-func CmdMisterMgl(pl platforms.Platform, env platforms.CmdEnv) error {
+func CmdMisterMgl(_ platforms.Platform, env platforms.CmdEnv) error {
 	if env.Args == "" {
 		return fmt.Errorf("no mgl specified")
 	}
@@ -131,7 +131,12 @@ func CmdMisterMgl(pl platforms.Platform, env platforms.CmdEnv) error {
 	if err != nil {
 		return err
 	}
-	defer cmd.Close()
+	defer func(cmd *os.File) {
+		err := cmd.Close()
+		if err != nil {
+			log.Warn().Err(err).Msg("failed to close mgl file")
+		}
+	}(cmd)
 
 	_, err = cmd.WriteString(fmt.Sprintf("load_core %s\n", tmpFile.Name()))
 	if err != nil {

@@ -24,28 +24,26 @@ require (
 
 require (
 	github.com/ajg/form v1.5.1 // indirect
-	github.com/andygrunwald/vdf v1.1.0 // indirect
 	github.com/creack/goselect v0.1.2 // indirect
-	github.com/ebfe/scard v0.0.0-20230420082256-7db3f9b7c8a7 // indirect
-	github.com/google/uuid v1.6.0 // indirect
-	github.com/joho/godotenv v1.4.0 // indirect
-	github.com/magefile/mage v1.13.0 // indirect
+	github.com/gorilla/websocket v1.5.1 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
-	github.com/olahol/melody v1.2.1 // indirect
 	github.com/stretchr/testify v1.9.0 // indirect
 	golang.org/x/term v0.22.0 // indirect
 )
 
 require (
+	github.com/andygrunwald/vdf v1.1.0
 	github.com/clausecker/nfc/v2 v2.1.4
+	github.com/ebfe/scard v0.0.0-20230420082256-7db3f9b7c8a7
 	github.com/go-chi/chi/v5 v5.0.12
 	github.com/go-chi/cors v1.2.1
 	github.com/go-chi/render v1.0.3
 	github.com/gobwas/glob v0.2.3
 	github.com/gocarina/gocsv v0.0.0-20230616125104-99d496ca653d
-	github.com/gorilla/websocket v1.5.1
+	github.com/google/uuid v1.6.0
 	github.com/hsanjuan/go-ndef v0.0.1
+	github.com/olahol/melody v1.2.1
 	github.com/rs/zerolog v1.31.0
 	github.com/wizzomafizzo/mrext v0.0.0-20240804073054-39dcc9bccc81
 	go.bug.st/serial v1.6.2

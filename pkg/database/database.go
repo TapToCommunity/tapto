@@ -39,7 +39,7 @@ func open(pl platforms.Platform, options *bolt.Options) (*bolt.DB, error) {
 		return nil, err
 	}
 
-	db.Update(func(txn *bolt.Tx) error {
+	err = db.Update(func(txn *bolt.Tx) error {
 		for _, bucket := range []string{BucketHistory, BucketMappings} {
 			_, err := txn.CreateBucketIfNotExists([]byte(bucket))
 			if err != nil {
@@ -49,6 +49,9 @@ func open(pl platforms.Platform, options *bolt.Options) (*bolt.DB, error) {
 
 		return nil
 	})
+	if err != nil {
+		return nil, err
+	}
 
 	return db, nil
 }
@@ -102,14 +105,14 @@ func (d *Database) AddHistory(entry HistoryEntry) error {
 func (d *Database) GetHistory() ([]HistoryEntry, error) {
 	var entries []HistoryEntry
 	i := 0
-	max := 25
+	maxResults := 25
 
 	err := d.bdb.View(func(txn *bolt.Tx) error {
 		b := txn.Bucket([]byte(BucketHistory))
 
 		c := b.Cursor()
 		for k, v := c.Last(); k != nil; k, v = c.Prev() {
-			if i >= max {
+			if i >= maxResults {
 				break
 			}
 

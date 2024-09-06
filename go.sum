@@ -34,12 +34,8 @@ github.com/gorilla/websocket v1.5.1 h1:gmztn0JnHVt9JZquRuzLw3g4wouNVzKL15iLr/zn/
 github.com/gorilla/websocket v1.5.1/go.mod h1:x3kM2JMyaluk02fnUJpQuwD2dCS5NDG2ZHL0uE0tcaY=
 github.com/hsanjuan/go-ndef v0.0.1 h1:un1E9jEVa0t8j33qT2JFfseOAI3MikbrkmMEn9Lx0Wk=
 github.com/hsanjuan/go-ndef v0.0.1/go.mod h1:LqYM55xXg5wubrxucAxkuK8nW+wjFCCZNyfsd9lPR+Q=
-github.com/joho/godotenv v1.4.0 h1:3l4+N6zfMWnkbPEXKng2o2/MR5mSwTrBih4ZEkkz1lg=
-github.com/joho/godotenv v1.4.0/go.mod h1:f4LDr5Voq0i2e/R5DDNOoa2zzDfwtkZa6DnEwAbqwq4=
 github.com/libp2p/zeroconf/v2 v2.2.0 h1:Cup06Jv6u81HLhIj1KasuNM/RHHrJ8T7wOTS4+Tv53Q=
 github.com/libp2p/zeroconf/v2 v2.2.0/go.mod h1:fuJqLnUwZTshS3U/bMRJ3+ow/v9oid1n0DmyYyNO1Xs=
-github.com/magefile/mage v1.13.0 h1:XtLJl8bcCM7EFoO8FyH8XK3t7G5hQAeK+i4tq+veT9M=
-github.com/magefile/mage v1.13.0/go.mod h1:z5UZb/iS3GoOSn0JgWuiw7dxlurVYTu+/jHXqQg881A=
 github.com/mattn/go-colorable v0.1.13 h1:fFA4WZxdEF4tXPZVKMLwD8oUnCTTo08duU7wxecdEvA=
 github.com/mattn/go-colorable v0.1.13/go.mod h1:7S9/ev0klgBDR4GtXTXX8a3vIGJpMovkB8vQcUbaXHg=
 github.com/mattn/go-isatty v0.0.16/go.mod h1:kYGgaQfpe5nmfYZH+SKPsOc2e4SrIfOl2e/yFXSvRLM=
@@ -67,10 +63,6 @@ github.com/stretchr/testify v1.9.0 h1:HtqpIVDClZ4nwg75+f6Lvsy/wHu+3BoSGCbBAcpTsT
 github.com/stretchr/testify v1.9.0/go.mod h1:r2ic/lqez/lEtzL7wO/rwa5dbSLXVDPFyf8C91i36aY=
 github.com/txn2/txeh v1.4.0 h1:0tdvpA4HGJrj8X3kmrU6o/JFStI009nKxwDpMK5CnRU=
 github.com/txn2/txeh v1.4.0/go.mod h1:Mgq0hY184zCrDBLgvkIp+9NYGHoYbJcu4xKqUcx1shc=
-github.com/wizzomafizzo/mrext v0.0.0-20240705120538-5efdc40f9c08 h1:IfCVEDGCzNY4Lx+1tUUkTOLEv4yxXh9Jpsj6T+8YWr4=
-github.com/wizzomafizzo/mrext v0.0.0-20240705120538-5efdc40f9c08/go.mod h1:pWjoPIzJIXlDfEmdf++eUqsZKrEsYVkOHy39s/H7WLA=
-github.com/wizzomafizzo/mrext v0.0.0-20240804070613-597047206eb5 h1:ybxJPWaRHVjmNbnIKlCe7Re0E0UcGAPCciQiS05Imcs=
-github.com/wizzomafizzo/mrext v0.0.0-20240804070613-597047206eb5/go.mod h1:pWjoPIzJIXlDfEmdf++eUqsZKrEsYVkOHy39s/H7WLA=
 github.com/wizzomafizzo/mrext v0.0.0-20240804073054-39dcc9bccc81 h1:j9tZjWiwt0JeKHYIxbJ9a+25K7v+bks696i4Cx5Thbk=
 github.com/wizzomafizzo/mrext v0.0.0-20240804073054-39dcc9bccc81/go.mod h1:pWjoPIzJIXlDfEmdf++eUqsZKrEsYVkOHy39s/H7WLA=
 go.bug.st/serial v1.6.2 h1:kn9LRX3sdm+WxWKufMlIRndwGfPWsH1/9lCWXQCasq8=
