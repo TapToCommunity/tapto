@@ -307,8 +307,6 @@ func NewNamesIndex(
 		}
 	}
 
-	log.Debug().Msgf("indexed systems: %v", indexedSystems)
-
 	err = writeIndexedSystems(db, indexedSystems)
 	if err != nil {
 		return status.Files, fmt.Errorf("error writing indexed systems: %s", err)
@@ -339,7 +337,7 @@ func searchNamesGeneric(
 		return nil, fmt.Errorf("gamesdb does not exist")
 	}
 
-	db, err := open(platform, &bolt.Options{ReadOnly: true})
+	db, err := open(platform, &bolt.Options{})
 	if err != nil {
 		return nil, err
 	}
@@ -377,6 +375,7 @@ func searchNamesGeneric(
 	})
 
 	if err != nil {
+		log.Debug().Err(err).Msg("search names")
 		return nil, err
 	}
 
@@ -458,7 +457,7 @@ func SystemIndexed(platform platforms.Platform, system System) bool {
 		return false
 	}
 
-	db, err := open(platform, &bolt.Options{ReadOnly: true})
+	db, err := open(platform, &bolt.Options{})
 	if err != nil {
 		return false
 	}
@@ -483,7 +482,7 @@ func IndexedSystems(platform platforms.Platform) ([]string, error) {
 		return nil, fmt.Errorf("gamesdb does not exist")
 	}
 
-	db, err := open(platform, &bolt.Options{ReadOnly: true})
+	db, err := open(platform, &bolt.Options{})
 	if err != nil {
 		return nil, err
 	}
@@ -508,7 +507,7 @@ func RandomGame(platform platforms.Platform, systems []System) (SearchResult, er
 		return SearchResult{}, fmt.Errorf("gamesdb does not exist")
 	}
 
-	db, err := open(platform, &bolt.Options{ReadOnly: true})
+	db, err := open(platform, &bolt.Options{})
 	if err != nil {
 		return SearchResult{}, err
 	}

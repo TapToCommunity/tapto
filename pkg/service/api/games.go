@@ -1,12 +1,11 @@
 package api
 
 import (
+	"encoding/json"
+	"errors"
 	"github.com/wizzomafizzo/tapto/pkg/service/notifications"
-	"net/http"
-	"strconv"
 	"sync"
 
-	"github.com/go-chi/render"
 	"github.com/rs/zerolog/log"
 	"github.com/wizzomafizzo/tapto/pkg/assets"
 	"github.com/wizzomafizzo/tapto/pkg/config"
@@ -118,86 +117,80 @@ type SearchResults struct {
 	Total   int                `json:"total"`
 }
 
-func (sr *SearchResults) Render(w http.ResponseWriter, r *http.Request) error {
-	return nil
+type SearchParams struct {
+	Query      string `json:"query"`
+	System     string `json:"system"`
+	MaxResults *int   `json:"maxResults"`
 }
 
-func handleGames(platform platforms.Platform, cfg *config.UserConfig) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		log.Info().Msg("received games search request")
+func handleGames(env RequestEnv) error {
+	log.Info().Msg("received games search request")
 
-		query := r.URL.Query().Get("query")
-		system := r.URL.Query().Get("system")
-		maxResultsStr := r.URL.Query().Get("maxResults")
+	if len(env.Params) == 0 {
+		return errors.New("missing params")
+	}
 
-		maxResults := defaultMaxResults
-		if maxResultsStr != "" {
-			parsedMaxResults, err := strconv.Atoi(maxResultsStr)
-			if err != nil {
-				http.Error(w, "Invalid maxResults value", http.StatusBadRequest)
-				return
-			}
-			maxResults = parsedMaxResults
-		}
+	var params SearchParams
+	err := json.Unmarshal(env.Params, &params)
+	if err != nil {
+		return errors.New("invalid params: " + err.Error())
+	}
 
-		if query == "" && system == "" {
-			http.Error(w, "query or system required", http.StatusBadRequest)
-			return
-		}
+	maxResults := defaultMaxResults
+	if params.MaxResults != nil && *params.MaxResults > 0 {
+		maxResults = *params.MaxResults
+	}
 
-		var results = make([]SearchResultGame, 0)
-		var search []gamesdb.SearchResult
-		var err error
+	if params.Query == "" && params.System == "" {
+		return errors.New("query or system is required")
+	}
 
-		if system == "all" || system == "" {
-			search, err = gamesdb.SearchNamesWords(platform, gamesdb.AllSystems(), query)
-		} else {
-			system, errSys := gamesdb.GetSystem(system)
-			if errSys != nil {
-				http.Error(w, errSys.Error(), http.StatusBadRequest)
-				log.Error().Err(errSys).Msg("error getting system")
-				return
-			}
-			search, err = gamesdb.SearchNamesWords(platform, []gamesdb.System{*system}, query)
-		}
+	var results = make([]SearchResultGame, 0)
+	var search []gamesdb.SearchResult
+	system := params.System
+	query := params.Query
 
+	if system == "all" || system == "" {
+		search, err = gamesdb.SearchNamesWords(env.Platform, gamesdb.AllSystems(), query)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			log.Error().Err(err).Msg("error searching games")
-			return
+			return errors.New("error searching all media: " + err.Error())
 		}
-
-		for _, result := range search {
-			system, err := gamesdb.GetSystem(result.SystemId)
-			if err != nil {
-				continue
-			}
-
-			results = append(results, SearchResultGame{
-				System: System{
-					Id:   system.Id,
-					Name: system.Id,
-				},
-				Name: result.Name,
-				Path: platform.NormalizePath(cfg, result.Path),
-			})
-		}
-
-		total := len(results)
-
-		if maxResults == 0 {
-		} else if len(results) > maxResults {
-			results = results[:maxResults]
-		}
-
-		err = render.Render(w, r, &SearchResults{
-			Results: results,
-			Total:   total,
-		})
+	} else {
+		system, err := gamesdb.GetSystem(system)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			log.Error().Err(err).Msg("error encoding games response")
-			return
+			return errors.New("error getting system: " + err.Error())
+		}
+
+		search, err = gamesdb.SearchNamesWords(env.Platform, []gamesdb.System{*system}, query)
+		if err != nil {
+			return errors.New("error searching " + system.Id + " media: " + err.Error())
 		}
 	}
+
+	for _, result := range search {
+		system, err := gamesdb.GetSystem(result.SystemId)
+		if err != nil {
+			continue
+		}
+
+		results = append(results, SearchResultGame{
+			System: System{
+				Id:   system.Id,
+				Name: system.Id,
+			},
+			Name: result.Name,
+			Path: env.Platform.NormalizePath(env.Config, result.Path),
+		})
+	}
+
+	total := len(results)
+
+	if len(results) > maxResults {
+		results = results[:maxResults]
+	}
+
+	return env.SendResponse(env.Id, &SearchResults{
+		Results: results,
+		Total:   total,
+	})
 }
