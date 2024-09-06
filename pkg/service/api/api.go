@@ -31,6 +31,7 @@ var methodMap = map[string]func(RequestEnv) error{
 	"launch":          handleLaunch,
 	"stop":            handleStopGame,
 	"media.index":     handleIndexGames,
+	"media.search":    handleGames,
 	"settings":        handleSettings,
 	"settings.update": handleSettingsUpdate,
 	"systems":         handleSystems,
