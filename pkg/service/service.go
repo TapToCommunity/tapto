@@ -179,6 +179,9 @@ func Start(
 		return nil, err
 	}
 
+	log.Debug().Msg("starting API service")
+	go api.Start(platform, cfg, st, tq, db, ns)
+
 	log.Debug().Msg("running platform setup")
 	err = platform.Setup(cfg, st.Notifications)
 	if err != nil {
@@ -190,7 +193,6 @@ func Start(
 		st.DisableLauncher()
 	}
 
-	go api.Start(platform, cfg, st, tq, db, ns)
 	go readerManager(platform, cfg, st, tq, lsq)
 	go processLaunchQueue(platform, cfg, st, tq, db, lsq)
 
@@ -201,7 +203,6 @@ func Start(
 		if err != nil {
 			log.Warn().Msgf("error stopping platform: %s", err)
 		}
-
 		return nil
 	}, nil
 }
