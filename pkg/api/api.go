@@ -3,7 +3,7 @@ package api
 import (
 	"encoding/json"
 	"errors"
-	"github.com/wizzomafizzo/tapto/pkg/service/api/notifications"
+	"github.com/wizzomafizzo/tapto/pkg/api/notifications"
 	"net/http"
 	"time"
 

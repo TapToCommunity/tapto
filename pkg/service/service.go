@@ -23,6 +23,7 @@ package service
 
 import (
 	"fmt"
+	"github.com/wizzomafizzo/tapto/pkg/api"
 	"strings"
 	"time"
 
@@ -33,7 +34,6 @@ import (
 	"github.com/wizzomafizzo/tapto/pkg/database"
 	"github.com/wizzomafizzo/tapto/pkg/launcher"
 	"github.com/wizzomafizzo/tapto/pkg/platforms"
-	"github.com/wizzomafizzo/tapto/pkg/service/api"
 	"github.com/wizzomafizzo/tapto/pkg/service/state"
 	"github.com/wizzomafizzo/tapto/pkg/tokens"
 )

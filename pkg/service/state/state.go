@@ -1,7 +1,7 @@
 package state
 
 import (
-	"github.com/wizzomafizzo/tapto/pkg/service/api/notifications"
+	"github.com/wizzomafizzo/tapto/pkg/api/notifications"
 	"sync"
 
 	"github.com/rs/zerolog/log"

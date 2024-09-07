@@ -28,6 +28,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"github.com/wizzomafizzo/tapto/pkg/api"
 	"io"
 	"net/http"
 	"net/url"
@@ -38,7 +39,6 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/wizzomafizzo/tapto/pkg/platforms/mister"
-	"github.com/wizzomafizzo/tapto/pkg/service/api"
 	"github.com/wizzomafizzo/tapto/pkg/utils"
 
 	gc "github.com/rthornton128/goncurses"
