@@ -210,9 +210,11 @@ func (c *UserConfig) IsFileAllowed(path string) bool {
 }
 
 var (
-	ErrClientNotExist  = errors.New("client does not exist")
-	ErrClientInvalidId = errors.New("client id contains invalid characters")
-	ErrClientExists    = errors.New("client id already exists")
+	ErrClientNotExist    = errors.New("client does not exist")
+	ErrClientInvalidId   = errors.New("client id contains invalid characters")
+	ErrClientEmptyId     = errors.New("client id cannot be empty")
+	ErrClientEmptySecret = errors.New("client secret cannot be empty")
+	ErrClientExists      = errors.New("client id already exists")
 )
 
 type Client struct {
@@ -267,8 +269,12 @@ func (c *UserConfig) AddClient(id string, name string, secret string) error {
 		return ErrClientExists
 	}
 
-	if strings.Contains(id, ":") {
+	if len(id) == 0 {
+		return ErrClientEmptyId
+	} else if strings.Contains(id, ":") {
 		return ErrClientInvalidId
+	} else if len(secret) == 0 {
+		return ErrClientEmptySecret
 	}
 
 	clients[id] = Client{
