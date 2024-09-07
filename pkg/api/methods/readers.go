@@ -11,7 +11,7 @@ type ReaderWriteParams struct {
 	Text string `json:"text"`
 }
 
-func handleReaderWrite(env api.RequestEnv) error {
+func HandleReaderWrite(env api.RequestEnv) error {
 	log.Info().Msg("received reader write request")
 
 	if len(env.Params) == 0 {

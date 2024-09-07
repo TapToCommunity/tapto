@@ -21,7 +21,7 @@ type AllMappingsResponse struct {
 	Mappings []MappingResponse `json:"mappings"`
 }
 
-func handleMappings(env api.RequestEnv) error {
+func HandleMappings(env api.RequestEnv) error {
 	log.Info().Msg("received mappings request")
 
 	resp := AllMappingsResponse{
@@ -84,7 +84,7 @@ func validateAddMappingParams(amr *AddMappingParams) error {
 	return nil
 }
 
-func handleAddMapping(env api.RequestEnv) error {
+func HandleAddMapping(env api.RequestEnv) error {
 	log.Info().Msg("received add mapping request")
 
 	if len(env.Params) == 0 {
@@ -123,7 +123,7 @@ type DeleteMappingParams struct {
 	Id string `json:"id"`
 }
 
-func handleDeleteMapping(env api.RequestEnv) error {
+func HandleDeleteMapping(env api.RequestEnv) error {
 	log.Info().Msg("received delete mapping request")
 
 	if len(env.Params) == 0 {
@@ -181,7 +181,7 @@ func validateUpdateMappingParams(umr *UpdateMappingParams) error {
 	return nil
 }
 
-func handleUpdateMapping(env api.RequestEnv) error {
+func HandleUpdateMapping(env api.RequestEnv) error {
 	log.Info().Msg("received update mapping request")
 
 	if len(env.Params) == 0 {

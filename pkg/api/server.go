@@ -29,21 +29,21 @@ import (
 const RequestTimeout = 30 * time.Second
 
 var methodMap = map[string]func(RequestEnv) error{
-	"launch":          methods.handleLaunch,
-	"stop":            methods.handleStopGame,
-	"media.index":     methods.handleIndexGames,
-	"media.search":    methods.handleGames,
-	"settings":        methods.handleSettings,
-	"settings.update": methods.handleSettingsUpdate,
-	"systems":         methods.handleSystems,
-	"history":         methods.handleHistory,
-	"mappings":        methods.handleMappings,
-	"mappings.new":    methods.handleAddMapping,
-	"mappings.delete": methods.handleDeleteMapping,
-	"mappings.update": methods.handleUpdateMapping,
-	"readers.write":   methods.handleReaderWrite,
-	"status":          methods.handleStatus, // TODO: remove, convert to individual methods?
-	"version":         methods.handleVersion,
+	"launch":          methods.HandleLaunch,
+	"stop":            methods.HandleStopGame,
+	"media.index":     methods.HandleIndexGames,
+	"media.search":    methods.HandleGames,
+	"settings":        methods.HandleSettings,
+	"settings.update": methods.HandleSettingsUpdate,
+	"systems":         methods.HandleSystems,
+	"history":         methods.HandleHistory,
+	"mappings":        methods.HandleMappings,
+	"mappings.new":    methods.HandleAddMapping,
+	"mappings.delete": methods.HandleDeleteMapping,
+	"mappings.update": methods.HandleUpdateMapping,
+	"readers.write":   methods.HandleReaderWrite,
+	"status":          methods.HandleStatus, // TODO: remove, convert to individual methods?
+	"version":         methods.HandleVersion,
 }
 
 type RequestEnv struct {
@@ -268,7 +268,7 @@ func Start(
 		}
 	})
 
-	r.Get("/launch/*", methods.handleLaunchBasic(st, tq))
+	r.Get("/launch/*", methods.HandleLaunchBasic(st, tq))
 
 	err := http.ListenAndServe(":"+cfg.Api.Port, r)
 	if err != nil {

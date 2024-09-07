@@ -20,7 +20,7 @@ type HistoryResponse struct {
 	Entries []HistoryReponseEntry `json:"entries"`
 }
 
-func handleHistory(env api.RequestEnv) error {
+func HandleHistory(env api.RequestEnv) error {
 	log.Info().Msg("received history request")
 
 	entries, err := env.Database.GetHistory()

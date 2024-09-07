@@ -101,7 +101,7 @@ func NewIndex() *Index {
 
 var IndexInstance = NewIndex()
 
-func handleIndexGames(env api.RequestEnv) error {
+func HandleIndexGames(env api.RequestEnv) error {
 	log.Info().Msg("received index games request")
 	IndexInstance.GenerateIndex(env.Platform, env.Config, env.State.Notifications)
 	return nil
@@ -124,7 +124,7 @@ type SearchParams struct {
 	MaxResults *int   `json:"maxResults"`
 }
 
-func handleGames(env api.RequestEnv) error {
+func HandleGames(env api.RequestEnv) error {
 	log.Info().Msg("received games search request")
 
 	if len(env.Params) == 0 {

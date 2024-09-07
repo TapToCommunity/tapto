@@ -17,7 +17,7 @@ type SystemsResponse struct {
 	Systems []System `json:"systems"`
 }
 
-func handleSystems(env api.RequestEnv) error {
+func HandleSystems(env api.RequestEnv) error {
 	log.Info().Msg("received systems request")
 
 	indexed, err := gamesdb.IndexedSystems(env.Platform)

@@ -21,7 +21,7 @@ type LaunchParams struct {
 	Data string `json:"data"`
 }
 
-func handleLaunch(env api.RequestEnv) error {
+func HandleLaunch(env api.RequestEnv) error {
 	log.Info().Msg("received launch request")
 
 	if len(env.Params) == 0 {
@@ -51,7 +51,8 @@ func handleLaunch(env api.RequestEnv) error {
 	return nil
 }
 
-func handleLaunchBasic(
+// TODO: this is still insecure
+func HandleLaunchBasic(
 	st *state.State,
 	tq *tokens.TokenQueue,
 ) http.HandlerFunc {
@@ -80,7 +81,7 @@ func handleLaunchBasic(
 	}
 }
 
-func handleStopGame(env api.RequestEnv) error {
+func HandleStopGame(env api.RequestEnv) error {
 	log.Info().Msg("received stop game request")
 	return env.Platform.KillLauncher()
 }

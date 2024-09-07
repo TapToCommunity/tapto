@@ -28,7 +28,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"github.com/wizzomafizzo/tapto/pkg/api"
+	"github.com/wizzomafizzo/tapto/pkg/api/methods"
 	"io"
 	"net/http"
 	"net/url"
@@ -93,7 +93,7 @@ func handleWriteCommand(textToWrite string, svc *mister.Service, cfg *config.Use
 		os.Exit(1)
 	}
 
-	body, err := json.Marshal(api.ReaderWriteParams{Text: textToWrite})
+	body, err := json.Marshal(methods.ReaderWriteParams{Text: textToWrite})
 	if err != nil {
 		_, _ = fmt.Fprintln(os.Stderr, "Error encoding request:", err)
 		log.Error().Msgf("error encoding request: %s", err)

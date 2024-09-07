@@ -131,7 +131,7 @@ func newStatus(
 	}
 }
 
-func handleStatus(env api.RequestEnv) error {
+func HandleStatus(env api.RequestEnv) error {
 	log.Info().Msg("received status request")
 	status := newStatus(env.Platform, env.Config, env.State)
 	return env.SendResponse(env.Id, status)
@@ -142,7 +142,7 @@ type VersionResponse struct {
 	Platform string `json:"platform"`
 }
 
-func handleVersion(env api.RequestEnv) error {
+func HandleVersion(env api.RequestEnv) error {
 	log.Info().Msg("received version request")
 	return env.SendResponse(
 		env.Id,

@@ -19,7 +19,7 @@ type SettingsResponse struct {
 	Launching         bool     `json:"launching"`
 }
 
-func handleSettings(env api.RequestEnv) error {
+func HandleSettings(env api.RequestEnv) error {
 	log.Info().Msg("received settings request")
 
 	resp := SettingsResponse{
@@ -55,7 +55,7 @@ type UpdateSettingsParams struct {
 	Launching         *bool     `json:"launching"`
 }
 
-func handleSettingsUpdate(env api.RequestEnv) error {
+func HandleSettingsUpdate(env api.RequestEnv) error {
 	log.Info().Msg("received settings update request")
 
 	if len(env.Params) == 0 {
