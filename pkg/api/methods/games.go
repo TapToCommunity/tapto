@@ -1,8 +1,9 @@
-package api
+package methods
 
 import (
 	"encoding/json"
 	"errors"
+	"github.com/wizzomafizzo/tapto/pkg/api"
 	"github.com/wizzomafizzo/tapto/pkg/api/notifications"
 	"sync"
 
@@ -100,7 +101,7 @@ func NewIndex() *Index {
 
 var IndexInstance = NewIndex()
 
-func handleIndexGames(env RequestEnv) error {
+func handleIndexGames(env api.RequestEnv) error {
 	log.Info().Msg("received index games request")
 	IndexInstance.GenerateIndex(env.Platform, env.Config, env.State.Notifications)
 	return nil
@@ -123,7 +124,7 @@ type SearchParams struct {
 	MaxResults *int   `json:"maxResults"`
 }
 
-func handleGames(env RequestEnv) error {
+func handleGames(env api.RequestEnv) error {
 	log.Info().Msg("received games search request")
 
 	if len(env.Params) == 0 {

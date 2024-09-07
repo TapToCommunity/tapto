@@ -1,7 +1,8 @@
-package api
+package methods
 
 import (
 	"github.com/rs/zerolog/log"
+	"github.com/wizzomafizzo/tapto/pkg/api"
 	"github.com/wizzomafizzo/tapto/pkg/assets"
 	"github.com/wizzomafizzo/tapto/pkg/database/gamesdb"
 )
@@ -16,7 +17,7 @@ type SystemsResponse struct {
 	Systems []System `json:"systems"`
 }
 
-func handleSystems(env RequestEnv) error {
+func handleSystems(env api.RequestEnv) error {
 	log.Info().Msg("received systems request")
 
 	indexed, err := gamesdb.IndexedSystems(env.Platform)

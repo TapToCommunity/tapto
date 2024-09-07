@@ -3,6 +3,7 @@ package api
 import (
 	"encoding/json"
 	"errors"
+	"github.com/wizzomafizzo/tapto/pkg/api/methods"
 	"github.com/wizzomafizzo/tapto/pkg/api/notifications"
 	"net/http"
 	"time"
@@ -28,21 +29,21 @@ import (
 const RequestTimeout = 30 * time.Second
 
 var methodMap = map[string]func(RequestEnv) error{
-	"launch":          handleLaunch,
-	"stop":            handleStopGame,
-	"media.index":     handleIndexGames,
-	"media.search":    handleGames,
-	"settings":        handleSettings,
-	"settings.update": handleSettingsUpdate,
-	"systems":         handleSystems,
-	"history":         handleHistory,
-	"mappings":        handleMappings,
-	"mappings.new":    handleAddMapping,
-	"mappings.delete": handleDeleteMapping,
-	"mappings.update": handleUpdateMapping,
-	"readers.write":   handleReaderWrite,
-	"status":          handleStatus, // TODO: remove, convert to individual methods?
-	"version":         handleVersion,
+	"launch":          methods.handleLaunch,
+	"stop":            methods.handleStopGame,
+	"media.index":     methods.handleIndexGames,
+	"media.search":    methods.handleGames,
+	"settings":        methods.handleSettings,
+	"settings.update": methods.handleSettingsUpdate,
+	"systems":         methods.handleSystems,
+	"history":         methods.handleHistory,
+	"mappings":        methods.handleMappings,
+	"mappings.new":    methods.handleAddMapping,
+	"mappings.delete": methods.handleDeleteMapping,
+	"mappings.update": methods.handleUpdateMapping,
+	"readers.write":   methods.handleReaderWrite,
+	"status":          methods.handleStatus, // TODO: remove, convert to individual methods?
+	"version":         methods.handleVersion,
 }
 
 type RequestEnv struct {
@@ -267,7 +268,7 @@ func Start(
 		}
 	})
 
-	r.Get("/launch/*", handleLaunchBasic(st, tq))
+	r.Get("/launch/*", methods.handleLaunchBasic(st, tq))
 
 	err := http.ListenAndServe(":"+cfg.Api.Port, r)
 	if err != nil {

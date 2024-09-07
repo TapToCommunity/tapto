@@ -1,9 +1,10 @@
-package api
+package methods
 
 import (
 	"encoding/json"
 	"errors"
 	"github.com/rs/zerolog/log"
+	"github.com/wizzomafizzo/tapto/pkg/api"
 )
 
 type SettingsResponse struct {
@@ -18,7 +19,7 @@ type SettingsResponse struct {
 	Launching         bool     `json:"launching"`
 }
 
-func handleSettings(env RequestEnv) error {
+func handleSettings(env api.RequestEnv) error {
 	log.Info().Msg("received settings request")
 
 	resp := SettingsResponse{
@@ -54,7 +55,7 @@ type UpdateSettingsParams struct {
 	Launching         *bool     `json:"launching"`
 }
 
-func handleSettingsUpdate(env RequestEnv) error {
+func handleSettingsUpdate(env api.RequestEnv) error {
 	log.Info().Msg("received settings update request")
 
 	if len(env.Params) == 0 {
