@@ -3,7 +3,7 @@ package methods
 import (
 	"encoding/json"
 	"errors"
-	"github.com/wizzomafizzo/tapto/pkg/api"
+	"github.com/wizzomafizzo/tapto/pkg/api/models/requests"
 	"net/http"
 	"net/url"
 	"time"
@@ -21,7 +21,7 @@ type LaunchParams struct {
 	Data string `json:"data"`
 }
 
-func HandleLaunch(env api.RequestEnv) error {
+func HandleLaunch(env requests.RequestEnv) error {
 	log.Info().Msg("received launch request")
 
 	if len(env.Params) == 0 {
@@ -81,7 +81,7 @@ func HandleLaunchBasic(
 	}
 }
 
-func HandleStopGame(env api.RequestEnv) error {
+func HandleStopGame(env requests.RequestEnv) error {
 	log.Info().Msg("received stop game request")
 	return env.Platform.KillLauncher()
 }

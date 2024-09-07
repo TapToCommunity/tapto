@@ -1,7 +1,7 @@
 package mac
 
 import (
-	"github.com/wizzomafizzo/tapto/pkg/api/notifications"
+	"github.com/wizzomafizzo/tapto/pkg/api/models"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -31,7 +31,7 @@ func (p *Platform) SupportedReaders(cfg *config.UserConfig) []readers.Reader {
 	}
 }
 
-func (p *Platform) Setup(_ *config.UserConfig, _ chan<- notifications.Notification) error {
+func (p *Platform) Setup(_ *config.UserConfig, _ chan<- models.Notification) error {
 	return nil
 }
 

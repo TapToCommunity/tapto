@@ -4,7 +4,8 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/wizzomafizzo/tapto/pkg/api/methods"
-	"github.com/wizzomafizzo/tapto/pkg/api/notifications"
+	"github.com/wizzomafizzo/tapto/pkg/api/models"
+	"github.com/wizzomafizzo/tapto/pkg/api/models/requests"
 	"net/http"
 	"time"
 
@@ -28,7 +29,8 @@ import (
 
 const RequestTimeout = 30 * time.Second
 
-var methodMap = map[string]func(RequestEnv) error{
+var methodMap = map[string]func(requests.RequestEnv) error{
+	// TODO: move these strings to models package
 	"launch":          methods.HandleLaunch,
 	"stop":            methods.HandleStopGame,
 	"media.index":     methods.HandleIndexGames,
@@ -44,18 +46,6 @@ var methodMap = map[string]func(RequestEnv) error{
 	"readers.write":   methods.HandleReaderWrite,
 	"status":          methods.HandleStatus, // TODO: remove, convert to individual methods?
 	"version":         methods.HandleVersion,
-}
-
-type RequestEnv struct {
-	Platform     platforms.Platform
-	Config       *config.UserConfig
-	State        *state.State
-	Database     *database.Database
-	TokenQueue   *tokens.TokenQueue
-	Id           uuid.UUID
-	Params       []byte
-	SendResponse func(uuid.UUID, any) error
-	SendError    func(uuid.UUID, int, string) error
 }
 
 type RequestObject struct {
@@ -80,7 +70,7 @@ type ResponseObject struct {
 
 // TODO: request function should return a response and error, not be
 // handed the sendResponse and sendError functions
-func handleRequest(env RequestEnv, req RequestObject) error {
+func handleRequest(env requests.RequestEnv, req RequestObject) error {
 	log.Debug().Interface("request", req).Msg("received request")
 
 	fn, ok := methodMap[req.Method]
@@ -169,7 +159,7 @@ func Start(
 	st *state.State,
 	tq *tokens.TokenQueue,
 	db *database.Database,
-	ns <-chan notifications.Notification,
+	ns <-chan models.Notification,
 ) {
 	r := chi.NewRouter()
 
@@ -186,8 +176,8 @@ func Start(
 	m := melody.New()
 	m.Upgrader.CheckOrigin = func(r *http.Request) bool { return true }
 
-	// consume and broadcast notifications
-	go func(ns <-chan notifications.Notification) {
+	// consume and broadcast models
+	go func(ns <-chan models.Notification) {
 		for !st.ShouldStopService() {
 			select {
 			case n := <-ns:
@@ -230,7 +220,7 @@ func Start(
 		var req RequestObject
 		err := json.Unmarshal(msg, &req)
 		if err == nil && req.Method != "" {
-			env := RequestEnv{
+			env := requests.RequestEnv{
 				Platform:     pl,
 				Config:       cfg,
 				State:        st,

@@ -1,7 +1,7 @@
 package methods
 
 import (
-	"github.com/wizzomafizzo/tapto/pkg/api"
+	"github.com/wizzomafizzo/tapto/pkg/api/models/requests"
 	"time"
 
 	"github.com/rs/zerolog/log"
@@ -131,7 +131,7 @@ func newStatus(
 	}
 }
 
-func HandleStatus(env api.RequestEnv) error {
+func HandleStatus(env requests.RequestEnv) error {
 	log.Info().Msg("received status request")
 	status := newStatus(env.Platform, env.Config, env.State)
 	return env.SendResponse(env.Id, status)
@@ -142,7 +142,7 @@ type VersionResponse struct {
 	Platform string `json:"platform"`
 }
 
-func HandleVersion(env api.RequestEnv) error {
+func HandleVersion(env requests.RequestEnv) error {
 	log.Info().Msg("received version request")
 	return env.SendResponse(
 		env.Id,

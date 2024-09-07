@@ -156,7 +156,7 @@ func Start(
 	platform platforms.Platform,
 	cfg *config.UserConfig,
 ) (func() error, error) {
-	// TODO: define the notifications chan here instead of in state
+	// TODO: define the models chan here instead of in state
 	st, ns := state.NewState(platform)
 	tq := tokens.NewTokenQueue() // TODO: convert this to a *token channel
 	lsq := make(chan *tokens.Token)

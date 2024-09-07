@@ -4,14 +4,14 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/rs/zerolog/log"
-	"github.com/wizzomafizzo/tapto/pkg/api"
+	"github.com/wizzomafizzo/tapto/pkg/api/models/requests"
 )
 
 type ReaderWriteParams struct {
 	Text string `json:"text"`
 }
 
-func HandleReaderWrite(env api.RequestEnv) error {
+func HandleReaderWrite(env requests.RequestEnv) error {
 	log.Info().Msg("received reader write request")
 
 	if len(env.Params) == 0 {

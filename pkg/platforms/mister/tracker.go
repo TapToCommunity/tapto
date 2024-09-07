@@ -7,7 +7,7 @@ package mister
 
 import (
 	"fmt"
-	"github.com/wizzomafizzo/tapto/pkg/api/notifications"
+	"github.com/wizzomafizzo/tapto/pkg/api/models"
 	"os"
 	"path/filepath"
 	"strings"
@@ -36,7 +36,7 @@ type NameMapping struct {
 type Tracker struct {
 	Config           *config.UserConfig
 	mu               sync.Mutex
-	ns               chan<- notifications.Notification
+	ns               chan<- models.Notification
 	ActiveCore       string
 	ActiveSystem     string
 	ActiveSystemName string
@@ -84,7 +84,7 @@ func generateNameMap() []NameMapping {
 	return nameMap
 }
 
-func NewTracker(cfg *config.UserConfig, ns chan<- notifications.Notification) (*Tracker, error) {
+func NewTracker(cfg *config.UserConfig, ns chan<- models.Notification) (*Tracker, error) {
 	log.Info().Msg("starting tracker")
 
 	nameMap := generateNameMap()
@@ -193,8 +193,8 @@ func (tr *Tracker) LoadCore() {
 
 		if coreName == "" {
 			tr.stopGame()
-			tr.ns <- notifications.Notification{
-				Method: notifications.SystemStopped,
+			tr.ns <- models.Notification{
+				Method: models.SystemStopped,
 			}
 			return
 		}
@@ -215,8 +215,8 @@ func (tr *Tracker) LoadCore() {
 			}
 		}
 
-		tr.ns <- notifications.Notification{
-			Method: notifications.SystemStarted,
+		tr.ns <- models.Notification{
+			Method: models.SystemStarted,
 			Params: coreName,
 		}
 	}
@@ -229,8 +229,8 @@ func (tr *Tracker) stopGame() bool {
 		tr.ActiveGameName = ""
 		tr.ActiveSystem = ""
 		tr.ActiveSystemName = ""
-		tr.ns <- notifications.Notification{
-			Method: notifications.MediaStopped,
+		tr.ns <- models.Notification{
+			Method: models.MediaStopped,
 		}
 		return true
 	} else {
@@ -294,12 +294,12 @@ func (tr *Tracker) loadGame() {
 		tr.ActiveSystem = system.Id
 		tr.ActiveSystemName = system.Name
 
-		tr.ns <- notifications.Notification{
-			Method: notifications.SystemStarted,
+		tr.ns <- models.Notification{
+			Method: models.SystemStarted,
 			Params: system.Name,
 		}
-		tr.ns <- notifications.Notification{
-			Method: notifications.MediaStarted,
+		tr.ns <- models.Notification{
+			Method: models.MediaStarted,
 			Params: name,
 		}
 	}
@@ -456,7 +456,7 @@ func StartFileWatch(tr *Tracker) (*fsnotify.Watcher, error) {
 	return watcher, nil
 }
 
-func StartTracker(cfg config.UserConfig, ns chan<- notifications.Notification) (*Tracker, func() error, error) {
+func StartTracker(cfg config.UserConfig, ns chan<- models.Notification) (*Tracker, func() error, error) {
 	tr, err := NewTracker(&cfg, ns)
 	if err != nil {
 		log.Error().Msgf("error creating tracker: %s", err)

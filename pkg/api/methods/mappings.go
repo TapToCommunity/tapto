@@ -3,7 +3,7 @@ package methods
 import (
 	"encoding/json"
 	"errors"
-	"github.com/wizzomafizzo/tapto/pkg/api"
+	"github.com/wizzomafizzo/tapto/pkg/api/models/requests"
 	"regexp"
 	"time"
 
@@ -21,7 +21,7 @@ type AllMappingsResponse struct {
 	Mappings []MappingResponse `json:"mappings"`
 }
 
-func HandleMappings(env api.RequestEnv) error {
+func HandleMappings(env requests.RequestEnv) error {
 	log.Info().Msg("received mappings request")
 
 	resp := AllMappingsResponse{
@@ -84,7 +84,7 @@ func validateAddMappingParams(amr *AddMappingParams) error {
 	return nil
 }
 
-func HandleAddMapping(env api.RequestEnv) error {
+func HandleAddMapping(env requests.RequestEnv) error {
 	log.Info().Msg("received add mapping request")
 
 	if len(env.Params) == 0 {
@@ -123,7 +123,7 @@ type DeleteMappingParams struct {
 	Id string `json:"id"`
 }
 
-func HandleDeleteMapping(env api.RequestEnv) error {
+func HandleDeleteMapping(env requests.RequestEnv) error {
 	log.Info().Msg("received delete mapping request")
 
 	if len(env.Params) == 0 {
@@ -181,7 +181,7 @@ func validateUpdateMappingParams(umr *UpdateMappingParams) error {
 	return nil
 }
 
-func HandleUpdateMapping(env api.RequestEnv) error {
+func HandleUpdateMapping(env requests.RequestEnv) error {
 	log.Info().Msg("received update mapping request")
 
 	if len(env.Params) == 0 {

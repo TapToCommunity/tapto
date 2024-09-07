@@ -1,7 +1,7 @@
 package methods
 
 import (
-	"github.com/wizzomafizzo/tapto/pkg/api"
+	"github.com/wizzomafizzo/tapto/pkg/api/models/requests"
 	"time"
 
 	"github.com/rs/zerolog/log"
@@ -20,7 +20,7 @@ type HistoryResponse struct {
 	Entries []HistoryReponseEntry `json:"entries"`
 }
 
-func HandleHistory(env api.RequestEnv) error {
+func HandleHistory(env requests.RequestEnv) error {
 	log.Info().Msg("received history request")
 
 	entries, err := env.Database.GetHistory()

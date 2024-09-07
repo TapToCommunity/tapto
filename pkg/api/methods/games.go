@@ -3,8 +3,8 @@ package methods
 import (
 	"encoding/json"
 	"errors"
-	"github.com/wizzomafizzo/tapto/pkg/api"
-	"github.com/wizzomafizzo/tapto/pkg/api/notifications"
+	"github.com/wizzomafizzo/tapto/pkg/api/models"
+	"github.com/wizzomafizzo/tapto/pkg/api/models/requests"
 	"sync"
 
 	"github.com/rs/zerolog/log"
@@ -32,7 +32,7 @@ func (s *Index) Exists(platform platforms.Platform) bool {
 func (s *Index) GenerateIndex(
 	pl platforms.Platform,
 	cfg *config.UserConfig,
-	ns chan<- notifications.Notification,
+	ns chan<- models.Notification,
 ) {
 	if s.Indexing {
 		return
@@ -43,8 +43,8 @@ func (s *Index) GenerateIndex(
 	s.TotalFiles = 0
 
 	log.Info().Msg("generating games index")
-	ns <- notifications.Notification{
-		Method: notifications.MediaIndexing,
+	ns <- models.Notification{
+		Method: models.MediaIndexing,
 		Params: s,
 	}
 
@@ -73,8 +73,8 @@ func (s *Index) GenerateIndex(
 				}
 			}
 			log.Info().Msgf("indexing status: %s", s.CurrentDesc)
-			ns <- notifications.Notification{
-				Method: notifications.MediaIndexing,
+			ns <- models.Notification{
+				Method: models.MediaIndexing,
 				Params: s,
 			}
 		})
@@ -88,8 +88,8 @@ func (s *Index) GenerateIndex(
 		s.CurrentDesc = ""
 
 		log.Info().Msg("finished generating games index")
-		ns <- notifications.Notification{
-			Method: notifications.MediaIndexing,
+		ns <- models.Notification{
+			Method: models.MediaIndexing,
 			Params: s,
 		}
 	}()
@@ -101,7 +101,7 @@ func NewIndex() *Index {
 
 var IndexInstance = NewIndex()
 
-func HandleIndexGames(env api.RequestEnv) error {
+func HandleIndexGames(env requests.RequestEnv) error {
 	log.Info().Msg("received index games request")
 	IndexInstance.GenerateIndex(env.Platform, env.Config, env.State.Notifications)
 	return nil
@@ -124,7 +124,7 @@ type SearchParams struct {
 	MaxResults *int   `json:"maxResults"`
 }
 
-func HandleGames(env api.RequestEnv) error {
+func HandleGames(env requests.RequestEnv) error {
 	log.Info().Msg("received games search request")
 
 	if len(env.Params) == 0 {

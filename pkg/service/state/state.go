@@ -1,7 +1,7 @@
 package state
 
 import (
-	"github.com/wizzomafizzo/tapto/pkg/api/notifications"
+	"github.com/wizzomafizzo/tapto/pkg/api/models"
 	"sync"
 
 	"github.com/rs/zerolog/log"
@@ -21,11 +21,11 @@ type State struct {
 	readers         map[string]readers.Reader
 	softwareToken   *tokens.Token
 	wroteToken      *tokens.Token
-	Notifications   chan<- notifications.Notification
+	Notifications   chan<- models.Notification
 }
 
-func NewState(platform platforms.Platform) (*State, <-chan notifications.Notification) {
-	ns := make(chan notifications.Notification)
+func NewState(platform platforms.Platform) (*State, <-chan models.Notification) {
+	ns := make(chan models.Notification)
 	return &State{
 		platform:      platform,
 		readers:       make(map[string]readers.Reader),
@@ -47,8 +47,8 @@ func (s *State) SetActiveCard(card tokens.Token) {
 		s.lastScanned = card
 	}
 
-	s.Notifications <- notifications.Notification{
-		Method: notifications.ActiveCardState,
+	s.Notifications <- models.Notification{
+		Method: models.ActiveCardState,
 		Params: card,
 	}
 	s.mu.Unlock()
@@ -84,8 +84,8 @@ func (s *State) DisableLauncher() {
 	if err := s.platform.SetLaunching(false); err != nil {
 		log.Error().Msgf("cannot create disable launch file: %s", err)
 	}
-	s.Notifications <- notifications.Notification{
-		Method: notifications.LaunchingState,
+	s.Notifications <- models.Notification{
+		Method: models.LaunchingState,
 		Params: false,
 	}
 	s.mu.Unlock()
@@ -97,8 +97,8 @@ func (s *State) EnableLauncher() {
 	if err := s.platform.SetLaunching(true); err != nil {
 		log.Error().Msgf("cannot remove disable launch file: %s", err)
 	}
-	s.Notifications <- notifications.Notification{
-		Method: notifications.LaunchingState,
+	s.Notifications <- models.Notification{
+		Method: models.LaunchingState,
 		Params: true,
 	}
 	s.mu.Unlock()
@@ -129,8 +129,8 @@ func (s *State) SetReader(device string, reader readers.Reader) {
 	}
 
 	s.readers[device] = reader
-	s.Notifications <- notifications.Notification{
-		Method: notifications.ReaderChanged,
+	s.Notifications <- models.Notification{
+		Method: models.ReaderChanged,
 		Params: device,
 	}
 	s.mu.Unlock()
@@ -146,8 +146,8 @@ func (s *State) RemoveReader(device string) {
 		}
 	}
 	delete(s.readers, device)
-	s.Notifications <- notifications.Notification{
-		Method: notifications.ReaderRemoved,
+	s.Notifications <- models.Notification{
+		Method: models.ReaderRemoved,
 		Params: device,
 	}
 	s.mu.Unlock()
