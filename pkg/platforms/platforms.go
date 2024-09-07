@@ -1,7 +1,7 @@
 package platforms
 
 import (
-	"github.com/wizzomafizzo/tapto/pkg/service/notifications"
+	"github.com/wizzomafizzo/tapto/pkg/service/api/notifications"
 	"path/filepath"
 	"strings"
 

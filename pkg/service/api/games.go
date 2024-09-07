@@ -3,7 +3,7 @@ package api
 import (
 	"encoding/json"
 	"errors"
-	"github.com/wizzomafizzo/tapto/pkg/service/notifications"
+	"github.com/wizzomafizzo/tapto/pkg/service/api/notifications"
 	"sync"
 
 	"github.com/rs/zerolog/log"

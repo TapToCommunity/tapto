@@ -22,8 +22,8 @@ along with TapTo.  If not, see <http://www.gnu.org/licenses/>.
 package config
 
 import (
+	"errors"
 	"fmt"
-	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	"os"
 	"path/filepath"

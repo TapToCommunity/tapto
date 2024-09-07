@@ -1,7 +1,7 @@
 package mac
 
 import (
-	"github.com/wizzomafizzo/tapto/pkg/service/notifications"
+	"github.com/wizzomafizzo/tapto/pkg/service/api/notifications"
 	"os"
 	"os/exec"
 	"path/filepath"

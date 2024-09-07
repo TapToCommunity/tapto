@@ -7,7 +7,7 @@ package mister
 
 import (
 	"fmt"
-	"github.com/wizzomafizzo/tapto/pkg/service/notifications"
+	"github.com/wizzomafizzo/tapto/pkg/service/api/notifications"
 	"os"
 	"path/filepath"
 	"strings"

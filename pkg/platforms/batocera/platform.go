@@ -2,7 +2,7 @@ package batocera
 
 import (
 	"errors"
-	"github.com/wizzomafizzo/tapto/pkg/service/notifications"
+	"github.com/wizzomafizzo/tapto/pkg/service/api/notifications"
 	"os"
 	"os/exec"
 	"path/filepath"
