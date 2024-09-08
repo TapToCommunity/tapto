@@ -27,7 +27,11 @@ import (
 // TODO: should api launches from localhost require allowlist?
 // TODO: download log file no longer works, need an alternative
 
-const RequestTimeout = 30 * time.Second
+const (
+	RequestTimeout  = 30 * time.Second
+	PayloadVersion  = 1
+	EncryptedHeader = "tapto:"
+)
 
 var methodMap = map[string]func(requests.RequestEnv) (any, error){
 	models.MethodLaunch:         methods.HandleLaunch,
@@ -47,8 +51,6 @@ var methodMap = map[string]func(requests.RequestEnv) (any, error){
 	models.MethodVersion:        methods.HandleVersion,
 }
 
-// TODO: request function should return a response and error, not be
-// handed the sendResponse and sendError functions
 func handleRequest(env requests.RequestEnv, req models.RequestObject) (any, error) {
 	log.Debug().Interface("request", req).Msg("received request")
 
@@ -81,6 +83,7 @@ func sendResponse(s *melody.Session, id uuid.UUID, result any) error {
 	log.Debug().Interface("result", result).Msg("sending response")
 
 	resp := models.ResponseObject{
+		TapTo:     PayloadVersion,
 		Id:        id,
 		Timestamp: time.Now().UnixNano() / int64(time.Millisecond),
 		Result:    result,
@@ -98,6 +101,7 @@ func sendError(s *melody.Session, id uuid.UUID, code int, message string) error 
 	log.Debug().Int("code", code).Str("message", message).Msg("sending error")
 
 	resp := models.ResponseObject{
+		TapTo:     PayloadVersion,
 		Id:        id,
 		Timestamp: time.Now().UnixNano() / int64(time.Millisecond),
 		Error: &models.ErrorObject{
@@ -148,6 +152,7 @@ func Start(
 			select {
 			case n := <-ns:
 				ro := models.RequestObject{
+					TapTo:     PayloadVersion,
 					Timestamp: time.Now().UnixNano() / int64(time.Millisecond),
 					Method:    n.Method,
 					Params:    n.Params,
@@ -159,6 +164,7 @@ func Start(
 					continue
 				}
 
+				// TODO: this will not work with encryption
 				err = m.Broadcast(data)
 				if err != nil {
 					log.Error().Err(err).Msg("broadcasting notification")
@@ -187,6 +193,13 @@ func Start(
 		// try parse a request first, which has a method field
 		var req models.RequestObject
 		err := json.Unmarshal(msg, &req)
+
+		if err == nil && req.TapTo != PayloadVersion {
+			log.Error().Int("tapto", req.TapTo).Msg("unsupported payload version")
+			// TODO: send error
+			return
+		}
+
 		if err == nil && req.Method != "" {
 			if req.Id == nil {
 				// request is notification
@@ -194,15 +207,13 @@ func Start(
 				return
 			}
 
-			env := requests.RequestEnv{
+			resp, err := handleRequest(requests.RequestEnv{
 				Platform:   pl,
 				Config:     cfg,
 				State:      st,
 				Database:   db,
 				TokenQueue: tq,
-			}
-
-			resp, err := handleRequest(env, req)
+			}, req)
 			if err != nil {
 				err := sendError(s, *req.Id, 1, err.Error())
 				if err != nil {
