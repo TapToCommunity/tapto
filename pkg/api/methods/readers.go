@@ -8,22 +8,22 @@ import (
 	"github.com/wizzomafizzo/tapto/pkg/api/models/requests"
 )
 
-func HandleReaderWrite(env requests.RequestEnv) error {
+func HandleReaderWrite(env requests.RequestEnv) (any, error) {
 	log.Info().Msg("received reader write request")
 
 	if len(env.Params) == 0 {
-		return errors.New("missing params")
+		return nil, ErrMissingParams
 	}
 
 	var params models.ReaderWriteParams
 	err := json.Unmarshal(env.Params, &params)
 	if err != nil {
-		return errors.New("invalid params: " + err.Error())
+		return nil, ErrInvalidParams
 	}
 
 	rs := env.State.ListReaders()
 	if len(rs) == 0 {
-		return errors.New("no readers connected")
+		return nil, errors.New("no readers connected")
 	}
 
 	rid := rs[0]
@@ -35,17 +35,18 @@ func HandleReaderWrite(env requests.RequestEnv) error {
 
 	reader, ok := env.State.GetReader(rid)
 	if !ok || reader == nil {
-		return errors.New("reader not connected: " + rs[0])
+		return nil, errors.New("reader not connected: " + rs[0])
 	}
 
 	t, err := reader.Write(params.Text)
 	if err != nil {
-		return errors.New("error writing to reader")
+		log.Error().Err(err).Msg("error writing to reader")
+		return nil, errors.New("error writing to reader")
 	}
 
 	if t != nil {
 		env.State.SetWroteToken(t)
 	}
 
-	return env.SendResponse(env.Id, true)
+	return nil, nil
 }

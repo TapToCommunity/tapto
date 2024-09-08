@@ -15,17 +15,22 @@ import (
 	"github.com/wizzomafizzo/tapto/pkg/tokens"
 )
 
-func HandleLaunch(env requests.RequestEnv) error {
+var (
+	ErrMissingParams = errors.New("missing params")
+	ErrInvalidParams = errors.New("invalid params")
+)
+
+func HandleLaunch(env requests.RequestEnv) (any, error) {
 	log.Info().Msg("received launch request")
 
 	if len(env.Params) == 0 {
-		return errors.New("missing params")
+		return nil, ErrMissingParams
 	}
 
 	var params models.LaunchParams
 	err := json.Unmarshal(env.Params, &params)
 	if err != nil {
-		return errors.New("invalid params: " + err.Error())
+		return nil, ErrInvalidParams
 	}
 
 	var t tokens.Token
@@ -42,7 +47,7 @@ func HandleLaunch(env requests.RequestEnv) error {
 	env.State.SetActiveCard(t)
 	env.TokenQueue.Enqueue(t)
 
-	return nil
+	return nil, nil
 }
 
 // TODO: this is still insecure
@@ -64,7 +69,6 @@ func HandleLaunchBasic(
 		log.Info().Msgf("launching basic token: %s", text)
 
 		t := tokens.Token{
-			UID:      "__api__",
 			Text:     text,
 			ScanTime: time.Now(),
 			Remote:   true,
@@ -75,7 +79,7 @@ func HandleLaunchBasic(
 	}
 }
 
-func HandleStopGame(env requests.RequestEnv) error {
-	log.Info().Msg("received stop game request")
-	return env.Platform.KillLauncher()
+func HandleStop(env requests.RequestEnv) (any, error) {
+	log.Info().Msg("received stop request")
+	return nil, env.Platform.KillLauncher()
 }

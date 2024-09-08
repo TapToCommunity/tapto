@@ -29,10 +29,10 @@ import (
 
 const RequestTimeout = 30 * time.Second
 
-var methodMap = map[string]func(requests.RequestEnv) error{
+var methodMap = map[string]func(requests.RequestEnv) (any, error){
 	models.MethodLaunch:         methods.HandleLaunch,
-	models.MethodStop:           methods.HandleStopGame,
-	models.MethodMediaIndex:     methods.HandleIndexGames,
+	models.MethodStop:           methods.HandleStop,
+	models.MethodMediaIndex:     methods.HandleIndexMedia,
 	models.MethodMediaSearch:    methods.HandleGames,
 	models.MethodSettings:       methods.HandleSettings,
 	models.MethodSettingsUpdate: methods.HandleSettingsUpdate,
@@ -47,39 +47,18 @@ var methodMap = map[string]func(requests.RequestEnv) error{
 	models.MethodVersion:        methods.HandleVersion,
 }
 
-type RequestObject struct {
-	// no id means the request is a "notification" and requires no response
-	Id        *uuid.UUID `json:"id,omitempty"` // UUID v1
-	Timestamp int64      `json:"timestamp"`    // unix timestamp (ms)
-	Method    string     `json:"method"`
-	Params    *any       `json:"params,omitempty"`
-}
-
-type ErrorObject struct {
-	Code    int    `json:"code"`
-	Message string `json:"message"`
-}
-
-type ResponseObject struct {
-	Id        uuid.UUID    `json:"id"`        // UUID v1
-	Timestamp int64        `json:"timestamp"` // unix timestamp (ms)
-	Result    any          `json:"result,omitempty"`
-	Error     *ErrorObject `json:"error,omitempty"`
-}
-
 // TODO: request function should return a response and error, not be
 // handed the sendResponse and sendError functions
-func handleRequest(env requests.RequestEnv, req RequestObject) error {
+func handleRequest(env requests.RequestEnv, req models.RequestObject) (any, error) {
 	log.Debug().Interface("request", req).Msg("received request")
 
 	fn, ok := methodMap[req.Method]
 	if !ok {
-		return errors.New("unknown method")
+		return nil, errors.New("unknown method")
 	}
 
 	if req.Id == nil {
-		log.Debug().Msg("request is a notification")
-		return nil
+		return nil, errors.New("missing request id")
 	}
 
 	var params []byte
@@ -88,66 +67,54 @@ func handleRequest(env requests.RequestEnv, req RequestObject) error {
 		// double unmarshal to use json decode on params later
 		params, err = json.Marshal(req.Params)
 		if err != nil {
-			return err
+			return nil, err
 		}
 	}
 
 	env.Id = *req.Id
 	env.Params = params
 
-	err := fn(env)
+	return fn(env)
+}
+
+func sendResponse(s *melody.Session, id uuid.UUID, result any) error {
+	log.Debug().Interface("result", result).Msg("sending response")
+
+	resp := models.ResponseObject{
+		Id:        id,
+		Timestamp: time.Now().UnixNano() / int64(time.Millisecond),
+		Result:    result,
+	}
+
+	data, err := json.Marshal(resp)
 	if err != nil {
-		err := env.SendError(env.Id, 0, err.Error())
-		if err != nil {
-			log.Error().Err(err).Msg("problem sending error response")
-		}
+		return err
 	}
 
-	return err
+	return s.Write(data)
 }
 
-func sendResponse(s *melody.Session) func(uuid.UUID, any) error {
-	return func(id uuid.UUID, result any) error {
-		log.Debug().Interface("result", result).Msg("sending response")
+func sendError(s *melody.Session, id uuid.UUID, code int, message string) error {
+	log.Debug().Int("code", code).Str("message", message).Msg("sending error")
 
-		resp := ResponseObject{
-			Id:        id,
-			Timestamp: time.Now().UnixNano() / int64(time.Millisecond),
-			Result:    result,
-		}
-
-		data, err := json.Marshal(resp)
-		if err != nil {
-			return err
-		}
-
-		return s.Write(data)
+	resp := models.ResponseObject{
+		Id:        id,
+		Timestamp: time.Now().UnixNano() / int64(time.Millisecond),
+		Error: &models.ErrorObject{
+			Code:    code,
+			Message: message,
+		},
 	}
-}
 
-func sendError(s *melody.Session) func(uuid.UUID, int, string) error {
-	return func(id uuid.UUID, code int, message string) error {
-		log.Debug().Int("code", code).Str("message", message).Msg("sending error")
-
-		resp := ResponseObject{
-			Id:        id,
-			Timestamp: time.Now().UnixNano() / int64(time.Millisecond),
-			Error: &ErrorObject{
-				Code:    code,
-				Message: message,
-			},
-		}
-
-		data, err := json.Marshal(resp)
-		if err != nil {
-			return err
-		}
-
-		return s.Write(data)
+	data, err := json.Marshal(resp)
+	if err != nil {
+		return err
 	}
+
+	return s.Write(data)
 }
 
-func handleResponse(resp ResponseObject) error {
+func handleResponse(resp models.ResponseObject) error {
 	log.Debug().Interface("response", resp).Msg("received response")
 	return nil
 }
@@ -180,10 +147,10 @@ func Start(
 		for !st.ShouldStopService() {
 			select {
 			case n := <-ns:
-				ro := RequestObject{
+				ro := models.RequestObject{
 					Timestamp: time.Now().UnixNano() / int64(time.Millisecond),
 					Method:    n.Method,
-					Params:    &n.Params,
+					Params:    n.Params,
 				}
 
 				data, err := json.Marshal(ro)
@@ -197,6 +164,7 @@ func Start(
 					log.Error().Err(err).Msg("broadcasting notification")
 				}
 			case <-time.After(500 * time.Millisecond):
+				// TODO: better to wait on a stop channel
 				continue
 			}
 		}
@@ -211,33 +179,46 @@ func Start(
 
 	m.HandleMessage(func(s *melody.Session, msg []byte) {
 		if !json.Valid(msg) {
+			// TODO: send error response
 			log.Error().Msg("data not valid json")
 			return
 		}
 
 		// try parse a request first, which has a method field
-		var req RequestObject
+		var req models.RequestObject
 		err := json.Unmarshal(msg, &req)
 		if err == nil && req.Method != "" {
-			env := requests.RequestEnv{
-				Platform:     pl,
-				Config:       cfg,
-				State:        st,
-				Database:     db,
-				TokenQueue:   tq,
-				SendResponse: sendResponse(s),
-				SendError:    sendError(s),
+			if req.Id == nil {
+				// request is notification
+				log.Info().Interface("req", req).Msg("received notification, ignoring")
+				return
 			}
 
-			err := handleRequest(env, req)
-			if err != nil {
-				log.Error().Err(err).Msg("error handling request")
+			env := requests.RequestEnv{
+				Platform:   pl,
+				Config:     cfg,
+				State:      st,
+				Database:   db,
+				TokenQueue: tq,
 			}
-			return
+
+			resp, err := handleRequest(env, req)
+			if err != nil {
+				err := sendError(s, *req.Id, 1, err.Error())
+				if err != nil {
+					log.Error().Err(err).Msg("error sending error response")
+				}
+				return
+			}
+
+			err = sendResponse(s, *req.Id, resp)
+			if err != nil {
+				log.Error().Err(err).Msg("error sending response")
+			}
 		}
 
 		// otherwise try parse a response, which has an id field
-		var resp ResponseObject
+		var resp models.ResponseObject
 		err = json.Unmarshal(msg, &resp)
 		if err == nil && resp.Id != uuid.Nil {
 			err := handleResponse(resp)
@@ -247,17 +228,12 @@ func Start(
 			return
 		}
 
+		// TODO: send error
 		log.Error().Err(err).Msg("message does not match known types")
 	})
 
-	r.Get("/version", func(w http.ResponseWriter, _ *http.Request) {
-		_, err := w.Write([]byte(config.Version))
-		if err != nil {
-			log.Error().Err(err).Msg("error writing version request")
-		}
-	})
-
-	r.Get("/launch/*", methods.HandleLaunchBasic(st, tq))
+	// TODO: use allow list
+	r.Get("/l/*", methods.HandleLaunchBasic(st, tq))
 
 	err := http.ListenAndServe(":"+cfg.Api.Port, r)
 	if err != nil {

@@ -18,11 +18,11 @@ const defaultMaxResults = 250
 
 type Index struct {
 	mu          sync.Mutex
-	Indexing    bool   `json:"indexing"`
-	TotalSteps  int    `json:"totalSteps"`
-	CurrentStep int    `json:"currentStep"`
-	CurrentDesc string `json:"currentDesc"`
-	TotalFiles  int    `json:"totalFiles"`
+	Indexing    bool
+	TotalSteps  int
+	CurrentStep int
+	CurrentDesc string
+	TotalFiles  int
 }
 
 func (s *Index) Exists(platform platforms.Platform) bool {
@@ -42,10 +42,16 @@ func (s *Index) GenerateIndex(
 	s.Indexing = true
 	s.TotalFiles = 0
 
-	log.Info().Msg("generating games index")
+	log.Info().Msg("generating media index")
 	ns <- models.Notification{
 		Method: models.MediaIndexing,
-		Params: s,
+		Params: models.IndexStatusResponse{
+			Indexing:    true,
+			TotalSteps:  0,
+			CurrentStep: 0,
+			CurrentDesc: "",
+			TotalFiles:  0,
+		},
 	}
 
 	go func() {
@@ -56,7 +62,7 @@ func (s *Index) GenerateIndex(
 			s.CurrentStep = status.Step
 			s.TotalFiles = status.Files
 			if status.Step == 1 {
-				s.CurrentDesc = "Finding games folders"
+				s.CurrentDesc = "Finding media folders"
 			} else if status.Step == status.Total {
 				s.CurrentDesc = "Writing database"
 			} else {
@@ -75,11 +81,17 @@ func (s *Index) GenerateIndex(
 			log.Info().Msgf("indexing status: %s", s.CurrentDesc)
 			ns <- models.Notification{
 				Method: models.MediaIndexing,
-				Params: s,
+				Params: models.IndexStatusResponse{
+					Indexing:    true,
+					TotalSteps:  s.TotalSteps,
+					CurrentStep: s.CurrentStep,
+					CurrentDesc: s.CurrentDesc,
+					TotalFiles:  s.TotalFiles,
+				},
 			}
 		})
 		if err != nil {
-			log.Error().Err(err).Msg("error generating games index")
+			log.Error().Err(err).Msg("error generating media index")
 		}
 
 		s.Indexing = false
@@ -87,10 +99,16 @@ func (s *Index) GenerateIndex(
 		s.CurrentStep = 0
 		s.CurrentDesc = ""
 
-		log.Info().Msg("finished generating games index")
+		log.Info().Msg("finished generating media index")
 		ns <- models.Notification{
 			Method: models.MediaIndexing,
-			Params: s,
+			Params: models.IndexStatusResponse{
+				Indexing:    false,
+				TotalSteps:  0,
+				CurrentStep: 0,
+				CurrentDesc: "",
+				TotalFiles:  0,
+			},
 		}
 	}()
 }
@@ -101,34 +119,23 @@ func NewIndex() *Index {
 
 var IndexInstance = NewIndex()
 
-func HandleIndexGames(env requests.RequestEnv) error {
-	log.Info().Msg("received index games request")
+func HandleIndexMedia(env requests.RequestEnv) (any, error) {
+	log.Info().Msg("received index media request")
 	IndexInstance.GenerateIndex(env.Platform, env.Config, env.State.Notifications)
-	return nil
+	return nil, nil
 }
 
-type SearchResultGame struct {
-	System System `json:"system"`
-	Name   string `json:"name"`
-	Path   string `json:"path"`
-}
-
-type SearchResults struct {
-	Results []SearchResultGame `json:"results"`
-	Total   int                `json:"total"`
-}
-
-func HandleGames(env requests.RequestEnv) error {
-	log.Info().Msg("received games search request")
+func HandleGames(env requests.RequestEnv) (any, error) {
+	log.Info().Msg("received media search request")
 
 	if len(env.Params) == 0 {
-		return errors.New("missing params")
+		return nil, ErrMissingParams
 	}
 
 	var params models.SearchParams
 	err := json.Unmarshal(env.Params, &params)
 	if err != nil {
-		return errors.New("invalid params: " + err.Error())
+		return nil, ErrInvalidParams
 	}
 
 	maxResults := defaultMaxResults
@@ -137,10 +144,10 @@ func HandleGames(env requests.RequestEnv) error {
 	}
 
 	if params.Query == "" && params.System == "" {
-		return errors.New("query or system is required")
+		return nil, errors.New("query or system is required")
 	}
 
-	var results = make([]SearchResultGame, 0)
+	var results = make([]models.SearchResultMedia, 0)
 	var search []gamesdb.SearchResult
 	system := params.System
 	query := params.Query
@@ -148,17 +155,17 @@ func HandleGames(env requests.RequestEnv) error {
 	if system == "all" || system == "" {
 		search, err = gamesdb.SearchNamesWords(env.Platform, gamesdb.AllSystems(), query)
 		if err != nil {
-			return errors.New("error searching all media: " + err.Error())
+			return nil, errors.New("error searching all media: " + err.Error())
 		}
 	} else {
 		system, err := gamesdb.GetSystem(system)
 		if err != nil {
-			return errors.New("error getting system: " + err.Error())
+			return nil, errors.New("error getting system: " + err.Error())
 		}
 
 		search, err = gamesdb.SearchNamesWords(env.Platform, []gamesdb.System{*system}, query)
 		if err != nil {
-			return errors.New("error searching " + system.Id + " media: " + err.Error())
+			return nil, errors.New("error searching " + system.Id + " media: " + err.Error())
 		}
 	}
 
@@ -168,8 +175,8 @@ func HandleGames(env requests.RequestEnv) error {
 			continue
 		}
 
-		results = append(results, SearchResultGame{
-			System: System{
+		results = append(results, models.SearchResultMedia{
+			System: models.System{
 				Id:   system.Id,
 				Name: system.Id,
 			},
@@ -184,8 +191,8 @@ func HandleGames(env requests.RequestEnv) error {
 		results = results[:maxResults]
 	}
 
-	return env.SendResponse(env.Id, &SearchResults{
+	return models.SearchResults{
 		Results: results,
 		Total:   total,
-	})
+	}, nil
 }

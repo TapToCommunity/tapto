@@ -1,40 +1,27 @@
 package methods
 
 import (
-	"github.com/wizzomafizzo/tapto/pkg/api/models/requests"
-	"time"
-
+	"errors"
 	"github.com/rs/zerolog/log"
+	"github.com/wizzomafizzo/tapto/pkg/api/models"
+	"github.com/wizzomafizzo/tapto/pkg/api/models/requests"
 )
 
-type HistoryReponseEntry struct {
-	Time    time.Time `json:"time"`
-	Type    string    `json:"type"`
-	UID     string    `json:"uid"`
-	Text    string    `json:"text"`
-	Data    string    `json:"data"`
-	Success bool      `json:"success"`
-}
-
-type HistoryResponse struct {
-	Entries []HistoryReponseEntry `json:"entries"`
-}
-
-func HandleHistory(env requests.RequestEnv) error {
+func HandleHistory(env requests.RequestEnv) (any, error) {
 	log.Info().Msg("received history request")
 
 	entries, err := env.Database.GetHistory()
 	if err != nil {
 		log.Error().Err(err).Msgf("error getting history")
-		return env.SendError(env.Id, 1, "error getting history") // TODO: error code
+		return nil, errors.New("error getting history")
 	}
 
-	resp := HistoryResponse{
-		Entries: make([]HistoryReponseEntry, len(entries)),
+	resp := models.HistoryResponse{
+		Entries: make([]models.HistoryReponseEntry, len(entries)),
 	}
 
 	for i, e := range entries {
-		resp.Entries[i] = HistoryReponseEntry{
+		resp.Entries[i] = models.HistoryReponseEntry{
 			Time:    e.Time,
 			Type:    e.Type,
 			UID:     e.UID,
@@ -44,5 +31,5 @@ func HandleHistory(env requests.RequestEnv) error {
 		}
 	}
 
-	return env.SendResponse(env.Id, resp)
+	return resp, nil
 }

@@ -7,6 +7,7 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/rs/zerolog/log"
 	"github.com/wizzomafizzo/tapto/pkg/api"
+	"github.com/wizzomafizzo/tapto/pkg/api/models"
 	"github.com/wizzomafizzo/tapto/pkg/config"
 	"net/url"
 	"time"
@@ -35,7 +36,7 @@ func LocalClient(
 		return "", err
 	}
 
-	req := api.RequestObject{
+	req := models.RequestObject{
 		Id:        &id,
 		Timestamp: time.Now().UnixNano() / int64(time.Millisecond),
 		Method:    method,
@@ -66,7 +67,7 @@ func LocalClient(
 	}(c)
 
 	done := make(chan struct{})
-	var resp *api.ResponseObject
+	var resp *models.ResponseObject
 
 	go func() {
 		defer close(done)
@@ -77,7 +78,7 @@ func LocalClient(
 				return
 			}
 
-			var m api.ResponseObject
+			var m models.ResponseObject
 			err = json.Unmarshal(message, &m)
 			if err != nil {
 				continue

@@ -1,68 +1,19 @@
 package methods
 
 import (
-	"github.com/wizzomafizzo/tapto/pkg/api/models/requests"
-	"time"
-
 	"github.com/rs/zerolog/log"
+	"github.com/wizzomafizzo/tapto/pkg/api/models"
+	"github.com/wizzomafizzo/tapto/pkg/api/models/requests"
 	"github.com/wizzomafizzo/tapto/pkg/config"
 	"github.com/wizzomafizzo/tapto/pkg/platforms"
 	"github.com/wizzomafizzo/tapto/pkg/service/state"
 )
 
-type TokenResponse struct {
-	Type     string    `json:"type"`
-	UID      string    `json:"uid"`
-	Text     string    `json:"text"`
-	Data     string    `json:"data"`
-	ScanTime time.Time `json:"scanTime"`
-}
-
-type IndexResponse struct {
-	Exists      bool   `json:"exists"`
-	Indexing    bool   `json:"indexing"`
-	TotalSteps  int    `json:"totalSteps"`
-	CurrentStep int    `json:"currentStep"`
-	CurrentDesc string `json:"currentDesc"`
-	TotalFiles  int    `json:"totalFiles"`
-}
-
-// TODO: legacy, remove in v2
-type ReaderStatusResponse struct {
-	Connected bool   `json:"connected"`
-	Type      string `json:"type"`
-}
-
-type ReaderResponse struct {
-	// TODO: type
-	Connected bool   `json:"connected"`
-	Device    string `json:"device"`
-	Info      string `json:"info"`
-}
-
-type PlayingResponse struct {
-	System     string `json:"system"`
-	SystemName string `json:"systemName"`
-	Game       string `json:"game"`
-	GameName   string `json:"gameName"`
-	GamePath   string `json:"gamePath"`
-}
-
-type StatusResponse struct {
-	Reader      ReaderStatusResponse `json:"reader"` // TODO: remove in v2
-	Readers     []ReaderResponse     `json:"readers"`
-	ActiveToken TokenResponse        `json:"activeToken"`
-	LastToken   TokenResponse        `json:"lastToken"`
-	Launching   bool                 `json:"launching"`
-	GamesIndex  IndexResponse        `json:"gamesIndex"`
-	Playing     PlayingResponse      `json:"playing"`
-}
-
 func newStatus(
 	pl platforms.Platform,
 	cfg *config.UserConfig,
 	st *state.State,
-) StatusResponse {
+) models.StatusResponse {
 	active := st.GetActiveCard()
 	last := st.GetLastScanned()
 
@@ -78,11 +29,11 @@ func newStatus(
 		}
 	}
 
-	readers := make([]ReaderResponse, 0)
+	readers := make([]models.ReaderResponse, 0)
 	for _, device := range rs {
 		reader, ok := st.GetReader(device)
 		if ok && reader != nil {
-			readers = append(readers, ReaderResponse{
+			readers = append(readers, models.ReaderResponse{
 				Connected: reader.Connected(),
 				Device:    device,
 				Info:      reader.Info(),
@@ -92,28 +43,28 @@ func newStatus(
 
 	launcherDisabled := st.IsLauncherDisabled()
 
-	return StatusResponse{
+	return models.StatusResponse{
 		Launching: !launcherDisabled,
 		Readers:   readers,
-		Reader: ReaderStatusResponse{
+		Reader: models.ReaderStatusResponse{
 			Connected: readerConnected,
 			Type:      readerType,
 		},
-		ActiveToken: TokenResponse{
+		ActiveToken: models.TokenResponse{
 			Type:     active.Type,
 			UID:      active.UID,
 			Text:     active.Text,
 			Data:     active.Data,
 			ScanTime: active.ScanTime,
 		},
-		LastToken: TokenResponse{
+		LastToken: models.TokenResponse{
 			Type:     last.Type,
 			UID:      last.UID,
 			Text:     last.Text,
 			Data:     last.Data,
 			ScanTime: last.ScanTime,
 		},
-		GamesIndex: IndexResponse{
+		GamesIndex: models.IndexResponse{
 			Exists:      IndexInstance.Exists(pl),
 			Indexing:    IndexInstance.Indexing,
 			TotalSteps:  IndexInstance.TotalSteps,
@@ -121,7 +72,7 @@ func newStatus(
 			CurrentDesc: IndexInstance.CurrentDesc,
 			TotalFiles:  IndexInstance.TotalFiles,
 		},
-		Playing: PlayingResponse{
+		Playing: models.PlayingResponse{
 			System:     pl.ActiveSystem(),
 			SystemName: pl.ActiveSystem(),
 			Game:       pl.ActiveGame(),
@@ -131,24 +82,16 @@ func newStatus(
 	}
 }
 
-func HandleStatus(env requests.RequestEnv) error {
+func HandleStatus(env requests.RequestEnv) (any, error) {
 	log.Info().Msg("received status request")
 	status := newStatus(env.Platform, env.Config, env.State)
-	return env.SendResponse(env.Id, status)
+	return status, nil
 }
 
-type VersionResponse struct {
-	Version  string `json:"version"`
-	Platform string `json:"platform"`
-}
-
-func HandleVersion(env requests.RequestEnv) error {
+func HandleVersion(env requests.RequestEnv) (any, error) {
 	log.Info().Msg("received version request")
-	return env.SendResponse(
-		env.Id,
-		VersionResponse{
-			Version:  config.Version,
-			Platform: env.Platform.Id(),
-		},
-	)
+	return models.VersionResponse{
+		Version:  config.Version,
+		Platform: env.Platform.Id(),
+	}, nil
 }

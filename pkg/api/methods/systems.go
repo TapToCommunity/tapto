@@ -2,22 +2,13 @@ package methods
 
 import (
 	"github.com/rs/zerolog/log"
+	"github.com/wizzomafizzo/tapto/pkg/api/models"
 	"github.com/wizzomafizzo/tapto/pkg/api/models/requests"
 	"github.com/wizzomafizzo/tapto/pkg/assets"
 	"github.com/wizzomafizzo/tapto/pkg/database/gamesdb"
 )
 
-type System struct {
-	Id       string `json:"id"`
-	Name     string `json:"name"`
-	Category string `json:"category"`
-}
-
-type SystemsResponse struct {
-	Systems []System `json:"systems"`
-}
-
-func HandleSystems(env requests.RequestEnv) error {
+func HandleSystems(env requests.RequestEnv) (any, error) {
 	log.Info().Msg("received systems request")
 
 	indexed, err := gamesdb.IndexedSystems(env.Platform)
@@ -30,7 +21,7 @@ func HandleSystems(env requests.RequestEnv) error {
 		log.Warn().Msg("no indexed systems found")
 	}
 
-	systems := make([]System, 0)
+	systems := make([]models.System, 0)
 
 	for _, id := range indexed {
 		sys, err := gamesdb.GetSystem(id)
@@ -39,7 +30,7 @@ func HandleSystems(env requests.RequestEnv) error {
 			continue
 		}
 
-		sr := System{
+		sr := models.System{
 			Id: sys.Id,
 		}
 
@@ -54,7 +45,7 @@ func HandleSystems(env requests.RequestEnv) error {
 		systems = append(systems, sr)
 	}
 
-	return env.SendResponse(env.Id, SystemsResponse{
+	return models.SystemsResponse{
 		Systems: systems,
-	})
+	}, nil
 }

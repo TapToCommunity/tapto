@@ -13,36 +13,33 @@ import (
 	"github.com/wizzomafizzo/tapto/pkg/utils"
 )
 
-type MappingResponse struct {
-	database.Mapping
-	Added string `json:"added"`
-}
-
-type AllMappingsResponse struct {
-	Mappings []MappingResponse `json:"mappings"`
-}
-
-func HandleMappings(env requests.RequestEnv) error {
+func HandleMappings(env requests.RequestEnv) (any, error) {
 	log.Info().Msg("received mappings request")
 
-	resp := AllMappingsResponse{
-		Mappings: make([]MappingResponse, 0),
+	resp := models.AllMappingsResponse{
+		Mappings: make([]models.MappingResponse, 0),
 	}
 
 	mappings, err := env.Database.GetAllMappings()
 	if err != nil {
 		log.Error().Err(err).Msg("error getting mappings")
-		return env.SendError(env.Id, 1, "error getting mappings") // TODO: error code
+		return nil, errors.New("error getting mappings")
 	}
 
-	mrs := make([]MappingResponse, 0)
+	mrs := make([]models.MappingResponse, 0)
 
 	for _, m := range mappings {
 		t := time.Unix(0, m.Added*int64(time.Millisecond))
 
-		mr := MappingResponse{
-			Mapping: m,
-			Added:   t.Format(time.RFC3339),
+		mr := models.MappingResponse{
+			Id:       m.Id,
+			Added:    t.Format(time.RFC3339),
+			Label:    m.Label,
+			Enabled:  m.Enabled,
+			Type:     m.Type,
+			Match:    m.Match,
+			Pattern:  m.Pattern,
+			Override: m.Override,
 		}
 
 		mrs = append(mrs, mr)
@@ -50,7 +47,7 @@ func HandleMappings(env requests.RequestEnv) error {
 
 	resp.Mappings = mrs
 
-	return env.SendResponse(env.Id, resp)
+	return resp, nil
 }
 
 func validateAddMappingParams(amr *models.AddMappingParams) error {
@@ -76,22 +73,23 @@ func validateAddMappingParams(amr *models.AddMappingParams) error {
 	return nil
 }
 
-func HandleAddMapping(env requests.RequestEnv) error {
+func HandleAddMapping(env requests.RequestEnv) (any, error) {
 	log.Info().Msg("received add mapping request")
 
 	if len(env.Params) == 0 {
-		return errors.New("missing params")
+		return nil, ErrMissingParams
 	}
 
 	var params models.AddMappingParams
 	err := json.Unmarshal(env.Params, &params)
 	if err != nil {
-		return errors.New("invalid params: " + err.Error())
+		return nil, ErrInvalidParams
 	}
 
 	err = validateAddMappingParams(&params)
 	if err != nil {
-		return errors.New("invalid params: " + err.Error())
+		log.Error().Err(err).Msg("invalid params")
+		return nil, ErrInvalidParams
 	}
 
 	m := database.Mapping{
@@ -105,31 +103,31 @@ func HandleAddMapping(env requests.RequestEnv) error {
 
 	err = env.Database.AddMapping(m)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return nil
+	return nil, nil
 }
 
-func HandleDeleteMapping(env requests.RequestEnv) error {
+func HandleDeleteMapping(env requests.RequestEnv) (any, error) {
 	log.Info().Msg("received delete mapping request")
 
 	if len(env.Params) == 0 {
-		return errors.New("missing params")
+		return nil, ErrMissingParams
 	}
 
 	var params models.DeleteMappingParams
 	err := json.Unmarshal(env.Params, &params)
 	if err != nil {
-		return errors.New("invalid params: " + err.Error())
+		return nil, ErrInvalidParams
 	}
 
 	err = env.Database.DeleteMapping(params.Id)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return nil
+	return nil, nil
 }
 
 func validateUpdateMappingParams(umr *models.UpdateMappingParams) error {
@@ -159,27 +157,28 @@ func validateUpdateMappingParams(umr *models.UpdateMappingParams) error {
 	return nil
 }
 
-func HandleUpdateMapping(env requests.RequestEnv) error {
+func HandleUpdateMapping(env requests.RequestEnv) (any, error) {
 	log.Info().Msg("received update mapping request")
 
 	if len(env.Params) == 0 {
-		return errors.New("missing params")
+		return nil, ErrMissingParams
 	}
 
 	var params models.UpdateMappingParams
 	err := json.Unmarshal(env.Params, &params)
 	if err != nil {
-		return errors.New("invalid params: " + err.Error())
+		return nil, ErrInvalidParams
 	}
 
 	err = validateUpdateMappingParams(&params)
 	if err != nil {
-		return errors.New("invalid params: " + err.Error())
+		log.Error().Err(err).Msg("invalid params")
+		return nil, ErrInvalidParams
 	}
 
 	oldMapping, err := env.Database.GetMapping(params.Id)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	newMapping := oldMapping
@@ -210,8 +209,8 @@ func HandleUpdateMapping(env requests.RequestEnv) error {
 
 	err = env.Database.UpdateMapping(params.Id, newMapping)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return nil
+	return nil, nil
 }

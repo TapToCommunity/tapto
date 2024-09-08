@@ -10,13 +10,11 @@ import (
 )
 
 type RequestEnv struct {
-	Platform     platforms.Platform
-	Config       *config.UserConfig
-	State        *state.State
-	Database     *database.Database
-	TokenQueue   *tokens.TokenQueue
-	Id           uuid.UUID
-	Params       []byte
-	SendResponse func(uuid.UUID, any) error
-	SendError    func(uuid.UUID, int, string) error
+	Platform   platforms.Platform
+	Config     *config.UserConfig
+	State      *state.State
+	Database   *database.Database
+	TokenQueue *tokens.TokenQueue
+	Id         uuid.UUID
+	Params     []byte
 }

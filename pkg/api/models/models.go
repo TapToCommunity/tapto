@@ -1,5 +1,7 @@
 package models
 
+import "github.com/google/uuid"
+
 const (
 	ReaderChanged        = "state.readerChanged"
 	ReaderRemoved        = "state.readerRemoved"
@@ -28,58 +30,27 @@ const (
 )
 
 type Notification struct {
-	Method string `json:"method"`
-	Params any    `json:"params,omitempty"`
+	Method string
+	Params any
 }
 
-type SearchParams struct {
-	Query      string `json:"query"`
-	System     string `json:"system"`
-	MaxResults *int   `json:"maxResults"`
+type RequestObject struct {
+	TapTo     int        `json:"tapto"`
+	Id        *uuid.UUID `json:"id,omitempty"` // UUID v1
+	Timestamp int64      `json:"timestamp"`    // unix timestamp (ms)
+	Method    string     `json:"method"`
+	Params    any        `json:"params,omitempty"`
 }
 
-type LaunchParams struct {
-	Type string `json:"type"`
-	UID  string `json:"uid"`
-	Text string `json:"text"`
-	Data string `json:"data"`
+type ErrorObject struct {
+	Code    int    `json:"code"`
+	Message string `json:"message"`
 }
 
-type AddMappingParams struct {
-	Label    string `json:"label"`
-	Enabled  bool   `json:"enabled"`
-	Type     string `json:"type"`
-	Match    string `json:"match"`
-	Pattern  string `json:"pattern"`
-	Override string `json:"override"`
-}
-
-type DeleteMappingParams struct {
-	Id string `json:"id"`
-}
-
-type UpdateMappingParams struct {
-	Id       string  `json:"id"`
-	Label    *string `json:"label"`
-	Enabled  *bool   `json:"enabled"`
-	Type     *string `json:"type"`
-	Match    *string `json:"match"`
-	Pattern  *string `json:"pattern"`
-	Override *string `json:"override"`
-}
-
-type ReaderWriteParams struct {
-	Text string `json:"text"`
-}
-
-type UpdateSettingsParams struct {
-	ConnectionString  *string   `json:"connectionString"`
-	AllowCommands     *bool     `json:"allowCommands"`
-	DisableSounds     *bool     `json:"disableSounds"`
-	ProbeDevice       *bool     `json:"probeDevice"`
-	ExitGame          *bool     `json:"exitGame"`
-	ExitGameDelay     *int      `json:"exitGameDelay"`
-	ExitGameBlocklist *[]string `json:"exitGameBlocklist"`
-	Debug             *bool     `json:"debug"`
-	Launching         *bool     `json:"launching"`
+type ResponseObject struct {
+	TapTo     int          `json:"tapto"`
+	Id        uuid.UUID    `json:"id"`        // UUID v1
+	Timestamp int64        `json:"timestamp"` // unix timestamp (ms)
+	Result    any          `json:"result,omitempty"`
+	Error     *ErrorObject `json:"error,omitempty"`
 }

@@ -2,28 +2,15 @@ package methods
 
 import (
 	"encoding/json"
-	"errors"
 	"github.com/rs/zerolog/log"
 	"github.com/wizzomafizzo/tapto/pkg/api/models"
 	"github.com/wizzomafizzo/tapto/pkg/api/models/requests"
 )
 
-type SettingsResponse struct {
-	ConnectionString  string   `json:"connectionString"`
-	AllowCommands     bool     `json:"allowCommands"`
-	DisableSounds     bool     `json:"disableSounds"`
-	ProbeDevice       bool     `json:"probeDevice"`
-	ExitGame          bool     `json:"exitGame"`
-	ExitGameDelay     int      `json:"exitGameDelay"`
-	ExitGameBlocklist []string `json:"exitGameBlocklist"`
-	Debug             bool     `json:"debug"`
-	Launching         bool     `json:"launching"`
-}
-
-func HandleSettings(env requests.RequestEnv) error {
+func HandleSettings(env requests.RequestEnv) (any, error) {
 	log.Info().Msg("received settings request")
 
-	resp := SettingsResponse{
+	resp := models.SettingsResponse{
 		// TODO: this is very out of date
 		ConnectionString:  env.Config.GetConnectionString(),
 		AllowCommands:     env.Config.GetAllowCommands(),
@@ -41,20 +28,20 @@ func HandleSettings(env requests.RequestEnv) error {
 		env.Config.GetExitGameBlocklist()...,
 	)
 
-	return env.SendResponse(env.Id, resp)
+	return resp, nil
 }
 
-func HandleSettingsUpdate(env requests.RequestEnv) error {
+func HandleSettingsUpdate(env requests.RequestEnv) (any, error) {
 	log.Info().Msg("received settings update request")
 
 	if len(env.Params) == 0 {
-		return errors.New("missing params")
+		return nil, ErrMissingParams
 	}
 
 	var params models.UpdateSettingsParams
 	err := json.Unmarshal(env.Params, &params)
 	if err != nil {
-		return errors.New("invalid params: " + err.Error())
+		return nil, ErrInvalidParams
 	}
 
 	if params.ConnectionString != nil {
@@ -111,5 +98,5 @@ func HandleSettingsUpdate(env requests.RequestEnv) error {
 		}
 	}
 
-	return env.Config.SaveConfig()
+	return nil, env.Config.SaveConfig()
 }
