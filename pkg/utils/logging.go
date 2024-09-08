@@ -34,5 +34,11 @@ func InitLogging(cfg *config.UserConfig, pl platforms.Platform) error {
 
 	log.Logger = log.Output(io.MultiWriter(BaseLogWriters...))
 
+	if cfg.GetDebug() {
+		zerolog.SetGlobalLevel(zerolog.DebugLevel)
+	} else {
+		zerolog.SetGlobalLevel(zerolog.InfoLevel)
+	}
+
 	return nil
 }

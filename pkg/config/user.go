@@ -342,7 +342,7 @@ func (c *UserConfig) SaveConfig() error {
 	return nil
 }
 
-func NewUserConfig(name string, defaultConfig *UserConfig) (*UserConfig, error) {
+func NewUserConfig(defaultConfig *UserConfig) (*UserConfig, error) {
 	iniPath := os.Getenv(UserConfigEnv)
 
 	exePath, err := os.Executable()
@@ -356,7 +356,7 @@ func NewUserConfig(name string, defaultConfig *UserConfig) (*UserConfig, error) 
 	}
 
 	if iniPath == "" {
-		iniPath = filepath.Join(filepath.Dir(exePath), name+".ini")
+		iniPath = filepath.Join(filepath.Dir(exePath), AppName+".ini")
 	}
 
 	defaultConfig.AppPath = exePath

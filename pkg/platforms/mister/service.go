@@ -28,18 +28,13 @@ type Service struct {
 }
 
 type ServiceArgs struct {
-	Name     string
 	Entry    ServiceEntry
 	NoDaemon bool
 }
 
 func NewService(args ServiceArgs) (*Service, error) {
-	if args.Name == "" {
-		return nil, fmt.Errorf("service name is required")
-	}
-
 	return &Service{
-		Name:   args.Name,
+		Name:   config.AppName,
 		daemon: !args.NoDaemon,
 		start:  args.Entry,
 	}, nil

@@ -1,4 +1,4 @@
-//go:build linux && cgo
+///go:build linux && cgo
 
 /*
 TapTo
@@ -46,7 +46,7 @@ func tryAddStartup(stdscr *goncurses.Window) error {
 		log.Error().Msgf("failed to load startup file: %s", err)
 	}
 
-	if !startup.Exists("mrext/" + appName) {
+	if !startup.Exists("mrext/" + config.AppName) {
 		win, err := curses.NewWindow(stdscr, 6, 43, "", -1)
 		if err != nil {
 			return err
@@ -95,7 +95,7 @@ func tryAddStartup(stdscr *goncurses.Window) error {
 		}
 
 		if selected == 0 {
-			err = startup.AddService("mrext/" + appName)
+			err = startup.AddService("mrext/" + config.AppName)
 			if err != nil {
 				return err
 			}
@@ -247,7 +247,7 @@ func displayServiceInfo(pl platforms.Platform, cfg *config.UserConfig, stdscr *g
 			statusText = "Service:        NOT RUNNING"
 		}
 
-		printCenter(0, "TapTo v"+appVersion)
+		printCenter(0, "TapTo v"+config.Version+" ("+pl.Id()+")")
 
 		clearLine(1)
 		printCenter(1, "Visit tapto.wiki for guides and help!")
