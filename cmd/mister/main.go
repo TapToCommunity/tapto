@@ -28,6 +28,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"github.com/wizzomafizzo/tapto/pkg/api/client"
 	"github.com/wizzomafizzo/tapto/pkg/api/methods"
 	"io"
 	"net/http"
@@ -156,6 +157,7 @@ func main() {
 	svcOpt := flag.String("service", "", "manage TapTo service (start, stop, restart, status)")
 	writeOpt := flag.String("write", "", "write text to tag")
 	launchOpt := flag.String("launch", "", "execute given text as if it were a token")
+	apiOpt := flag.String("api", "", "send a method and params to the API")
 	versionOpt := flag.Bool("version", false, "print version and exit")
 	flag.Parse()
 
@@ -163,6 +165,8 @@ func main() {
 		fmt.Println("TapTo v" + appVersion + " (mister)")
 		os.Exit(0)
 	}
+
+	// TODO: print errors to stderr
 
 	cfg, err := config.NewUserConfig(appName, &config.UserConfig{
 		TapTo: config.TapToConfig{
@@ -173,7 +177,7 @@ func main() {
 		},
 	})
 	if err != nil {
-		log.Error().Msgf("error loading user config: %s", err)
+		// TODO: load default config and then log later
 		fmt.Println("Error loading config:", err)
 		os.Exit(1)
 	}
@@ -185,6 +189,7 @@ func main() {
 		os.Exit(1)
 	}
 
+	// TODO: move to config?
 	if cfg.GetDebug() {
 		zerolog.SetGlobalLevel(zerolog.DebugLevel)
 	} else {
@@ -207,6 +212,23 @@ func main() {
 		handleWriteCommand(*writeOpt, svc, cfg)
 	} else if *launchOpt != "" {
 		handleLaunchCommand(*launchOpt, svc, cfg)
+	} else if *apiOpt != "" {
+		ps := strings.SplitN(*apiOpt, ":", 2)
+		method := ps[0]
+		params := ""
+		if len(ps) > 1 {
+			params = ps[1]
+		}
+
+		resp, err := client.LocalClient(cfg, method, params)
+		if err != nil {
+			log.Error().Msgf("error calling API: %s", err)
+			fmt.Println("Error calling API:", err)
+			os.Exit(1)
+		}
+
+		fmt.Println(resp)
+		os.Exit(0)
 	}
 
 	svc.ServiceHandler(svcOpt)
