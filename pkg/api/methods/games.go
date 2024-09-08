@@ -118,12 +118,6 @@ type SearchResults struct {
 	Total   int                `json:"total"`
 }
 
-type SearchParams struct {
-	Query      string `json:"query"`
-	System     string `json:"system"`
-	MaxResults *int   `json:"maxResults"`
-}
-
 func HandleGames(env requests.RequestEnv) error {
 	log.Info().Msg("received games search request")
 
@@ -131,7 +125,7 @@ func HandleGames(env requests.RequestEnv) error {
 		return errors.New("missing params")
 	}
 
-	var params SearchParams
+	var params models.SearchParams
 	err := json.Unmarshal(env.Params, &params)
 	if err != nil {
 		return errors.New("invalid params: " + err.Error())

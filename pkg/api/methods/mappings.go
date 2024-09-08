@@ -3,6 +3,7 @@ package methods
 import (
 	"encoding/json"
 	"errors"
+	"github.com/wizzomafizzo/tapto/pkg/api/models"
 	"github.com/wizzomafizzo/tapto/pkg/api/models/requests"
 	"regexp"
 	"time"
@@ -52,16 +53,7 @@ func HandleMappings(env requests.RequestEnv) error {
 	return env.SendResponse(env.Id, resp)
 }
 
-type AddMappingParams struct {
-	Label    string `json:"label"`
-	Enabled  bool   `json:"enabled"`
-	Type     string `json:"type"`
-	Match    string `json:"match"`
-	Pattern  string `json:"pattern"`
-	Override string `json:"override"`
-}
-
-func validateAddMappingParams(amr *AddMappingParams) error {
+func validateAddMappingParams(amr *models.AddMappingParams) error {
 	if !utils.Contains(database.AllowedMappingTypes, amr.Type) {
 		return errors.New("invalid type")
 	}
@@ -91,7 +83,7 @@ func HandleAddMapping(env requests.RequestEnv) error {
 		return errors.New("missing params")
 	}
 
-	var params AddMappingParams
+	var params models.AddMappingParams
 	err := json.Unmarshal(env.Params, &params)
 	if err != nil {
 		return errors.New("invalid params: " + err.Error())
@@ -119,10 +111,6 @@ func HandleAddMapping(env requests.RequestEnv) error {
 	return nil
 }
 
-type DeleteMappingParams struct {
-	Id string `json:"id"`
-}
-
 func HandleDeleteMapping(env requests.RequestEnv) error {
 	log.Info().Msg("received delete mapping request")
 
@@ -130,7 +118,7 @@ func HandleDeleteMapping(env requests.RequestEnv) error {
 		return errors.New("missing params")
 	}
 
-	var params DeleteMappingParams
+	var params models.DeleteMappingParams
 	err := json.Unmarshal(env.Params, &params)
 	if err != nil {
 		return errors.New("invalid params: " + err.Error())
@@ -144,17 +132,7 @@ func HandleDeleteMapping(env requests.RequestEnv) error {
 	return nil
 }
 
-type UpdateMappingParams struct {
-	Id       string  `json:"id"`
-	Label    *string `json:"label"`
-	Enabled  *bool   `json:"enabled"`
-	Type     *string `json:"type"`
-	Match    *string `json:"match"`
-	Pattern  *string `json:"pattern"`
-	Override *string `json:"override"`
-}
-
-func validateUpdateMappingParams(umr *UpdateMappingParams) error {
+func validateUpdateMappingParams(umr *models.UpdateMappingParams) error {
 	if umr.Label == nil && umr.Enabled == nil && umr.Type == nil && umr.Match == nil && umr.Pattern == nil && umr.Override == nil {
 		return errors.New("missing fields")
 	}
@@ -188,7 +166,7 @@ func HandleUpdateMapping(env requests.RequestEnv) error {
 		return errors.New("missing params")
 	}
 
-	var params UpdateMappingParams
+	var params models.UpdateMappingParams
 	err := json.Unmarshal(env.Params, &params)
 	if err != nil {
 		return errors.New("invalid params: " + err.Error())

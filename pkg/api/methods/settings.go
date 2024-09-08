@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/rs/zerolog/log"
+	"github.com/wizzomafizzo/tapto/pkg/api/models"
 	"github.com/wizzomafizzo/tapto/pkg/api/models/requests"
 )
 
@@ -43,18 +44,6 @@ func HandleSettings(env requests.RequestEnv) error {
 	return env.SendResponse(env.Id, resp)
 }
 
-type UpdateSettingsParams struct {
-	ConnectionString  *string   `json:"connectionString"`
-	AllowCommands     *bool     `json:"allowCommands"`
-	DisableSounds     *bool     `json:"disableSounds"`
-	ProbeDevice       *bool     `json:"probeDevice"`
-	ExitGame          *bool     `json:"exitGame"`
-	ExitGameDelay     *int      `json:"exitGameDelay"`
-	ExitGameBlocklist *[]string `json:"exitGameBlocklist"`
-	Debug             *bool     `json:"debug"`
-	Launching         *bool     `json:"launching"`
-}
-
 func HandleSettingsUpdate(env requests.RequestEnv) error {
 	log.Info().Msg("received settings update request")
 
@@ -62,7 +51,7 @@ func HandleSettingsUpdate(env requests.RequestEnv) error {
 		return errors.New("missing params")
 	}
 
-	var params UpdateSettingsParams
+	var params models.UpdateSettingsParams
 	err := json.Unmarshal(env.Params, &params)
 	if err != nil {
 		return errors.New("invalid params: " + err.Error())

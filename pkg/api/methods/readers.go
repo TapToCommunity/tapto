@@ -4,12 +4,9 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/rs/zerolog/log"
+	"github.com/wizzomafizzo/tapto/pkg/api/models"
 	"github.com/wizzomafizzo/tapto/pkg/api/models/requests"
 )
-
-type ReaderWriteParams struct {
-	Text string `json:"text"`
-}
 
 func HandleReaderWrite(env requests.RequestEnv) error {
 	log.Info().Msg("received reader write request")
@@ -18,7 +15,7 @@ func HandleReaderWrite(env requests.RequestEnv) error {
 		return errors.New("missing params")
 	}
 
-	var params ReaderWriteParams
+	var params models.ReaderWriteParams
 	err := json.Unmarshal(env.Params, &params)
 	if err != nil {
 		return errors.New("invalid params: " + err.Error())

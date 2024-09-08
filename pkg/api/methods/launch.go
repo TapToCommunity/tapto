@@ -3,6 +3,7 @@ package methods
 import (
 	"encoding/json"
 	"errors"
+	"github.com/wizzomafizzo/tapto/pkg/api/models"
 	"github.com/wizzomafizzo/tapto/pkg/api/models/requests"
 	"net/http"
 	"net/url"
@@ -14,13 +15,6 @@ import (
 	"github.com/wizzomafizzo/tapto/pkg/tokens"
 )
 
-type LaunchParams struct {
-	Type string `json:"type"`
-	UID  string `json:"uid"`
-	Text string `json:"text"`
-	Data string `json:"data"`
-}
-
 func HandleLaunch(env requests.RequestEnv) error {
 	log.Info().Msg("received launch request")
 
@@ -28,7 +22,7 @@ func HandleLaunch(env requests.RequestEnv) error {
 		return errors.New("missing params")
 	}
 
-	var params LaunchParams
+	var params models.LaunchParams
 	err := json.Unmarshal(env.Params, &params)
 	if err != nil {
 		return errors.New("invalid params: " + err.Error())
