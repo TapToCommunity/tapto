@@ -30,22 +30,21 @@ import (
 const RequestTimeout = 30 * time.Second
 
 var methodMap = map[string]func(requests.RequestEnv) error{
-	// TODO: move these strings to models package
-	"launch":          methods.HandleLaunch,
-	"stop":            methods.HandleStopGame,
-	"media.index":     methods.HandleIndexGames,
-	"media.search":    methods.HandleGames,
-	"settings":        methods.HandleSettings,
-	"settings.update": methods.HandleSettingsUpdate,
-	"systems":         methods.HandleSystems,
-	"history":         methods.HandleHistory,
-	"mappings":        methods.HandleMappings,
-	"mappings.new":    methods.HandleAddMapping,
-	"mappings.delete": methods.HandleDeleteMapping,
-	"mappings.update": methods.HandleUpdateMapping,
-	"readers.write":   methods.HandleReaderWrite,
-	"status":          methods.HandleStatus, // TODO: remove, convert to individual methods?
-	"version":         methods.HandleVersion,
+	models.MethodLaunch:         methods.HandleLaunch,
+	models.MethodStop:           methods.HandleStopGame,
+	models.MethodMediaIndex:     methods.HandleIndexGames,
+	models.MethodMediaSearch:    methods.HandleGames,
+	models.MethodSettings:       methods.HandleSettings,
+	models.MethodSettingsUpdate: methods.HandleSettingsUpdate,
+	models.MethodSystems:        methods.HandleSystems,
+	models.MethodHistory:        methods.HandleHistory,
+	models.MethodMappings:       methods.HandleMappings,
+	models.MethodMappingsNew:    methods.HandleAddMapping,
+	models.MethodMappingsDelete: methods.HandleDeleteMapping,
+	models.MethodMappingsUpdate: methods.HandleUpdateMapping,
+	models.MethodReadersWrite:   methods.HandleReaderWrite,
+	models.MethodStatus:         methods.HandleStatus, // TODO: remove, convert to individual methods
+	models.MethodVersion:        methods.HandleVersion,
 }
 
 type RequestObject struct {
