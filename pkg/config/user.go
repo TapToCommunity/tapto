@@ -22,8 +22,6 @@ along with TapTo.  If not, see <http://www.gnu.org/licenses/>.
 package config
 
 import (
-	"errors"
-	"fmt"
 	"github.com/rs/zerolog/log"
 	"os"
 	"path/filepath"
@@ -207,100 +205,6 @@ func (c *UserConfig) IsFileAllowed(path string) bool {
 		}
 	}
 	return false
-}
-
-var (
-	ErrClientNotExist    = errors.New("client does not exist")
-	ErrClientInvalidId   = errors.New("client id contains invalid characters")
-	ErrClientEmptyId     = errors.New("client id cannot be empty")
-	ErrClientEmptySecret = errors.New("client secret cannot be empty")
-	ErrClientExists      = errors.New("client id already exists")
-)
-
-type Client struct {
-	Id     string
-	Name   string
-	Secret string
-}
-
-func (c *UserConfig) allClients() map[string]Client {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-	clients := make(map[string]Client)
-	for _, entry := range c.Api.Client {
-		ps := strings.SplitN(entry, ":", 3)
-		cli := Client{
-			Id:     ps[0],
-			Name:   ps[1],
-			Secret: ps[2],
-		}
-		clients[cli.Id] = cli
-	}
-	return clients
-}
-
-func toConfigClients(clients map[string]Client) []string {
-	var cfgClients []string
-	for _, cli := range clients {
-		cfgClients = append(cfgClients, fmt.Sprintf("%s:%s:%s", cli.Id, cli.Name, cli.Secret))
-	}
-	return cfgClients
-}
-
-func (c *UserConfig) GetClient(id string) (Client, error) {
-	clients := c.allClients()
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-	cli, ok := clients[id]
-	if ok {
-		return cli, nil
-	} else {
-		return cli, ErrClientNotExist
-	}
-}
-
-func (c *UserConfig) AddClient(id string, name string, secret string) error {
-	clients := c.allClients()
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
-	_, ok := clients[id]
-	if ok {
-		return ErrClientExists
-	}
-
-	if len(id) == 0 {
-		return ErrClientEmptyId
-	} else if strings.Contains(id, ":") {
-		return ErrClientInvalidId
-	} else if len(secret) == 0 {
-		return ErrClientEmptySecret
-	}
-
-	clients[id] = Client{
-		Id:     id,
-		Name:   name,
-		Secret: secret,
-	}
-
-	c.Api.Client = toConfigClients(clients)
-
-	return nil
-}
-
-func (c *UserConfig) RemoveClient(id string) error {
-	clients := c.allClients()
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
-	_, ok := clients[id]
-	if !ok {
-		return ErrClientNotExist
-	}
-
-	delete(clients, id)
-	c.Api.Client = toConfigClients(clients)
-	return nil
 }
 
 func (c *UserConfig) LoadConfig() error {
