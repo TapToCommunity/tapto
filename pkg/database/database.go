@@ -2,6 +2,9 @@ package database
 
 import (
 	"encoding/json"
+	"errors"
+	"fmt"
+	"github.com/google/uuid"
 	"os"
 	"path/filepath"
 	"time"
@@ -14,6 +17,7 @@ import (
 const (
 	BucketHistory  = "history"
 	BucketMappings = "mappings"
+	BucketClients  = "clients"
 )
 
 func dbFile(pl platforms.Platform) string {
@@ -40,7 +44,11 @@ func open(pl platforms.Platform, options *bolt.Options) (*bolt.DB, error) {
 	}
 
 	err = db.Update(func(txn *bolt.Tx) error {
-		for _, bucket := range []string{BucketHistory, BucketMappings} {
+		for _, bucket := range []string{
+			BucketHistory,
+			BucketMappings,
+			BucketClients,
+		} {
 			_, err := txn.CreateBucketIfNotExists([]byte(bucket))
 			if err != nil {
 				return err
@@ -131,4 +139,80 @@ func (d *Database) GetHistory() ([]HistoryEntry, error) {
 	})
 
 	return entries, err
+}
+
+type Client struct {
+	Id      uuid.UUID `json:"id"`
+	Name    string    `json:"name"`
+	Address string    `json:"address"`
+	Secret  string    `json:"secret"`
+}
+
+func clientKey(id uuid.UUID) []byte {
+	return []byte(id.String())
+}
+
+func (d *Database) GetClient(id uuid.UUID) (Client, error) {
+	var c Client
+
+	err := d.bdb.View(func(txn *bolt.Tx) error {
+		b := txn.Bucket([]byte(BucketClients))
+
+		v := b.Get(clientKey(id))
+		if v == nil {
+			return fmt.Errorf("client not found: %s", id)
+		}
+
+		return json.Unmarshal(v, &c)
+	})
+
+	return c, err
+}
+
+func (d *Database) AddClient(c Client) error {
+	if c.Id == uuid.Nil {
+		return errors.New("client id is missing")
+	} else if c.Secret == "" {
+		return errors.New("client secret is missing")
+	}
+
+	return d.bdb.Update(func(txn *bolt.Tx) error {
+		b := txn.Bucket([]byte(BucketClients))
+
+		data, err := json.Marshal(c)
+		if err != nil {
+			return err
+		}
+
+		return b.Put(clientKey(c.Id), data)
+	})
+}
+
+func (d *Database) RemoveClient(id uuid.UUID) error {
+	return d.bdb.Update(func(txn *bolt.Tx) error {
+		b := txn.Bucket([]byte(BucketClients))
+		return b.Delete(clientKey(id))
+	})
+}
+
+func (d *Database) GetAllClients() ([]Client, error) {
+	var clients []Client
+	err := d.bdb.View(func(txn *bolt.Tx) error {
+		b := txn.Bucket([]byte(BucketClients))
+		c := b.Cursor()
+
+		for k, v := c.First(); k != nil; k, v = c.Next() {
+			var c Client
+			err := json.Unmarshal(v, &c)
+			if err != nil {
+				return err
+			}
+
+			clients = append(clients, c)
+		}
+
+		return nil
+	})
+
+	return clients, err
 }
