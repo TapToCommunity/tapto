@@ -7,6 +7,7 @@ import (
 	"github.com/google/uuid"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/wizzomafizzo/tapto/pkg/config"
@@ -174,6 +175,8 @@ func (d *Database) AddClient(c Client) error {
 		return errors.New("client id is missing")
 	} else if c.Secret == "" {
 		return errors.New("client secret is missing")
+	} else if strings.Contains(c.Id.String(), ":") {
+		return errors.New("client id cannot contain ':'")
 	}
 
 	return d.bdb.Update(func(txn *bolt.Tx) error {
