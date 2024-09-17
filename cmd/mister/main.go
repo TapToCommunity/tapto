@@ -107,7 +107,7 @@ func main() {
 	}
 	svc.ServiceHandler(serviceFlag)
 
-	flags.Post(cfg, pl)
+	flags.Post(cfg)
 
 	// display gui
 	// assume gui is working from this point, don't print to stdout

@@ -28,8 +28,15 @@ require (
 	github.com/gorilla/websocket v1.5.3 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
+	github.com/mattn/go-runewidth v0.0.9 // indirect
+	github.com/mdp/qrterminal/v3 v3.2.0 // indirect
+	github.com/nsf/termbox-go v1.1.1 // indirect
 	github.com/stretchr/testify v1.9.0 // indirect
+	github.com/yeqown/go-qrcode/v2 v2.2.4 // indirect
+	github.com/yeqown/go-qrcode/writer/terminal v1.1.1 // indirect
+	github.com/yeqown/reedsolomon v1.0.0 // indirect
 	golang.org/x/term v0.22.0 // indirect
+	rsc.io/qr v0.2.0 // indirect
 )
 
 require (

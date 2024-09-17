@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"github.com/google/uuid"
+	"github.com/mdp/qrterminal/v3"
 	"github.com/rs/zerolog/log"
 	"github.com/wizzomafizzo/tapto/pkg/api/client"
 	"github.com/wizzomafizzo/tapto/pkg/api/models"
@@ -82,9 +84,15 @@ func (f *Flags) Pre(pl platforms.Platform) {
 	}
 }
 
+type ConnQr struct {
+	Id      uuid.UUID `json:"id"`
+	Secret  string    `json:"sec"`
+	Address string    `json:"addr"`
+}
+
 // Post actions all remaining common flags that require the environment to be
 // set up. Logging is allowed.
-func (f *Flags) Post(cfg *config.UserConfig, pl platforms.Platform) {
+func (f *Flags) Post(cfg *config.UserConfig) {
 	if *f.Write != "" {
 		data, err := json.Marshal(&models.ReaderWriteParams{
 			Text: *f.Write,
@@ -165,7 +173,30 @@ func (f *Flags) Post(cfg *config.UserConfig, pl platforms.Platform) {
 			fmt.Printf("- ID:     %s\n", c.Id)
 			fmt.Printf("- Secret: %s\n", c.Secret)
 
-			// TODO: QR code gen
+			if *f.Qr {
+				ip, err := utils.GetLocalIp()
+				if err != nil {
+					_, _ = fmt.Fprintf(os.Stderr, "Error getting local IP: %v\n", err)
+					os.Exit(1)
+				}
+
+				cq := ConnQr{
+					Id:      c.Id,
+					Secret:  c.Secret,
+					Address: ip.String(),
+				}
+				respQr, err := json.Marshal(cq)
+				if err != nil {
+					_, _ = fmt.Fprintf(os.Stderr, "Error encoding QR code: %v\n", err)
+					os.Exit(1)
+				}
+
+				qrterminal.Generate(
+					string(respQr),
+					qrterminal.L,
+					os.Stdout,
+				)
+			}
 		}
 
 		os.Exit(0)
@@ -201,7 +232,30 @@ func (f *Flags) Post(cfg *config.UserConfig, pl platforms.Platform) {
 		fmt.Printf("- Name:   %s\n", c.Name)
 		fmt.Printf("- Secret: %s\n", c.Secret)
 
-		// TODO: QR code gen
+		if *f.Qr {
+			ip, err := utils.GetLocalIp()
+			if err != nil {
+				_, _ = fmt.Fprintf(os.Stderr, "Error getting local IP: %v\n", err)
+				os.Exit(1)
+			}
+
+			cq := ConnQr{
+				Id:      c.Id,
+				Secret:  c.Secret,
+				Address: ip.String(),
+			}
+			respQr, err := json.Marshal(cq)
+			if err != nil {
+				_, _ = fmt.Fprintf(os.Stderr, "Error encoding QR code: %v\n", err)
+				os.Exit(1)
+			}
+
+			qrterminal.Generate(
+				string(respQr),
+				qrterminal.L,
+				os.Stdout,
+			)
+		}
 
 		os.Exit(0)
 	} else if *f.DeleteClient != "" {
