@@ -18,6 +18,9 @@ const (
 	MethodMediaSearch    = "media.search"
 	MethodSettings       = "settings"
 	MethodSettingsUpdate = "settings.update"
+	MethodClients        = "clients"
+	MethodClientsNew     = "clients.new"
+	MethodClientsDelete  = "clients.delete"
 	MethodSystems        = "systems"
 	MethodHistory        = "history"
 	MethodMappings       = "mappings"
@@ -53,4 +56,11 @@ type ResponseObject struct {
 	Timestamp int64        `json:"timestamp"` // unix timestamp (ms)
 	Result    any          `json:"result,omitempty"`
 	Error     *ErrorObject `json:"error,omitempty"`
+}
+
+type ClientResponse struct {
+	Id      uuid.UUID `json:"id"`
+	Name    string    `json:"name"`
+	Address string    `json:"address"`
+	Secret  string    `json:"secret"`
 }

@@ -51,3 +51,7 @@ type UpdateSettingsParams struct {
 	Debug             *bool     `json:"debug"`
 	Launching         *bool     `json:"launching"`
 }
+
+type NewClientParams struct {
+	Name string `json:"name"`
+}

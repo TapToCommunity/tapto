@@ -15,6 +15,7 @@ type RequestEnv struct {
 	State      *state.State
 	Database   *database.Database
 	TokenQueue *tokens.TokenQueue
+	IsLocal    bool
 	Id         uuid.UUID
 	Params     []byte
 }

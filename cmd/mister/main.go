@@ -1,5 +1,3 @@
-//go:build linux && cgo
-
 /*
 TapTo
 Copyright (C) 2023 Gareth Jones
@@ -109,7 +107,7 @@ func main() {
 	}
 	svc.ServiceHandler(serviceFlag)
 
-	flags.Post(cfg)
+	flags.Post(cfg, pl)
 
 	// display gui
 	// assume gui is working from this point, don't print to stdout

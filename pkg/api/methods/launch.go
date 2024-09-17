@@ -18,6 +18,7 @@ import (
 var (
 	ErrMissingParams = errors.New("missing params")
 	ErrInvalidParams = errors.New("invalid params")
+	ErrNotAllowed    = errors.New("not allowed")
 )
 
 func HandleLaunch(env requests.RequestEnv) (any, error) {

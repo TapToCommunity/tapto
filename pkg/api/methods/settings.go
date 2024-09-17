@@ -1,10 +1,14 @@
 package methods
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
+	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
 	"github.com/wizzomafizzo/tapto/pkg/api/models"
 	"github.com/wizzomafizzo/tapto/pkg/api/models/requests"
+	"github.com/wizzomafizzo/tapto/pkg/database"
 )
 
 func HandleSettings(env requests.RequestEnv) (any, error) {
@@ -99,4 +103,68 @@ func HandleSettingsUpdate(env requests.RequestEnv) (any, error) {
 	}
 
 	return nil, env.Config.SaveConfig()
+}
+
+func HandleListClients(env requests.RequestEnv) (any, error) {
+	if !env.IsLocal {
+		return nil, ErrNotAllowed
+	}
+
+	clients, err := env.Database.GetAllClients()
+	if err != nil {
+		return nil, err
+	}
+
+	resp := make([]models.ClientResponse, 0)
+	for _, c := range clients {
+		resp = append(resp, models.ClientResponse{
+			Id:      c.Id,
+			Name:    c.Name,
+			Address: c.Address,
+			Secret:  c.Secret,
+		})
+	}
+
+	return resp, nil
+}
+
+func HandleNewClient(env requests.RequestEnv) (any, error) {
+	if !env.IsLocal {
+		return nil, ErrNotAllowed
+	}
+
+	name := ""
+
+	var params models.NewClientParams
+	if len(env.Params) > 0 {
+		err := json.Unmarshal(env.Params, &params)
+		if err != nil {
+			return nil, ErrInvalidParams
+		}
+	}
+
+	name = params.Name
+	id := uuid.New()
+
+	bs := make([]byte, 32)
+	if _, err := rand.Read(bs); err != nil {
+		return nil, err
+	}
+
+	secret := hex.EncodeToString(bs)
+
+	err := env.Database.AddClient(database.Client{
+		Id:     id,
+		Name:   name,
+		Secret: secret,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return models.ClientResponse{
+		Id:     id,
+		Name:   name,
+		Secret: secret,
+	}, nil
 }

@@ -6,7 +6,9 @@ import (
 	"github.com/wizzomafizzo/tapto/pkg/api/methods"
 	"github.com/wizzomafizzo/tapto/pkg/api/models"
 	"github.com/wizzomafizzo/tapto/pkg/api/models/requests"
+	"net"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -40,6 +42,8 @@ var methodMap = map[string]func(requests.RequestEnv) (any, error){
 	models.MethodMediaSearch:    methods.HandleGames,
 	models.MethodSettings:       methods.HandleSettings,
 	models.MethodSettingsUpdate: methods.HandleSettingsUpdate,
+	models.MethodClients:        methods.HandleListClients,
+	models.MethodClientsNew:     methods.HandleNewClient,
 	models.MethodSystems:        methods.HandleSystems,
 	models.MethodHistory:        methods.HandleHistory,
 	models.MethodMappings:       methods.HandleMappings,
@@ -146,7 +150,7 @@ func Start(
 	m := melody.New()
 	m.Upgrader.CheckOrigin = func(r *http.Request) bool { return true }
 
-	// consume and broadcast models
+	// consume and broadcast notifications
 	go func(ns <-chan models.Notification) {
 		for !st.ShouldStopService() {
 			select {
@@ -170,7 +174,7 @@ func Start(
 					log.Error().Err(err).Msg("broadcasting notification")
 				}
 			case <-time.After(500 * time.Millisecond):
-				// TODO: better to wait on a stop channel
+				// TODO: better to wait on a stop channel?
 				continue
 			}
 		}
@@ -207,12 +211,17 @@ func Start(
 				return
 			}
 
+			rawIp := strings.SplitN(s.Request.RemoteAddr, ":", 2)
+			clientIp := net.ParseIP(rawIp[0])
+			log.Debug().IPAddr("ip", clientIp).Msg("parsed ip")
+
 			resp, err := handleRequest(requests.RequestEnv{
 				Platform:   pl,
 				Config:     cfg,
 				State:      st,
 				Database:   db,
 				TokenQueue: tq,
+				IsLocal:    clientIp.IsLoopback(),
 			}, req)
 			if err != nil {
 				err := sendError(s, *req.Id, 1, err.Error())

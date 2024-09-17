@@ -1,17 +1,13 @@
 package cli
 
 import (
-	"crypto/rand"
-	"encoding/hex"
 	"encoding/json"
 	"flag"
 	"fmt"
-	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
 	"github.com/wizzomafizzo/tapto/pkg/api/client"
 	"github.com/wizzomafizzo/tapto/pkg/api/models"
 	"github.com/wizzomafizzo/tapto/pkg/config"
-	"github.com/wizzomafizzo/tapto/pkg/database"
 	"github.com/wizzomafizzo/tapto/pkg/platforms"
 	"github.com/wizzomafizzo/tapto/pkg/utils"
 	"os"
@@ -35,12 +31,12 @@ func SetupFlags() *Flags {
 		Write: flag.String(
 			"write",
 			"",
-			"write text to tag using connected reader (via API)",
+			"write text to tag using connected reader",
 		),
 		Launch: flag.String(
 			"launch",
 			"",
-			"launch text as if it were a scanned token (via API)",
+			"launch text as if it were a scanned token",
 		),
 		Api: flag.String(
 			"api",
@@ -65,7 +61,7 @@ func SetupFlags() *Flags {
 		Qr: flag.Bool(
 			"qr",
 			false,
-			"output a device connection QR code with client details",
+			"output a connection QR code along with client details",
 		),
 		Version: flag.Bool(
 			"version",
@@ -88,7 +84,7 @@ func (f *Flags) Pre(pl platforms.Platform) {
 
 // Post actions all remaining common flags that require the environment to be
 // set up. Logging is allowed.
-func (f *Flags) Post(cfg *config.UserConfig, db *database.Database) {
+func (f *Flags) Post(cfg *config.UserConfig, pl platforms.Platform) {
 	if *f.Write != "" {
 		data, err := json.Marshal(&models.ReaderWriteParams{
 			Text: *f.Write,
@@ -144,11 +140,18 @@ func (f *Flags) Post(cfg *config.UserConfig, db *database.Database) {
 
 	// clients
 	if *f.Clients {
-		clients, err := db.GetAllClients()
+		resp, err := client.LocalClient(cfg, models.MethodClients, "")
 		if err != nil {
-			log.Error().Err(err).Msg("error getting all clients")
-			_, _ = fmt.Fprintf(os.Stderr, "Error listing clients: %v\n", err)
+			log.Error().Err(err).Msg("error calling API")
+			_, _ = fmt.Fprintf(os.Stderr, "Error calling API: %v\n", err)
 			os.Exit(1)
+		}
+
+		var clients []models.ClientResponse
+		err = json.Unmarshal([]byte(resp), &clients)
+		if err != nil {
+			log.Error().Err(err).Msg("error decoding API response")
+			_, _ = fmt.Fprintf(os.Stderr, "Error decoding API response: %v\n", err)
 		}
 
 		for _, c := range clients {
@@ -164,35 +167,43 @@ func (f *Flags) Post(cfg *config.UserConfig, db *database.Database) {
 
 			// TODO: QR code gen
 		}
-	} else if *f.NewClient != "" {
-		id := uuid.New()
 
-		bs := make([]byte, 32)
-		if _, err := rand.Read(bs); err != nil {
-			log.Error().Err(err).Msg("error getting random bytes")
-			_, _ = fmt.Fprintf(os.Stderr, "Error generating secret: %v\n", err)
+		os.Exit(0)
+	} else if *f.NewClient != "" {
+		data, err := json.Marshal(&models.NewClientParams{
+			Name: *f.NewClient,
+		})
+		if err != nil {
+			_, _ = fmt.Fprintf(os.Stderr, "Error encoding params: %v\n", err)
 			os.Exit(1)
 		}
 
-		secret := hex.EncodeToString(bs)
-
-		err := db.AddClient(database.Client{
-			Id:     id,
-			Name:   *f.NewClient,
-			Secret: secret,
-		})
+		resp, err := client.LocalClient(
+			cfg,
+			models.MethodClientsNew,
+			string(data),
+		)
 		if err != nil {
-			log.Error().Err(err).Msg("error adding client")
-			_, _ = fmt.Fprintf(os.Stderr, "Error registering client: %v\n", err)
+			log.Error().Err(err).Msg("error calling API")
+			_, _ = fmt.Fprintf(os.Stderr, "Error calling API: %v\n", err)
 			os.Exit(1)
+		}
+
+		var c models.ClientResponse
+		err = json.Unmarshal([]byte(resp), &c)
+		if err != nil {
+			log.Error().Err(err).Msg("error decoding API response")
+			_, _ = fmt.Fprintf(os.Stderr, "Error decoding API response: %v\n", err)
 		}
 
 		fmt.Println("New client registered:")
-		fmt.Printf("- ID:     %s\n", id)
-		fmt.Printf("- Name:   %s\n", *f.NewClient)
-		fmt.Printf("- Secret: %s\n", secret)
+		fmt.Printf("- ID:     %s\n", c.Id)
+		fmt.Printf("- Name:   %s\n", c.Name)
+		fmt.Printf("- Secret: %s\n", c.Secret)
 
 		// TODO: QR code gen
+
+		os.Exit(0)
 	}
 }
 

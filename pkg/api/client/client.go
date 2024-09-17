@@ -37,6 +37,7 @@ func LocalClient(
 	}
 
 	req := models.RequestObject{
+		TapTo:     1,
 		Id:        &id,
 		Timestamp: time.Now().UnixNano() / int64(time.Millisecond),
 		Method:    method,
