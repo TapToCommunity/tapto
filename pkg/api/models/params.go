@@ -55,3 +55,7 @@ type UpdateSettingsParams struct {
 type NewClientParams struct {
 	Name string `json:"name"`
 }
+
+type DeleteClientParams struct {
+	Id string `json:"id"`
+}

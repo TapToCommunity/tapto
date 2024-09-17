@@ -204,6 +204,27 @@ func (f *Flags) Post(cfg *config.UserConfig, pl platforms.Platform) {
 		// TODO: QR code gen
 
 		os.Exit(0)
+	} else if *f.DeleteClient != "" {
+		data, err := json.Marshal(&models.DeleteClientParams{
+			Id: *f.DeleteClient,
+		})
+		if err != nil {
+			_, _ = fmt.Fprintf(os.Stderr, "Error encoding params: %v\n", err)
+			os.Exit(1)
+		}
+
+		_, err = client.LocalClient(
+			cfg,
+			models.MethodClientsDelete,
+			string(data),
+		)
+		if err != nil {
+			log.Error().Err(err).Msg("error calling API")
+			_, _ = fmt.Fprintf(os.Stderr, "Error calling API: %v\n", err)
+			os.Exit(1)
+		}
+
+		os.Exit(0)
 	}
 }
 

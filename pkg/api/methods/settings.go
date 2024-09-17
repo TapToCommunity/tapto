@@ -168,3 +168,30 @@ func HandleNewClient(env requests.RequestEnv) (any, error) {
 		Secret: secret,
 	}, nil
 }
+
+func HandleDeleteClient(env requests.RequestEnv) (any, error) {
+	if !env.IsLocal {
+		return nil, ErrNotAllowed
+	}
+
+	var params models.DeleteClientParams
+	if len(env.Params) > 0 {
+		err := json.Unmarshal(env.Params, &params)
+		if err != nil {
+			return nil, ErrInvalidParams
+		}
+	}
+
+	id, err := uuid.Parse(params.Id)
+	if err != nil {
+		log.Error().Err(err).Msg("failed to parse client id")
+		return nil, ErrInvalidParams
+	}
+
+	err = env.Database.RemoveClient(id)
+	if err != nil {
+		return nil, err
+	}
+
+	return nil, nil
+}

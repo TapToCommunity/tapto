@@ -44,6 +44,7 @@ var methodMap = map[string]func(requests.RequestEnv) (any, error){
 	models.MethodSettingsUpdate: methods.HandleSettingsUpdate,
 	models.MethodClients:        methods.HandleListClients,
 	models.MethodClientsNew:     methods.HandleNewClient,
+	models.MethodClientsDelete:  methods.HandleDeleteClient,
 	models.MethodSystems:        methods.HandleSystems,
 	models.MethodHistory:        methods.HandleHistory,
 	models.MethodMappings:       methods.HandleMappings,
