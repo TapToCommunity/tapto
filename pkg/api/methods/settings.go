@@ -53,15 +53,14 @@ func HandleSettingsUpdate(env requests.RequestEnv) (any, error) {
 		env.Config.SetConnectionString(*params.ConnectionString)
 	}
 
-	//if req.AllowCommands != nil {
-	//	if !strings.HasPrefix(r.RemoteAddr, "127.0.0.1:") {
-	//		http.Error(w, "allow_commands can only be changed from localhost", http.StatusForbidden)
-	//		log.Info().Str("remoteAddr", r.RemoteAddr).Bool("allowCommands", *req.AllowCommands).Msg("allow_commands can only be changed from localhost")
-	//	} else {
-	//		log.Info().Bool("allowCommands", *req.AllowCommands).Msg("updating allow commands")
-	//		cfg.SetAllowCommands(*req.AllowCommands)
-	//	}
-	//}
+	if params.AllowCommands != nil {
+		if !env.IsLocal {
+			return nil, ErrNotAllowed
+		} else {
+			log.Info().Bool("allowCommands", *params.AllowCommands).Msg("updating allow commands")
+			env.Config.SetAllowCommands(*params.AllowCommands)
+		}
+	}
 
 	if params.DisableSounds != nil {
 		log.Info().Bool("disableSounds", *params.DisableSounds).Msg("updating disable sounds")

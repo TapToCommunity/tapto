@@ -36,24 +36,33 @@ const (
 )
 
 var methodMap = map[string]func(requests.RequestEnv) (any, error){
-	models.MethodLaunch:         methods.HandleLaunch,
-	models.MethodStop:           methods.HandleStop,
-	models.MethodMediaIndex:     methods.HandleIndexMedia,
-	models.MethodMediaSearch:    methods.HandleGames,
+	// launching
+	models.MethodLaunch: methods.HandleLaunch,
+	models.MethodStop:   methods.HandleStop,
+	// media
+	models.MethodMediaIndex:  methods.HandleIndexMedia,
+	models.MethodMediaSearch: methods.HandleGames,
+	// settings
 	models.MethodSettings:       methods.HandleSettings,
 	models.MethodSettingsUpdate: methods.HandleSettingsUpdate,
-	models.MethodClients:        methods.HandleListClients,
-	models.MethodClientsNew:     methods.HandleNewClient,
-	models.MethodClientsDelete:  methods.HandleDeleteClient,
-	models.MethodSystems:        methods.HandleSystems,
-	models.MethodHistory:        methods.HandleHistory,
+	// clients
+	models.MethodClients:       methods.HandleListClients,
+	models.MethodClientsNew:    methods.HandleNewClient,
+	models.MethodClientsDelete: methods.HandleDeleteClient,
+	// systems
+	models.MethodSystems: methods.HandleSystems,
+	// history
+	models.MethodHistory: methods.HandleHistory,
+	// mappings
 	models.MethodMappings:       methods.HandleMappings,
 	models.MethodMappingsNew:    methods.HandleAddMapping,
 	models.MethodMappingsDelete: methods.HandleDeleteMapping,
 	models.MethodMappingsUpdate: methods.HandleUpdateMapping,
-	models.MethodReadersWrite:   methods.HandleReaderWrite,
-	models.MethodStatus:         methods.HandleStatus, // TODO: remove, convert to individual methods
-	models.MethodVersion:        methods.HandleVersion,
+	// readers
+	models.MethodReadersWrite: methods.HandleReaderWrite,
+	// utils
+	models.MethodStatus:  methods.HandleStatus, // TODO: remove, convert to individual methods
+	models.MethodVersion: methods.HandleVersion,
 }
 
 func handleRequest(env requests.RequestEnv, req models.RequestObject) (any, error) {
