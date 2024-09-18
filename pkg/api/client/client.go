@@ -85,6 +85,11 @@ func LocalClient(
 				continue
 			}
 
+			if m.TapTo != 1 {
+				log.Error().Msg("invalid tapto version")
+				continue
+			}
+
 			if m.Id != id {
 				continue
 			}
