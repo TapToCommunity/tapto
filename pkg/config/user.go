@@ -61,7 +61,6 @@ type LaunchersConfig struct {
 
 type ApiConfig struct {
 	Port        string   `ini:"port"`
-	Client      []string `ini:"client,omitempty,allowshadow"`
 	AllowLaunch []string `ini:"allow_launch,omitempty,allowshadow"`
 }
 

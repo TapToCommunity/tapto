@@ -42,7 +42,7 @@ func HandleLaunch(env requests.RequestEnv) (any, error) {
 	t.Data = params.Data
 
 	t.ScanTime = time.Now()
-	t.Remote = true
+	t.Remote = true // TODO: check if this is still necessary after api update
 
 	// TODO: how do we report back errors?
 	env.State.SetActiveCard(t)

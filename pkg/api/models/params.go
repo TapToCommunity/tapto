@@ -2,10 +2,11 @@ package models
 
 type SearchParams struct {
 	Query      string `json:"query"`
-	System     string `json:"system"`
+	System     string `json:"system"` // TODO: shouldn't be required, should be a list?
 	MaxResults *int   `json:"maxResults"`
 }
 
+// TODO: not everything should be required
 type LaunchParams struct {
 	Type string `json:"type"`
 	UID  string `json:"uid"`
