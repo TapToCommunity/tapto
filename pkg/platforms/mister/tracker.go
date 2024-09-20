@@ -2,8 +2,12 @@
 
 package mister
 
+// TODO: i don't think it's actually useful to track if a system is running,
+// it should probably be completely removed and just report game playing state
+
 import (
 	"fmt"
+	"github.com/wizzomafizzo/tapto/pkg/api/models"
 	"os"
 	"path/filepath"
 	"strings"
@@ -32,7 +36,7 @@ type NameMapping struct {
 type Tracker struct {
 	Config           *config.UserConfig
 	mu               sync.Mutex
-	eventHook        *func()
+	ns               chan<- models.Notification
 	ActiveCore       string
 	ActiveSystem     string
 	ActiveSystemName string
@@ -80,7 +84,7 @@ func generateNameMap() []NameMapping {
 	return nameMap
 }
 
-func NewTracker(cfg *config.UserConfig) (*Tracker, error) {
+func NewTracker(cfg *config.UserConfig, ns chan<- models.Notification) (*Tracker, error) {
 	log.Info().Msg("starting tracker")
 
 	nameMap := generateNameMap()
@@ -89,6 +93,7 @@ func NewTracker(cfg *config.UserConfig) (*Tracker, error) {
 
 	return &Tracker{
 		Config:           cfg,
+		ns:               ns,
 		ActiveCore:       "",
 		ActiveSystem:     "",
 		ActiveSystemName: "",
@@ -97,18 +102,6 @@ func NewTracker(cfg *config.UserConfig) (*Tracker, error) {
 		ActiveGamePath:   "",
 		NameMap:          nameMap,
 	}, nil
-}
-
-func (tr *Tracker) SetEventHook(hook *func()) {
-	tr.mu.Lock()
-	defer tr.mu.Unlock()
-	tr.eventHook = hook
-}
-
-func (tr *Tracker) runEventHook() {
-	if tr.eventHook != nil {
-		(*tr.eventHook)()
-	}
 }
 
 func (tr *Tracker) ReloadNameMap() {
@@ -200,14 +193,20 @@ func (tr *Tracker) LoadCore() {
 
 		if coreName == "" {
 			tr.stopGame()
-			tr.runEventHook()
+			tr.ns <- models.Notification{
+				Method: models.SystemStopped,
+			}
 			return
 		}
 
 		result := tr.LookupCoreName(coreName, tr.ActiveGamePath)
 		if result != (NameMapping{}) {
 			if result.ArcadeName != "" {
-				mister.SetActiveGame(result.CoreName)
+				err := mister.SetActiveGame(result.CoreName)
+				if err != nil {
+					log.Warn().Err(err).Msg("error setting active game")
+				}
+
 				tr.ActiveGameId = coreName
 				tr.ActiveGameName = result.ArcadeName
 				tr.ActiveGamePath = "" // TODO: any way to find this?
@@ -216,7 +215,10 @@ func (tr *Tracker) LoadCore() {
 			}
 		}
 
-		tr.runEventHook()
+		tr.ns <- models.Notification{
+			Method: models.SystemStarted,
+			Params: coreName,
+		}
 	}
 }
 
@@ -227,6 +229,9 @@ func (tr *Tracker) stopGame() bool {
 		tr.ActiveGameName = ""
 		tr.ActiveSystem = ""
 		tr.ActiveSystemName = ""
+		tr.ns <- models.Notification{
+			Method: models.MediaStopped,
+		}
 		return true
 	} else {
 		return false
@@ -289,7 +294,14 @@ func (tr *Tracker) loadGame() {
 		tr.ActiveSystem = system.Id
 		tr.ActiveSystemName = system.Name
 
-		tr.runEventHook()
+		tr.ns <- models.Notification{
+			Method: models.SystemStarted,
+			Params: system.Name,
+		}
+		tr.ns <- models.Notification{
+			Method: models.MediaStarted,
+			Params: name,
+		}
 	}
 }
 
@@ -444,8 +456,8 @@ func StartFileWatch(tr *Tracker) (*fsnotify.Watcher, error) {
 	return watcher, nil
 }
 
-func StartTracker(cfg config.UserConfig) (*Tracker, func() error, error) {
-	tr, err := NewTracker(&cfg)
+func StartTracker(cfg config.UserConfig, ns chan<- models.Notification) (*Tracker, func() error, error) {
+	tr, err := NewTracker(&cfg, ns)
 	if err != nil {
 		log.Error().Msgf("error creating tracker: %s", err)
 		return nil, nil, err

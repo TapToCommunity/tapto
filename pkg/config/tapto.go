@@ -6,4 +6,5 @@ const (
 	TapToDbFilename = "tapto.db"
 	DefaultApiPort  = "7497"
 	LogFilename     = "tapto.log"
+	AppName         = "tapto"
 )

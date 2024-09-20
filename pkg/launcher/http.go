@@ -10,14 +10,18 @@ import (
 	"github.com/wizzomafizzo/tapto/pkg/platforms"
 )
 
-func cmdHttpGet(pl platforms.Platform, env platforms.CmdEnv) error {
+func cmdHttpGet(_ platforms.Platform, env platforms.CmdEnv) error {
 	go func() {
 		resp, err := http.Get(env.Args)
 		if err != nil {
-			log.Error().Msgf("error getting url: %s", err)
+			log.Error().Err(err).Msgf("getting url: %s", env.Args)
 			return
 		}
-		resp.Body.Close()
+		err = resp.Body.Close()
+		if err != nil {
+			log.Error().Err(err).Msgf("closing body")
+			return
+		}
 	}()
 
 	return nil
@@ -34,10 +38,14 @@ func cmdHttpPost(pl platforms.Platform, env platforms.CmdEnv) error {
 	go func() {
 		resp, err := http.Post(url, format, strings.NewReader(data))
 		if err != nil {
-			log.Error().Msgf("error posting to url: %s", err)
+			log.Error().Err(err).Msgf("error posting to url: %s", env.Args)
 			return
 		}
-		resp.Body.Close()
+		err = resp.Body.Close()
+		if err != nil {
+			log.Error().Err(err).Msgf("closing body")
+			return
+		}
 	}()
 
 	return nil

@@ -201,7 +201,7 @@ func (r *Reader) Write(text string) (*tokens.Token, error) {
 
 // keep track of serial devices that had failed opens
 var serialCacheMu = &sync.RWMutex{}
-var serialBlockList = []string{}
+var serialBlockList []string
 
 func detectSerialReaders(connected []string) string {
 	devices, err := utils.GetSerialDeviceList()
@@ -267,7 +267,10 @@ func detectSerialReaders(connected []string) string {
 			serialBlockList = append(serialBlockList, device)
 			serialCacheMu.Unlock()
 		} else {
-			pnd.Close()
+			err := pnd.Close()
+			if err != nil {
+				log.Warn().Err(err).Msgf("error closing device: %s", device)
+			}
 			return connStr
 		}
 	}
@@ -314,7 +317,7 @@ func (r *Reader) pollDevice(
 
 	count, target, err := pnd.InitiatorPollTarget(tags.SupportedCardTypes, ttp, pbp)
 	if err != nil && !errors.Is(err, nfc.Error(nfc.ETIMEOUT)) {
-		return nil, removed, err
+		return nil, false, err
 	}
 
 	if count > 1 {

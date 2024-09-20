@@ -1,4 +1,4 @@
-package daemon
+package service
 
 import (
 	"errors"
@@ -7,9 +7,9 @@ import (
 
 	"github.com/rs/zerolog/log"
 	"github.com/wizzomafizzo/tapto/pkg/config"
-	"github.com/wizzomafizzo/tapto/pkg/daemon/state"
 	"github.com/wizzomafizzo/tapto/pkg/platforms"
 	"github.com/wizzomafizzo/tapto/pkg/readers"
+	"github.com/wizzomafizzo/tapto/pkg/service/state"
 	"github.com/wizzomafizzo/tapto/pkg/tokens"
 	"github.com/wizzomafizzo/tapto/pkg/utils"
 )
@@ -108,14 +108,18 @@ func connectReaders(
 	}
 
 	ids := st.ListReaders()
-	readers := make(map[string]*readers.Reader, 0)
+	rsm := make(map[string]*readers.Reader)
 	for _, id := range ids {
 		r, ok := st.GetReader(id)
 		if ok && r != nil {
-			readers[id] = &r
+			rsm[id] = &r
 		}
 	}
-	pl.ReadersUpdateHook(readers)
+
+	err := pl.ReadersUpdateHook(rsm)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -181,8 +185,8 @@ func readerManager(
 			case <-stopService:
 				return
 			case <-readerTicker.C:
-				readers := st.ListReaders()
-				for _, device := range readers {
+				rs := st.ListReaders()
+				for _, device := range rs {
 					r, ok := st.GetReader(device)
 					if ok && r != nil && !r.Connected() {
 						log.Debug().Msgf("pruning disconnected reader: %s", device)
@@ -192,7 +196,7 @@ func readerManager(
 
 				err := connectReaders(pl, cfg, st, inputQueue)
 				if err != nil {
-					log.Error().Msgf("error connecting readers: %s", err)
+					log.Error().Msgf("error connecting rs: %s", err)
 				}
 			}
 		}
@@ -273,8 +277,8 @@ func readerManager(
 
 	// daemon shutdown
 	stopService <- true
-	readers := st.ListReaders()
-	for _, device := range readers {
+	rs := st.ListReaders()
+	for _, device := range rs {
 		r, ok := st.GetReader(device)
 		if ok && r != nil {
 			err := r.Close()

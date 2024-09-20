@@ -32,8 +32,8 @@ import (
 )
 
 const (
-	WRITE_COMMAND = byte(0xA2)
-	READ_COMMAND  = byte(0x30)
+	WriteCommand = byte(0xA2)
+	ReadCommand  = byte(0x30)
 )
 
 var SupportedCardTypes = []nfc.Modulation{

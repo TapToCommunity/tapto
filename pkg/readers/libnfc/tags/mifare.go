@@ -27,6 +27,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"github.com/rs/zerolog/log"
 
 	"github.com/clausecker/nfc/v2"
 	"github.com/wizzomafizzo/tapto/pkg/tokens"
@@ -34,9 +35,9 @@ import (
 )
 
 const (
-	MIFARE_WRITABLE_SECTOR_COUNT      = 15
-	MIFARE_WRITABLE_BLOCKS_PER_SECTOR = 3
-	MIFARE_BLOCK_SIZE_BYTES           = 16
+	MifareWritableSectorCount     = 15
+	MifareWritableBlocksPerSector = 3
+	MifareBlockSizeBytes          = 16
 )
 
 // buildMifareAuthCommand returns a command to authenticate against a block
@@ -55,7 +56,7 @@ func buildMifareAuthCommand(block byte, cardUid string) []byte {
 // ReadMifare reads data from all blocks in sectors 1-15
 func ReadMifare(pnd nfc.Device, cardUid string) (TagData, error) {
 	permissionSectors := []int{4, 8, 12, 16, 20, 24, 28, 32, 36, 40, 44, 48, 52, 56, 60}
-	var allBlocks = []byte{}
+	var allBlocks []byte
 	for block := 0; block < 64; block++ {
 		if block <= 3 {
 			// The first sector contains infomation we don't care about and
@@ -73,7 +74,10 @@ func ReadMifare(pnd nfc.Device, cardUid string) (TagData, error) {
 		// We need to authenticate before any read/ write operations can be performed
 		// Only need to authenticate once per sector
 		if block%4 == 0 {
-			comm(pnd, buildMifareAuthCommand(byte(block), cardUid), 2)
+			_, err := comm(pnd, buildMifareAuthCommand(byte(block), cardUid), 2)
+			if err != nil {
+				log.Warn().Err(err).Msg("authenticating sector error")
+			}
 		}
 
 		blockData, err := comm(pnd, []byte{0x30, byte(block)}, 16)
@@ -83,7 +87,7 @@ func ReadMifare(pnd nfc.Device, cardUid string) (TagData, error) {
 
 		allBlocks = append(allBlocks, blockData...)
 
-		if bytes.Contains(blockData, NDEF_END) {
+		if bytes.Contains(blockData, NdefEnd) {
 			// Once we find the end of the NDEF text record there is no need to
 			// continue reading the rest of the card.
 			// This should make things "load" quicker
@@ -100,7 +104,7 @@ func ReadMifare(pnd nfc.Device, cardUid string) (TagData, error) {
 
 // getMifareCapacityInBytes returns the Mifare card capacity
 func getMifareCapacityInBytes() int {
-	return (MIFARE_WRITABLE_BLOCKS_PER_SECTOR * MIFARE_WRITABLE_SECTOR_COUNT) * MIFARE_BLOCK_SIZE_BYTES
+	return (MifareWritableBlocksPerSector * MifareWritableSectorCount) * MifareBlockSizeBytes
 }
 
 // WriteMifare writes the given text string to a Mifare card starting from sector, skipping any trailer blocks
@@ -115,7 +119,7 @@ func WriteMifare(pnd nfc.Device, text string, cardUid string) ([]byte, error) {
 		return nil, errors.New(fmt.Sprintf("Payload too big for card: [%d/%d] bytes used\n", len(payload), cardCapacity))
 	}
 
-	chunks := [][]byte{}
+	var chunks [][]byte
 	for _, chunk := range chunkBy(payload, 16) {
 		for len(chunk) < 16 {
 			chunk = append(chunk, []byte{0x00}...)

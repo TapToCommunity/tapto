@@ -1,5 +1,3 @@
-//go:build linux && cgo
-
 /*
 TapTo
 Copyright (C) 2023, 2024 Callan Barrett
@@ -46,7 +44,7 @@ func tryAddStartup(stdscr *goncurses.Window) error {
 		log.Error().Msgf("failed to load startup file: %s", err)
 	}
 
-	if !startup.Exists("mrext/" + appName) {
+	if !startup.Exists("mrext/" + config.AppName) {
 		win, err := curses.NewWindow(stdscr, 6, 43, "", -1)
 		if err != nil {
 			return err
@@ -95,7 +93,7 @@ func tryAddStartup(stdscr *goncurses.Window) error {
 		}
 
 		if selected == 0 {
-			err = startup.AddService("mrext/" + appName)
+			err = startup.AddService("mrext/" + config.AppName)
 			if err != nil {
 				return err
 			}
@@ -149,6 +147,7 @@ func generateIndexWindow(pl platforms.Platform, cfg *config.UserConfig, stdscr *
 		DisplayText: "Finding games folders...",
 	}
 
+	// TODO: this should index via the API as well
 	go func() {
 		_, err = gamesdb.NewNamesIndex(pl, cfg, gamesdb.AllSystems(), func(is gamesdb.IndexStatus) {
 			systemName := is.SystemId
@@ -246,7 +245,7 @@ func displayServiceInfo(pl platforms.Platform, cfg *config.UserConfig, stdscr *g
 			statusText = "Service:        NOT RUNNING"
 		}
 
-		printCenter(0, "TapTo v"+appVersion)
+		printCenter(0, "TapTo v"+config.Version+" ("+pl.Id()+")")
 
 		clearLine(1)
 		printCenter(1, "Visit tapto.wiki for guides and help!")
@@ -264,8 +263,8 @@ func displayServiceInfo(pl platforms.Platform, cfg *config.UserConfig, stdscr *g
 			ipDisplay = "Unknown"
 		} else {
 			ipDisplay = ip.String()
-			if cfg.TapTo.ApiPort != config.DefaultApiPort {
-				ipDisplay += ":" + cfg.TapTo.ApiPort
+			if cfg.Api.Port != config.DefaultApiPort {
+				ipDisplay += ":" + cfg.Api.Port
 			}
 		}
 

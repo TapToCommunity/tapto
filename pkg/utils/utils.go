@@ -24,6 +24,7 @@ import (
 	"archive/zip"
 	"crypto/md5"
 	"fmt"
+	"github.com/rs/zerolog/log"
 	"io"
 	"math/rand"
 	"net"
@@ -121,7 +122,12 @@ func GetLocalIp() (net.IP, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer conn.Close()
+	defer func(conn net.Conn) {
+		err := conn.Close()
+		if err != nil {
+			log.Warn().Err(err).Msg("close connection failed")
+		}
+	}(conn)
 
 	localAddr := conn.LocalAddr().(*net.UDPAddr)
 
@@ -138,7 +144,12 @@ func ListZip(path string) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer r.Close()
+	defer func(r *zip.ReadCloser) {
+		err := r.Close()
+		if err != nil {
+			log.Warn().Err(err).Msg("close zip failed")
+		}
+	}(r)
 
 	var files []string
 	for _, f := range r.File {

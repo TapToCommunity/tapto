@@ -1,6 +1,7 @@
 package mac
 
 import (
+	"github.com/wizzomafizzo/tapto/pkg/api/models"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -30,7 +31,7 @@ func (p *Platform) SupportedReaders(cfg *config.UserConfig) []readers.Reader {
 	}
 }
 
-func (p *Platform) Setup(cfg *config.UserConfig) error {
+func (p *Platform) Setup(_ *config.UserConfig, _ chan<- models.Notification) error {
 	return nil
 }
 
@@ -117,9 +118,6 @@ func (p *Platform) ActiveGameName() string {
 
 func (p *Platform) ActiveGamePath() string {
 	return ""
-}
-
-func (p *Platform) SetEventHook(f *func()) {
 }
 
 func (p *Platform) LaunchSystem(cfg *config.UserConfig, id string) error {

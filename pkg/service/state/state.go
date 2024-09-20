@@ -1,6 +1,7 @@
 package state
 
 import (
+	"github.com/wizzomafizzo/tapto/pkg/api/models"
 	"sync"
 
 	"github.com/rs/zerolog/log"
@@ -12,28 +13,24 @@ import (
 
 type State struct {
 	mu              sync.RWMutex
-	updateHook      *func(st *State)
-	activeCard      tokens.Token
+	activeCard      tokens.Token // TODO: rename activeToken
 	lastScanned     tokens.Token
-	stopService     bool
+	stopService     bool // TODO: make a channel outside state
 	disableLauncher bool
 	platform        platforms.Platform
 	readers         map[string]readers.Reader
 	softwareToken   *tokens.Token
 	wroteToken      *tokens.Token
+	Notifications   chan<- models.Notification
 }
 
-func NewState(platform platforms.Platform) *State {
+func NewState(platform platforms.Platform) (*State, <-chan models.Notification) {
+	ns := make(chan models.Notification)
 	return &State{
-		platform: platform,
-		readers:  make(map[string]readers.Reader),
-	}
-}
-
-func (s *State) SetUpdateHook(hook *func(st *State)) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	s.updateHook = hook
+		platform:      platform,
+		readers:       make(map[string]readers.Reader),
+		Notifications: ns,
+	}, ns
 }
 
 func (s *State) SetActiveCard(card tokens.Token) {
@@ -50,11 +47,11 @@ func (s *State) SetActiveCard(card tokens.Token) {
 		s.lastScanned = card
 	}
 
-	s.mu.Unlock()
-
-	if s.updateHook != nil {
-		(*s.updateHook)(s)
+	s.Notifications <- models.Notification{
+		Method: models.ActiveCardState,
+		Params: card,
 	}
+	s.mu.Unlock()
 }
 
 func (s *State) GetActiveCard() tokens.Token {
@@ -73,9 +70,6 @@ func (s *State) StopService() {
 	s.mu.Lock()
 	s.stopService = true
 	s.mu.Unlock()
-	if s.updateHook != nil {
-		(*s.updateHook)(s)
-	}
 }
 
 func (s *State) ShouldStopService() bool {
@@ -90,10 +84,11 @@ func (s *State) DisableLauncher() {
 	if err := s.platform.SetLaunching(false); err != nil {
 		log.Error().Msgf("cannot create disable launch file: %s", err)
 	}
-	s.mu.Unlock()
-	if s.updateHook != nil {
-		(*s.updateHook)(s)
+	s.Notifications <- models.Notification{
+		Method: models.LaunchingState,
+		Params: false,
 	}
+	s.mu.Unlock()
 }
 
 func (s *State) EnableLauncher() {
@@ -102,10 +97,11 @@ func (s *State) EnableLauncher() {
 	if err := s.platform.SetLaunching(true); err != nil {
 		log.Error().Msgf("cannot remove disable launch file: %s", err)
 	}
-	s.mu.Unlock()
-	if s.updateHook != nil {
-		(*s.updateHook)(s)
+	s.Notifications <- models.Notification{
+		Method: models.LaunchingState,
+		Params: true,
 	}
+	s.mu.Unlock()
 }
 
 func (s *State) IsLauncherDisabled() bool {
@@ -133,10 +129,11 @@ func (s *State) SetReader(device string, reader readers.Reader) {
 	}
 
 	s.readers[device] = reader
-	s.mu.Unlock()
-	if s.updateHook != nil {
-		(*s.updateHook)(s)
+	s.Notifications <- models.Notification{
+		Method: models.ReaderChanged,
+		Params: device,
 	}
+	s.mu.Unlock()
 }
 
 func (s *State) RemoveReader(device string) {
@@ -149,22 +146,23 @@ func (s *State) RemoveReader(device string) {
 		}
 	}
 	delete(s.readers, device)
-	s.mu.Unlock()
-	if s.updateHook != nil {
-		(*s.updateHook)(s)
+	s.Notifications <- models.Notification{
+		Method: models.ReaderRemoved,
+		Params: device,
 	}
+	s.mu.Unlock()
 }
 
 func (s *State) ListReaders() []string {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	var readers []string
+	var rs []string
 	for k := range s.readers {
-		readers = append(readers, k)
+		rs = append(rs, k)
 	}
 
-	return readers
+	return rs
 }
 
 func (s *State) SetSoftwareToken(token *tokens.Token) {

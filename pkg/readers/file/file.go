@@ -17,24 +17,24 @@ import (
 
 const TokenType = "file"
 
-type FileReader struct {
+type Reader struct {
 	cfg     *config.UserConfig
 	device  string
 	path    string
 	polling bool
 }
 
-func NewReader(cfg *config.UserConfig) *FileReader {
-	return &FileReader{
+func NewReader(cfg *config.UserConfig) *Reader {
+	return &Reader{
 		cfg: cfg,
 	}
 }
 
-func (r *FileReader) Ids() []string {
+func (r *Reader) Ids() []string {
 	return []string{"file"}
 }
 
-func (r *FileReader) Open(device string, iq chan<- readers.Scan) error {
+func (r *Reader) Open(device string, iq chan<- readers.Scan) error {
 	ps := strings.SplitN(device, ":", 2)
 	if len(ps) != 2 {
 		return errors.New("invalid device string: " + device)
@@ -128,27 +128,27 @@ func (r *FileReader) Open(device string, iq chan<- readers.Scan) error {
 	return nil
 }
 
-func (r *FileReader) Close() error {
+func (r *Reader) Close() error {
 	r.polling = false
 	return nil
 }
 
-func (r *FileReader) Detect(connected []string) string {
+func (r *Reader) Detect(connected []string) string {
 	return ""
 }
 
-func (r *FileReader) Device() string {
+func (r *Reader) Device() string {
 	return r.device
 }
 
-func (r *FileReader) Connected() bool {
+func (r *Reader) Connected() bool {
 	return r.polling
 }
 
-func (r *FileReader) Info() string {
+func (r *Reader) Info() string {
 	return r.path
 }
 
-func (r *FileReader) Write(text string) (*tokens.Token, error) {
+func (r *Reader) Write(text string) (*tokens.Token, error) {
 	return nil, errors.New("writing not supported on this reader")
 }

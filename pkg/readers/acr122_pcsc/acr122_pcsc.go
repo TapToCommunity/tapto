@@ -205,7 +205,10 @@ func (r *Acr122Pcsc) Open(device string, iq chan<- readers.Scan) error {
 func (r *Acr122Pcsc) Close() error {
 	r.polling = false
 	if r.ctx != nil {
-		r.ctx.Release()
+		err := r.ctx.Release()
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -215,17 +218,22 @@ func (r *Acr122Pcsc) Detect(connected []string) string {
 	if err != nil {
 		return ""
 	}
-	defer ctx.Release()
+	defer func(ctx *scard.Context) {
+		err := ctx.Release()
+		if err != nil {
+			log.Warn().Err(err).Msg("error releasing pcsc context")
+		}
+	}(ctx)
 
-	readers, err := ctx.ListReaders()
+	rs, err := ctx.ListReaders()
 	if err != nil {
-		log.Debug().Msgf("error listing pcsc readers: %s", err)
+		log.Debug().Err(err).Msg("listing pcsc readers")
 		return ""
 	}
-	// log.Debug().Msgf("pcsc readers: %v", readers)
+	// log.Debug().Msgf("pcsc rs: %v", rs)
 
 	acrs := make([]string, 0)
-	for _, r := range readers {
+	for _, r := range rs {
 		if strings.HasPrefix(r, "ACS ACR122") && !utils.Contains(connected, "acr122_pcsc:"+r) {
 			acrs = append(acrs, r)
 		}
@@ -251,6 +259,6 @@ func (r *Acr122Pcsc) Info() string {
 	return r.name
 }
 
-func (r *Acr122Pcsc) Write(text string) (*tokens.Token, error) {
+func (r *Acr122Pcsc) Write(_ string) (*tokens.Token, error) {
 	return nil, errors.New("writing not supported on this reader")
 }

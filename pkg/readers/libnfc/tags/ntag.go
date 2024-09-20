@@ -34,19 +34,19 @@ import (
 )
 
 const (
-	NTAG_213_CAPACITY_BYTES = 114
-	NTAG_213_IDENTIFIER     = 0x12
+	Ntag213CapacityBytes = 114
+	Ntag213Identifier    = 0x12
 
-	NTAG_215_CAPACITY_BYTES = 496
-	NTAG_215_IDENTIFIER     = 0x3E
+	Ntag215CapacityBytes = 496
+	Ntag215Identifier    = 0x3E
 
-	NTAG_216_CAPACITY_BYTES = 872
-	NTAG_216_IDENTIFIER     = 0x6D
+	Ntag216CapacityBytes = 872
+	Ntag216Identifier    = 0x6D
 )
 
 // Can be identified by matching blocks 0x03-0x07
 // https://github.com/RfidResearchGroup/proxmark3/blob/master/client/src/cmdhfmfu.c
-var LEGO_DIMENSIONS_MATCHER = []byte{
+var LegoDimensionsMatcher = []byte{
 	//0xE1, 0x10, 0x12, 0x00, // Skip as we never read 0x03
 	0x01, 0x03, 0xA0, 0x0C,
 	0x34, 0x03, 0x13, 0xD1,
@@ -54,7 +54,7 @@ var LEGO_DIMENSIONS_MATCHER = []byte{
 	0x65, 0x6E}
 
 // Can be identified by matching address 0x09-0x0F
-var AMIIBO_MATCHER = []byte{
+var AmiiboMatcher = []byte{
 	0x48, 0x0F, 0xE0,
 	0xF1, 0x10, 0xFF, 0xEE}
 
@@ -66,10 +66,10 @@ func ReadNtag(pnd nfc.Device) (TagData, error) {
 
 	log.Debug().Msgf("NTAG has %d blocks", blockCount)
 
-	header, _ := comm(pnd, []byte{READ_COMMAND, byte(0)}, 16)
-	if len(header) > 9 && bytes.Equal(header[9:], AMIIBO_MATCHER) {
+	header, _ := comm(pnd, []byte{ReadCommand, byte(0)}, 16)
+	if len(header) > 9 && bytes.Equal(header[9:], AmiiboMatcher) {
 		log.Info().Msg("found Amiibo")
-		amiibo, _ := comm(pnd, []byte{READ_COMMAND, byte(21)}, 16)
+		amiibo, _ := comm(pnd, []byte{ReadCommand, byte(21)}, 16)
 		amiibo = amiibo[:8]
 		log.Info().Msg("Amiibo identifier:" + hex.EncodeToString(amiibo))
 		return TagData{
@@ -82,12 +82,12 @@ func ReadNtag(pnd nfc.Device) (TagData, error) {
 	currentBlock := 4
 
 	for i := 0; i <= (blockCount / 4); i++ {
-		blocks, err := comm(pnd, []byte{READ_COMMAND, byte(currentBlock)}, 16)
+		blocks, err := comm(pnd, []byte{ReadCommand, byte(currentBlock)}, 16)
 		if err != nil {
 			return TagData{}, err
 		}
 
-		if byte(currentBlock) == 0x04 && len(blocks) >= 13 && bytes.Equal(blocks[0:14], LEGO_DIMENSIONS_MATCHER) {
+		if byte(currentBlock) == 0x04 && len(blocks) >= 13 && bytes.Equal(blocks[0:14], LegoDimensionsMatcher) {
 			log.Info().Msg("found Lego Dimensions tag")
 			return TagData{
 				Type:  tokens.TypeLegoDimensions,
@@ -98,7 +98,7 @@ func ReadNtag(pnd nfc.Device) (TagData, error) {
 		allBlocks = append(allBlocks, blocks...)
 		currentBlock = currentBlock + 4
 
-		if bytes.Contains(allBlocks, NDEF_END) {
+		if bytes.Contains(allBlocks, NdefEnd) {
 			// Once we find the end of the NDEF text record there is no need to
 			// continue reading the rest of the card.
 			// This should make things "load" quicker
@@ -133,7 +133,7 @@ func WriteNtag(pnd nfc.Device, text string) ([]byte, error) {
 		for len(chunk) < 4 {
 			chunk = append(chunk, []byte{0x00}...)
 		}
-		var tx = []byte{WRITE_COMMAND, startingBlock + byte(i)}
+		var tx = []byte{WriteCommand, startingBlock + byte(i)}
 		tx = append(tx, chunk...)
 		_, err := comm(pnd, tx, 1)
 		if err != nil {
@@ -146,7 +146,7 @@ func WriteNtag(pnd nfc.Device, text string) ([]byte, error) {
 
 func getNtagBlockCount(pnd nfc.Device) (int, error) {
 	// Find tag capacity by looking in block 3 (capability container)
-	tx := []byte{READ_COMMAND, 0x03}
+	tx := []byte{ReadCommand, 0x03}
 	rx := make([]byte, 16)
 
 	timeout := 0
@@ -173,7 +173,7 @@ func getNtagBlockCount(pnd nfc.Device) (int, error) {
 
 func getNtagCapacity(pnd nfc.Device) (int, error) {
 	// Find tag capacity by looking in block 3 (capability container)
-	tx := []byte{READ_COMMAND, 0x03}
+	tx := []byte{ReadCommand, 0x03}
 	rx := make([]byte, 16)
 
 	timeout := 0
@@ -184,15 +184,15 @@ func getNtagCapacity(pnd nfc.Device) (int, error) {
 
 	// https://github.com/adafruit/Adafruit_MFRC630/blob/master/docs/NTAG.md#capability-container
 	switch rx[2] {
-	case NTAG_213_IDENTIFIER:
-		return NTAG_213_CAPACITY_BYTES, nil
-	case NTAG_215_IDENTIFIER:
-		return NTAG_215_CAPACITY_BYTES, nil
-	case NTAG_216_IDENTIFIER:
-		return NTAG_216_CAPACITY_BYTES, nil
+	case Ntag213Identifier:
+		return Ntag213CapacityBytes, nil
+	case Ntag215Identifier:
+		return Ntag215CapacityBytes, nil
+	case Ntag216Identifier:
+		return Ntag216CapacityBytes, nil
 	default:
 		// fallback
-		return NTAG_213_CAPACITY_BYTES, nil
+		return Ntag213CapacityBytes, nil
 	}
 }
 

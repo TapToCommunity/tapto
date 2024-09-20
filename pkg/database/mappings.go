@@ -90,7 +90,7 @@ func (d *Database) AddMapping(m Mapping) error {
 	return d.bdb.Update(func(txn *bolt.Tx) error {
 		b := txn.Bucket([]byte(BucketMappings))
 		id, _ := b.NextSequence()
-		return b.Put([]byte(mappingKey(strconv.Itoa(int(id)))), md)
+		return b.Put(mappingKey(strconv.Itoa(int(id))), md)
 	})
 }
 
@@ -100,7 +100,7 @@ func (d *Database) GetMapping(id string) (Mapping, error) {
 	err := d.bdb.View(func(txn *bolt.Tx) error {
 		b := txn.Bucket([]byte(BucketMappings))
 
-		v := b.Get([]byte(mappingKey(id)))
+		v := b.Get(mappingKey(id))
 		if v == nil {
 			return fmt.Errorf("mapping not found: %s", id)
 		}
@@ -114,7 +114,7 @@ func (d *Database) GetMapping(id string) (Mapping, error) {
 func (d *Database) DeleteMapping(id string) error {
 	return d.bdb.Update(func(txn *bolt.Tx) error {
 		b := txn.Bucket([]byte(BucketMappings))
-		return b.Delete([]byte(mappingKey(id)))
+		return b.Delete(mappingKey(id))
 	})
 }
 
@@ -149,7 +149,7 @@ func (d *Database) UpdateMapping(id string, m Mapping) error {
 
 	return d.bdb.Update(func(txn *bolt.Tx) error {
 		b := txn.Bucket([]byte(BucketMappings))
-		return b.Put([]byte(mappingKey(id)), md)
+		return b.Put(mappingKey(id), md)
 	})
 }
 

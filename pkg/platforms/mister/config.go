@@ -4,7 +4,7 @@ package mister
 
 import (
 	mrextConfig "github.com/wizzomafizzo/mrext/pkg/config"
-	config "github.com/wizzomafizzo/tapto/pkg/config"
+	"github.com/wizzomafizzo/tapto/pkg/config"
 )
 
 const (

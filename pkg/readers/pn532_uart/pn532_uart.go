@@ -102,13 +102,13 @@ func (r *Pn532UartReader) Open(device string, iq chan<- readers.Scan) error {
 	r.polling = true
 
 	go func() {
-		errors := 0
+		errCount := 0
 		maxErrors := 5
 		zeroScans := 0
 		maxZeroScans := 3
 
 		for r.polling {
-			if errors >= maxErrors {
+			if errCount >= maxErrors {
 				log.Error().Msg("too many errors, exiting")
 				err := r.Close()
 				if err != nil {
@@ -123,7 +123,7 @@ func (r *Pn532UartReader) Open(device string, iq chan<- readers.Scan) error {
 			tgt, err := InListPassiveTarget(r.port)
 			if err != nil {
 				log.Error().Err(err).Msg("failed to read passive target")
-				errors++
+				errCount++
 				continue
 			} else if tgt == nil {
 				zeroScans++
@@ -144,7 +144,7 @@ func (r *Pn532UartReader) Open(device string, iq chan<- readers.Scan) error {
 
 			log.Debug().Msgf("target: %s", tgt.Uid)
 
-			errors = 0
+			errCount = 0
 			zeroScans = 0
 
 			if r.lastToken != nil && r.lastToken.UID == tgt.Uid {
@@ -168,11 +168,11 @@ func (r *Pn532UartReader) Open(device string, iq chan<- readers.Scan) error {
 				res, err := InDataExchange(r.port, []byte{0x30, byte(i)})
 				if err != nil {
 					log.Error().Err(err).Msg("failed to run indataexchange")
-					errors++
+					errCount++
 					break
 				} else if len(res) < 2 {
 					log.Error().Msg("unexpected data response length")
-					errors++
+					errCount++
 					break
 				} else if res[0] != 0x41 || res[1] != 0x00 {
 					log.Warn().Msgf("unexpected data format: %x", res)
@@ -239,7 +239,7 @@ func (r *Pn532UartReader) Close() error {
 
 // keep track of serial devices that had failed opens
 var serialCacheMu = &sync.RWMutex{}
-var serialBlockList = []string{}
+var serialBlockList []string
 
 func (r *Pn532UartReader) Detect(connected []string) string {
 	ports, err := utils.GetSerialDeviceList()

@@ -4,6 +4,7 @@ package mister
 
 import (
 	"fmt"
+	"github.com/wizzomafizzo/tapto/pkg/api/models"
 	"os"
 	"os/exec"
 	"regexp"
@@ -74,7 +75,7 @@ func (p *Platform) SupportedReaders(cfg *config.UserConfig) []readers.Reader {
 	}
 }
 
-func (p *Platform) Setup(cfg *config.UserConfig) error {
+func (p *Platform) Setup(cfg *config.UserConfig, ns chan<- models.Notification) error {
 	kbd, err := input.NewKeyboard()
 	if err != nil {
 		return err
@@ -93,7 +94,7 @@ func (p *Platform) Setup(cfg *config.UserConfig) error {
 	}
 	p.gpd = gpd
 
-	tr, stopTr, err := StartTracker(*UserConfigToMrext(cfg))
+	tr, stopTr, err := StartTracker(*UserConfigToMrext(cfg), ns)
 	if err != nil {
 		return err
 	}
@@ -272,10 +273,6 @@ func (p *Platform) ActiveGamePath() string {
 	return p.tr.ActiveGamePath
 }
 
-func (p *Platform) SetEventHook(f *func()) {
-	p.tr.SetEventHook(f)
-}
-
 func (p *Platform) LaunchSystem(cfg *config.UserConfig, id string) error {
 	system, err := games.LookupSystem(id)
 	if err != nil {
@@ -330,9 +327,17 @@ func (p *Platform) GamepadPress(name string) error {
 		return fmt.Errorf("unknown button: %s", name)
 	}
 
-	p.gpd.ButtonDown(code)
+	err := p.gpd.ButtonDown(code)
+	if err != nil {
+		return err
+	}
+
 	time.Sleep(40 * time.Millisecond)
-	p.gpd.ButtonUp(code)
+
+	err = p.gpd.ButtonUp(code)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -365,6 +370,8 @@ func (p *Platform) LookupMapping(t tokens.Token) (string, bool) {
 				log.Info().Msg("launching with csv text match override")
 				return pattern, true
 			}
+
+			return "", false
 		}
 
 		// regex

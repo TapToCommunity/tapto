@@ -22,8 +22,11 @@ along with TapTo.  If not, see <http://www.gnu.org/licenses/>.
 package config
 
 import (
+	"github.com/rs/zerolog/log"
 	"os"
 	"path/filepath"
+	"runtime"
+	"strings"
 	"sync"
 
 	"github.com/rs/zerolog"
@@ -34,22 +37,21 @@ const UserConfigEnv = "TAPTO_CONFIG"
 const UserAppPathEnv = "TAPTO_APP_PATH"
 
 type TapToConfig struct {
-	ConnectionString  string   `ini:"connection_string"` // DEPRECATED
 	Reader            []string `ini:"reader,omitempty,allowshadow"`
-	AllowCommands     bool     `ini:"allow_commands"` // TODO: rename to allow_shell
-	DisableSounds     bool     `ini:"disable_sounds"`
-	ProbeDevice       bool     `ini:"probe_device"`
-	ExitGame          bool     `ini:"exit_game"` // TODO: rename to insert_mode
-	ExitGameBlocklist []string `ini:"exit_game_blocklist"`
-	ExitGameDelay     int8     `ini:"exit_game_delay"`
+	AllowCommands     bool     `ini:"allow_commands"`      // TODO: DEPRECATED, remove and use allow_shell below
+	DisableSounds     bool     `ini:"disable_sounds"`      // TODO: rename something like audio_feedback?
+	ProbeDevice       bool     `ini:"probe_device"`        // TODO: rename to reader_detection?
+	ExitGame          bool     `ini:"exit_game"`           // TODO: rename to insert_mode
+	ExitGameBlocklist []string `ini:"exit_game_blocklist"` // TODO: rename to insert_mode_blocklist
+	ExitGameDelay     int      `ini:"exit_game_delay"`     // TODO: rename to insert_mode_delay
+	ConsoleLogging    bool     `ini:"console_logging"`
 	Debug             bool     `ini:"debug"`
-	ApiPort           string   `ini:"api_port"`
-	ApiBasicAuth      string   `ini:"api_basic_auth"`
+	ConnectionString  string   `ini:"connection_string,omitempty"` // DEPRECATED
 }
 
 type SystemsConfig struct {
-	GamesFolder []string `ini:"games_folder,omitempty,allowshadow"`
-	SetCore     []string `ini:"set_core,omitempty,allowshadow"` // TODO: deprecated?
+	GamesFolder []string `ini:"games_folder,omitempty,allowshadow"` // TODO: rename root_folder?
+	SetCore     []string `ini:"set_core,omitempty,allowshadow"`     // TODO: deprecated? change to set_launcher
 }
 
 type LaunchersConfig struct {
@@ -57,13 +59,19 @@ type LaunchersConfig struct {
 	// TODO: allow_shell - contents of shell command
 }
 
+type ApiConfig struct {
+	Port        string   `ini:"port"`
+	AllowLaunch []string `ini:"allow_launch,omitempty,allowshadow"`
+}
+
 type UserConfig struct {
 	mu        sync.RWMutex
 	AppPath   string          `ini:"-"`
 	IniPath   string          `ini:"-"`
 	TapTo     TapToConfig     `ini:"tapto"`
-	Systems   SystemsConfig   `ini:"systems,omitempty"`
-	Launchers LaunchersConfig `ini:"launchers,omitempty"`
+	Systems   SystemsConfig   `ini:"systems"`
+	Launchers LaunchersConfig `ini:"launchers"`
+	Api       ApiConfig       `ini:"api"`
 }
 
 func (c *UserConfig) GetConnectionString() string {
@@ -132,7 +140,7 @@ func (c *UserConfig) GetExitGame() bool {
 	return c.TapTo.ExitGame
 }
 
-func (c *UserConfig) SetExitGameDelay(exitGameDelay int8) {
+func (c *UserConfig) SetExitGameDelay(exitGameDelay int) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.TapTo.ExitGameDelay = exitGameDelay
@@ -150,7 +158,7 @@ func (c *UserConfig) GetExitGameBlocklist() []string {
 	return c.TapTo.ExitGameBlocklist
 }
 
-func (c *UserConfig) GetExitGameDelay() int8 {
+func (c *UserConfig) GetExitGameDelay() int {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	return c.TapTo.ExitGameDelay
@@ -182,9 +190,16 @@ func (c *UserConfig) SetDebug(debug bool) {
 func (c *UserConfig) IsFileAllowed(path string) bool {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
-	// TODO: case insensitive on windows?
 	for _, allowed := range c.Launchers.AllowFile {
-		if filepath.FromSlash(allowed) == path {
+		// TODO: case insensitive on mister? platform option?
+		if runtime.GOOS == "windows" {
+			// do a case-insensitive comparison on windows
+			allowed = strings.ToLower(allowed)
+			path = strings.ToLower(path)
+		}
+
+		// convert all slashes to OS preferred
+		if filepath.FromSlash(allowed) == filepath.FromSlash(path) {
 			return true
 		}
 	}
@@ -214,7 +229,7 @@ func (c *UserConfig) SaveConfig() error {
 
 	cfg := ini.Empty()
 
-	ini.PrettyEqual = false
+	ini.PrettyEqual = true
 	ini.PrettyFormat = false
 
 	err := cfg.ReflectFrom(c)
@@ -230,7 +245,7 @@ func (c *UserConfig) SaveConfig() error {
 	return nil
 }
 
-func NewUserConfig(name string, defaultConfig *UserConfig) (*UserConfig, error) {
+func NewUserConfig(defaultConfig *UserConfig) (*UserConfig, error) {
 	iniPath := os.Getenv(UserConfigEnv)
 
 	exePath, err := os.Executable()
@@ -244,18 +259,26 @@ func NewUserConfig(name string, defaultConfig *UserConfig) (*UserConfig, error) 
 	}
 
 	if iniPath == "" {
-		iniPath = filepath.Join(filepath.Dir(exePath), name+".ini")
+		iniPath = filepath.Join(filepath.Dir(exePath), AppName+".ini")
 	}
 
 	defaultConfig.AppPath = exePath
 	defaultConfig.IniPath = iniPath
 
 	if _, err := os.Stat(iniPath); os.IsNotExist(err) {
+		// create a blank one on disk
+		err := defaultConfig.SaveConfig()
+		if err != nil {
+			log.Error().Err(err).Msg("failed to save new user config to disk")
+			return defaultConfig, err
+		}
+
 		return defaultConfig, nil
 	}
 
 	err = defaultConfig.LoadConfig()
 	if err != nil {
+		log.Error().Err(err).Msg("failed to load user config")
 		return defaultConfig, err
 	}
 
