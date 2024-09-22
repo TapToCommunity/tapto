@@ -183,7 +183,6 @@ func (tr *Tracker) LoadCore() {
 		if err != nil {
 			log.Error().Msgf("error setting active game: %s", err)
 		}
-		coreName = ""
 	}
 
 	if coreName != tr.ActiveCore {
@@ -191,11 +190,9 @@ func (tr *Tracker) LoadCore() {
 
 		tr.ActiveCore = coreName
 
-		if coreName == "" {
+		if coreName == config.MenuCore {
+			log.Debug().Msg("in menu, stopping game")
 			tr.stopGame()
-			tr.ns <- models.Notification{
-				Method: models.SystemStopped,
-			}
 			return
 		}
 
@@ -214,27 +211,17 @@ func (tr *Tracker) LoadCore() {
 				tr.ActiveSystemName = ArcadeSystem
 			}
 		}
-
-		tr.ns <- models.Notification{
-			Method: models.SystemStarted,
-			Params: coreName,
-		}
 	}
 }
 
-func (tr *Tracker) stopGame() bool {
-	if tr.ActiveGameId != "" {
-		tr.ActiveGameId = ""
-		tr.ActiveGamePath = ""
-		tr.ActiveGameName = ""
-		tr.ActiveSystem = ""
-		tr.ActiveSystemName = ""
-		tr.ns <- models.Notification{
-			Method: models.MediaStopped,
-		}
-		return true
-	} else {
-		return false
+func (tr *Tracker) stopGame() {
+	tr.ActiveGameId = ""
+	tr.ActiveGamePath = ""
+	tr.ActiveGameName = ""
+	tr.ActiveSystem = ""
+	tr.ActiveSystemName = ""
+	tr.ns <- models.Notification{
+		Method: models.MediaStopped,
 	}
 }
 
@@ -253,6 +240,7 @@ func (tr *Tracker) loadGame() {
 		// TODO: will this work ok long term?
 		return
 	} else if activeGame == "" {
+		log.Debug().Msg("active game is empty, stopping game")
 		tr.stopGame()
 		return
 	}
@@ -285,8 +273,6 @@ func (tr *Tracker) loadGame() {
 	id := fmt.Sprintf("%s/%s", system.Id, filename)
 
 	if id != tr.ActiveGameId {
-		tr.stopGame()
-
 		tr.ActiveGameId = id
 		tr.ActiveGameName = name
 		tr.ActiveGamePath = path
@@ -295,12 +281,13 @@ func (tr *Tracker) loadGame() {
 		tr.ActiveSystemName = system.Name
 
 		tr.ns <- models.Notification{
-			Method: models.SystemStarted,
-			Params: system.Name,
-		}
-		tr.ns <- models.Notification{
 			Method: models.MediaStarted,
-			Params: name,
+			Params: models.MediaStartedParams{
+				SystemId:   system.Id,
+				SystemName: system.Name,
+				MediaName:  name,
+				MediaPath:  path,
+			},
 		}
 	}
 }
