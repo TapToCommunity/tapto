@@ -1,6 +1,7 @@
 package api
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"github.com/wizzomafizzo/tapto/pkg/api/methods"
@@ -198,6 +199,17 @@ func Start(
 	})
 
 	m.HandleMessage(func(s *melody.Session, msg []byte) {
+		// ping command for heartbeat operation
+		if bytes.Compare(msg, []byte("ping")) == 0 {
+			err := s.Write([]byte("pong"))
+			if err != nil {
+				log.Error().Err(err).Msg("sending pong")
+			} else {
+				log.Debug().Msg("sent pong")
+			}
+			return
+		}
+
 		if !json.Valid(msg) {
 			// TODO: send error response
 			log.Error().Msg("data not valid json")
