@@ -48,7 +48,7 @@ func (s *State) SetActiveCard(card tokens.Token) {
 	}
 
 	s.Notifications <- models.Notification{
-		Method: models.ActiveCardState,
+		Method: models.TokensActive,
 		Params: card,
 	}
 	s.mu.Unlock()
@@ -85,7 +85,7 @@ func (s *State) DisableLauncher() {
 		log.Error().Msgf("cannot create disable launch file: %s", err)
 	}
 	s.Notifications <- models.Notification{
-		Method: models.LaunchingState,
+		Method: models.TokensLaunching,
 		Params: false,
 	}
 	s.mu.Unlock()
@@ -98,7 +98,7 @@ func (s *State) EnableLauncher() {
 		log.Error().Msgf("cannot remove disable launch file: %s", err)
 	}
 	s.Notifications <- models.Notification{
-		Method: models.LaunchingState,
+		Method: models.TokensLaunching,
 		Params: true,
 	}
 	s.mu.Unlock()
@@ -130,7 +130,7 @@ func (s *State) SetReader(device string, reader readers.Reader) {
 
 	s.readers[device] = reader
 	s.Notifications <- models.Notification{
-		Method: models.ReaderChanged,
+		Method: models.ReadersConnected,
 		Params: device,
 	}
 	s.mu.Unlock()
@@ -147,7 +147,7 @@ func (s *State) RemoveReader(device string) {
 	}
 	delete(s.readers, device)
 	s.Notifications <- models.Notification{
-		Method: models.ReaderRemoved,
+		Method: models.ReadersDisconnected,
 		Params: device,
 	}
 	s.mu.Unlock()
