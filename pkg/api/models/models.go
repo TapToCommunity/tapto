@@ -3,12 +3,10 @@ package models
 import "github.com/google/uuid"
 
 const (
-	ReaderChanged        = "state.readerChanged"
-	ReaderRemoved        = "state.readerRemoved"
-	LaunchingState       = "state.launching"
-	ActiveCardState      = "state.activeCard"
-	SystemStopped        = "system.stopped" // TODO: REMOVE
-	SystemStarted        = "system.started" // TODO: REMOVE
+	ReadersConnected     = "readers.connected"
+	ReadersDisconnected  = "readers.disconnected"
+	TokensLaunching      = "tokens.launching"
+	TokensActive         = "tokens.active"
 	MediaStopped         = "media.stopped"
 	MediaStarted         = "media.started"
 	MediaIndexing        = "media.indexing"
@@ -63,4 +61,11 @@ type ClientResponse struct {
 	Name    string    `json:"name"`
 	Address string    `json:"address"`
 	Secret  string    `json:"secret"`
+}
+
+type MediaStartedParams struct {
+	SystemId   string `json:"systemId"`
+	SystemName string `json:"systemName"`
+	MediaPath  string `json:"mediaPath"`
+	MediaName  string `json:"mediaName"`
 }
