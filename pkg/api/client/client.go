@@ -37,10 +37,9 @@ func LocalClient(
 	}
 
 	req := models.RequestObject{
-		TapTo:     1,
-		Id:        &id,
-		Timestamp: time.Now().UnixNano() / int64(time.Millisecond),
-		Method:    method,
+		JsonRpc: "2.0",
+		Id:      &id,
+		Method:  method,
 	}
 
 	if len(params) == 0 {
@@ -85,8 +84,8 @@ func LocalClient(
 				continue
 			}
 
-			if m.TapTo != 1 {
-				log.Error().Msg("invalid tapto version")
+			if m.JsonRpc != "2.0" {
+				log.Error().Msg("invalid jsonrpc version")
 				continue
 			}
 
@@ -98,6 +97,9 @@ func LocalClient(
 			return
 		}
 	}()
+
+	//reqFmt, _ := json.MarshalIndent(req, "", "    ")
+	//fmt.Println(string(reqFmt))
 
 	err = c.WriteJSON(req)
 	if err != nil {
@@ -125,6 +127,9 @@ func LocalClient(
 	if err != nil {
 		return "", err
 	}
+
+	//respFmt, _ := json.MarshalIndent(resp, "", "    ")
+	//fmt.Println(string(respFmt))
 
 	return string(b), nil
 }

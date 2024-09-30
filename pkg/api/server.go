@@ -30,11 +30,7 @@ import (
 // TODO: should api launches from localhost require allowlist?
 // TODO: download log file no longer works, need an alternative
 
-const (
-	RequestTimeout  = 30 * time.Second
-	PayloadVersion  = 1
-	EncryptedHeader = "tapto:"
-)
+const RequestTimeout = 30 * time.Second
 
 var methodMap = map[string]func(requests.RequestEnv) (any, error){
 	// launching
@@ -98,10 +94,9 @@ func sendResponse(s *melody.Session, id uuid.UUID, result any) error {
 	log.Debug().Interface("result", result).Msg("sending response")
 
 	resp := models.ResponseObject{
-		TapTo:     PayloadVersion,
-		Id:        id,
-		Timestamp: time.Now().UnixNano() / int64(time.Millisecond),
-		Result:    result,
+		JsonRpc: "2.0",
+		Id:      id,
+		Result:  result,
 	}
 
 	data, err := json.Marshal(resp)
@@ -116,9 +111,8 @@ func sendError(s *melody.Session, id uuid.UUID, code int, message string) error 
 	log.Debug().Int("code", code).Str("message", message).Msg("sending error")
 
 	resp := models.ResponseObject{
-		TapTo:     PayloadVersion,
-		Id:        id,
-		Timestamp: time.Now().UnixNano() / int64(time.Millisecond),
+		JsonRpc: "2.0",
+		Id:      id,
 		Error: &models.ErrorObject{
 			Code:    code,
 			Message: message,
@@ -167,10 +161,9 @@ func Start(
 			select {
 			case n := <-ns:
 				ro := models.RequestObject{
-					TapTo:     PayloadVersion,
-					Timestamp: time.Now().UnixNano() / int64(time.Millisecond),
-					Method:    n.Method,
-					Params:    n.Params,
+					JsonRpc: "2.0",
+					Method:  n.Method,
+					Params:  n.Params,
 				}
 
 				data, err := json.Marshal(ro)
@@ -220,8 +213,8 @@ func Start(
 		var req models.RequestObject
 		err := json.Unmarshal(msg, &req)
 
-		if err == nil && req.TapTo != PayloadVersion {
-			log.Error().Int("tapto", req.TapTo).Msg("unsupported payload version")
+		if err == nil && req.JsonRpc != "2.0" {
+			log.Error().Str("jsonrpc", req.JsonRpc).Msg("unsupported payload version")
 			// TODO: send error
 			return
 		}
