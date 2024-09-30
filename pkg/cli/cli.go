@@ -112,7 +112,7 @@ func (f *Flags) Post(cfg *config.UserConfig) {
 		}
 	} else if *f.Launch != "" {
 		data, err := json.Marshal(&models.LaunchParams{
-			Text: *f.Launch,
+			Text: f.Launch,
 		})
 		if err != nil {
 			_, _ = fmt.Fprintf(os.Stderr, "Error encoding params: %v\n", err)
