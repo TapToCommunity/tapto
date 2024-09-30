@@ -114,20 +114,22 @@ type fileInfo struct {
 }
 
 // Delete all names in index for the given system.
-func deleteSystemNames(db *bolt.DB, systemId string) error {
-	return db.Batch(func(tx *bolt.Tx) error {
+func deleteSystemNames(db *bolt.DB, systemId string) (int, error) {
+	deleted := 0
+	err := db.Batch(func(tx *bolt.Tx) error {
 		bns := tx.Bucket([]byte(BucketNames))
-
 		c := bns.Cursor()
-		for k, _ := c.Seek([]byte(systemId + ":")); k != nil && strings.HasPrefix(string(k), systemId+":"); k, _ = c.Next() {
+		p := []byte(systemId + ":")
+		for k, _ := c.Seek(p); k != nil && strings.HasPrefix(string(k), string(p)); k, _ = c.Next() {
 			err := bns.Delete(k)
 			if err != nil {
 				return err
 			}
+			deleted++
 		}
-
 		return nil
 	})
+	return deleted, err
 }
 
 // Update the names index with the given files.
@@ -190,17 +192,26 @@ func NewNamesIndex(
 		}
 	}(db)
 
+	filteredIds := make([]string, 0)
+	for _, s := range systems {
+		filteredIds = append(filteredIds, s.Id)
+	}
+
 	indexed, err := readIndexedSystems(db)
 	if err != nil {
 		log.Info().Msg("no indexed systems found")
 	}
 
 	for _, v := range indexed {
-		err := deleteSystemNames(db, v)
+		if !utils.Contains(filteredIds, v) {
+			continue
+		}
+
+		count, err := deleteSystemNames(db, v)
 		if err != nil {
 			return status.Files, fmt.Errorf("error deleting system names: %s", err)
 		} else {
-			log.Debug().Msgf("deleted names for system: %s", v)
+			log.Debug().Msgf("deleted names for %s: %d", v, count)
 		}
 	}
 
@@ -246,10 +257,12 @@ func NewNamesIndex(
 		}
 
 		if len(files) == 0 {
+			log.Debug().Msgf("no files found for system: %s", systemId)
 			continue
 		}
 
 		status.Files += len(files)
+		log.Debug().Msgf("scanned %d files for system: %s", len(files), systemId)
 		scanned[systemId] = true
 
 		g.Go(func() error {
@@ -301,11 +314,13 @@ func NewNamesIndex(
 	}
 
 	indexedSystems := make([]string, 0)
+	log.Debug().Msgf("scanned systems: %v", scanned)
 	for k, v := range scanned {
 		if v {
-			indexedSystems = append(indexed, k)
+			indexedSystems = append(indexedSystems, k)
 		}
 	}
+	log.Debug().Msgf("indexed systems: %v", indexedSystems)
 
 	err = writeIndexedSystems(db, indexedSystems)
 	if err != nil {

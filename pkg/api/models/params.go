@@ -10,7 +10,6 @@ type MediaIndexParams struct {
 	Systems *[]string `json:"systems"`
 }
 
-// TODO: not everything should be required
 type LaunchParams struct {
 	Type *string `json:"type"`
 	UID  *string `json:"uid"`
