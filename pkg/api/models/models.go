@@ -36,11 +36,10 @@ type Notification struct {
 }
 
 type RequestObject struct {
-	TapTo     int        `json:"tapto"`
-	Id        *uuid.UUID `json:"id,omitempty"` // UUID v1
-	Timestamp int64      `json:"timestamp"`    // unix timestamp (ms)
-	Method    string     `json:"method"`
-	Params    any        `json:"params,omitempty"`
+	JsonRpc string     `json:"jsonrpc"`
+	Id      *uuid.UUID `json:"id,omitempty"`
+	Method  string     `json:"method"`
+	Params  any        `json:"params,omitempty"`
 }
 
 type ErrorObject struct {
@@ -49,11 +48,10 @@ type ErrorObject struct {
 }
 
 type ResponseObject struct {
-	TapTo     int          `json:"tapto"`
-	Id        uuid.UUID    `json:"id"`        // UUID v1
-	Timestamp int64        `json:"timestamp"` // unix timestamp (ms)
-	Result    any          `json:"result,omitempty"`
-	Error     *ErrorObject `json:"error,omitempty"`
+	JsonRpc string       `json:"jsonrpc"`
+	Id      uuid.UUID    `json:"id"`
+	Result  any          `json:"result,omitempty"`
+	Error   *ErrorObject `json:"error,omitempty"`
 }
 
 type ClientResponse struct {
