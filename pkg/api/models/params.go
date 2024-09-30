@@ -8,10 +8,10 @@ type SearchParams struct {
 
 // TODO: not everything should be required
 type LaunchParams struct {
-	Type string `json:"type"`
-	UID  string `json:"uid"`
-	Text string `json:"text"`
-	Data string `json:"data"`
+	Type *string `json:"type"`
+	UID  *string `json:"uid"`
+	Text *string `json:"text"`
+	Data *string `json:"data"`
 }
 
 type AddMappingParams struct {
