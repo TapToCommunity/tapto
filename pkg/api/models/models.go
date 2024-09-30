@@ -20,7 +20,7 @@ const (
 	MethodClientsNew     = "clients.new"
 	MethodClientsDelete  = "clients.delete"
 	MethodSystems        = "systems"
-	MethodHistory        = "history"
+	MethodHistory        = "tokens.history"
 	MethodMappings       = "mappings"
 	MethodMappingsNew    = "mappings.new"
 	MethodMappingsDelete = "mappings.delete"
