@@ -143,29 +143,34 @@ func HandleGames(env requests.RequestEnv) (any, error) {
 		maxResults = *params.MaxResults
 	}
 
-	if params.Query == "" && params.System == "" {
+	if params.Query == "" && (params.Systems == nil || len(*params.Systems) == 0) {
 		return nil, errors.New("query or system is required")
 	}
 
 	var results = make([]models.SearchResultMedia, 0)
 	var search []gamesdb.SearchResult
-	system := params.System
+	system := params.Systems
 	query := params.Query
 
-	if system == "all" || system == "" {
+	if system == nil || len(*system) == 0 {
 		search, err = gamesdb.SearchNamesWords(env.Platform, gamesdb.AllSystems(), query)
 		if err != nil {
 			return nil, errors.New("error searching all media: " + err.Error())
 		}
 	} else {
-		system, err := gamesdb.GetSystem(system)
-		if err != nil {
-			return nil, errors.New("error getting system: " + err.Error())
+		systems := make([]gamesdb.System, 0)
+		for _, s := range *system {
+			system, err := gamesdb.GetSystem(s)
+			if err != nil {
+				return nil, errors.New("error getting system: " + err.Error())
+			}
+
+			systems = append(systems, *system)
 		}
 
-		search, err = gamesdb.SearchNamesWords(env.Platform, []gamesdb.System{*system}, query)
+		search, err = gamesdb.SearchNamesWords(env.Platform, systems, query)
 		if err != nil {
-			return nil, errors.New("error searching " + system.Id + " media: " + err.Error())
+			return nil, errors.New("error searching media: " + err.Error())
 		}
 	}
 
