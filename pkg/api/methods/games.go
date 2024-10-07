@@ -26,7 +26,7 @@ type Index struct {
 }
 
 func (s *Index) Exists(platform platforms.Platform) bool {
-	return gamesdb.DbExists(platform)
+	return gamesdb.Exists(platform)
 }
 
 func (s *Index) GenerateIndex(
