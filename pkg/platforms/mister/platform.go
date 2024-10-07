@@ -5,6 +5,7 @@ package mister
 import (
 	"fmt"
 	"github.com/wizzomafizzo/tapto/pkg/api/models"
+	"github.com/wizzomafizzo/tapto/pkg/readers/optical_drive"
 	"os"
 	"os/exec"
 	"regexp"
@@ -72,6 +73,7 @@ func (p *Platform) SupportedReaders(cfg *config.UserConfig) []readers.Reader {
 		libnfc.NewReader(cfg),
 		file.NewReader(cfg),
 		simple_serial.NewReader(cfg),
+		optical_drive.NewReader(cfg),
 	}
 }
 
