@@ -24,13 +24,13 @@ const (
 	indexedSystemsKey = "meta:indexedSystems"
 )
 
-// Return the key for a name in the names index.
+// NameKey returns the key for a file name in the names index.
 func NameKey(systemId string, name string) string {
 	return systemId + ":" + name
 }
 
-// Check if the gamesdb exists on disk.
-func DbExists(platform platforms.Platform) bool {
+// Exists returns true if the media database exists on disk.
+func Exists(platform platforms.Platform) bool {
 	_, err := os.Stat(filepath.Join(platform.ConfigFolder(), config.GamesDbFilename))
 	return err == nil
 }
@@ -66,7 +66,7 @@ func open(platform platforms.Platform, options *bolt.Options) (*bolt.DB, error) 
 }
 
 // Open the gamesdb with default options for generating names index.
-func openNames(platform platforms.Platform) (*bolt.DB, error) {
+func openForGenerate(platform platforms.Platform) (*bolt.DB, error) {
 	return open(platform, &bolt.Options{
 		NoSync:         true,
 		NoFreelistSync: true,
@@ -181,7 +181,7 @@ func NewNamesIndex(
 		Step:  1,
 	}
 
-	db, err := openNames(platform)
+	db, err := openForGenerate(platform)
 	if err != nil {
 		return status.Files, fmt.Errorf("error opening gamesdb: %s", err)
 	}
@@ -348,7 +348,7 @@ func searchNamesGeneric(
 	query string,
 	test func(string, string) bool,
 ) ([]SearchResult, error) {
-	if !DbExists(platform) {
+	if !Exists(platform) {
 		return nil, fmt.Errorf("gamesdb does not exist")
 	}
 
@@ -468,7 +468,7 @@ func SearchNamesGlob(platform platforms.Platform, systems []System, query string
 
 // Return true if a specific system is indexed in the gamesdb
 func SystemIndexed(platform platforms.Platform, system System) bool {
-	if !DbExists(platform) {
+	if !Exists(platform) {
 		return false
 	}
 
@@ -493,7 +493,7 @@ func SystemIndexed(platform platforms.Platform, system System) bool {
 
 // Return all systems indexed in the gamesdb
 func IndexedSystems(platform platforms.Platform) ([]string, error) {
-	if !DbExists(platform) {
+	if !Exists(platform) {
 		return nil, fmt.Errorf("gamesdb does not exist")
 	}
 
@@ -518,7 +518,7 @@ func IndexedSystems(platform platforms.Platform) ([]string, error) {
 
 // Return a random game from specified systems.
 func RandomGame(platform platforms.Platform, systems []System) (SearchResult, error) {
-	if !DbExists(platform) {
+	if !Exists(platform) {
 		return SearchResult{}, fmt.Errorf("gamesdb does not exist")
 	}
 

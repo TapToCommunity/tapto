@@ -197,8 +197,6 @@ func Start(
 			err := s.Write([]byte("pong"))
 			if err != nil {
 				log.Error().Err(err).Msg("sending pong")
-			} else {
-				log.Debug().Msg("sent pong")
 			}
 			return
 		}
