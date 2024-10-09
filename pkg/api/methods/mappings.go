@@ -6,6 +6,7 @@ import (
 	"github.com/wizzomafizzo/tapto/pkg/api/models"
 	"github.com/wizzomafizzo/tapto/pkg/api/models/requests"
 	"regexp"
+	"strconv"
 	"time"
 
 	"github.com/rs/zerolog/log"
@@ -122,7 +123,7 @@ func HandleDeleteMapping(env requests.RequestEnv) (any, error) {
 		return nil, ErrInvalidParams
 	}
 
-	err = env.Database.DeleteMapping(params.Id)
+	err = env.Database.DeleteMapping(strconv.Itoa(params.Id))
 	if err != nil {
 		return nil, err
 	}
@@ -176,7 +177,7 @@ func HandleUpdateMapping(env requests.RequestEnv) (any, error) {
 		return nil, ErrInvalidParams
 	}
 
-	oldMapping, err := env.Database.GetMapping(params.Id)
+	oldMapping, err := env.Database.GetMapping(strconv.Itoa(params.Id))
 	if err != nil {
 		return nil, err
 	}
@@ -207,7 +208,7 @@ func HandleUpdateMapping(env requests.RequestEnv) (any, error) {
 		newMapping.Override = *params.Override
 	}
 
-	err = env.Database.UpdateMapping(params.Id, newMapping)
+	err = env.Database.UpdateMapping(strconv.Itoa(params.Id), newMapping)
 	if err != nil {
 		return nil, err
 	}

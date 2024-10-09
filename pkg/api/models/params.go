@@ -27,11 +27,11 @@ type AddMappingParams struct {
 }
 
 type DeleteMappingParams struct {
-	Id string `json:"id"`
+	Id int `json:"id"`
 }
 
 type UpdateMappingParams struct {
-	Id       string  `json:"id"`
+	Id       int     `json:"id"`
 	Label    *string `json:"label"`
 	Enabled  *bool   `json:"enabled"`
 	Type     *string `json:"type"`
