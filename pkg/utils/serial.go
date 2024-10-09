@@ -82,7 +82,7 @@ func ignoreSerialDevice(path string) bool {
 }
 
 func getLinuxList() ([]string, error) {
-	path := "/dev/serial/by-id"
+	path := "/dev"
 
 	if _, err := os.Stat(path); os.IsNotExist(err) {
 		return nil, nil
@@ -95,7 +95,7 @@ func getLinuxList() ([]string, error) {
 	defer func(f *os.File) {
 		err := f.Close()
 		if err != nil {
-			log.Warn().Err(err).Msg("failed to close serial device")
+			log.Warn().Err(err).Msg("failed to close serial device folder")
 		}
 	}(f)
 
@@ -108,6 +108,10 @@ func getLinuxList() ([]string, error) {
 
 	for _, v := range files {
 		if v.IsDir() {
+			continue
+		}
+
+		if !strings.HasPrefix(v.Name(), "ttyUSB") && !strings.HasPrefix(v.Name(), "ttyACM") {
 			continue
 		}
 
