@@ -1,17 +1,20 @@
 package models
 
 type SearchParams struct {
-	Query      string `json:"query"`
-	System     string `json:"system"` // TODO: shouldn't be required, should be a list?
-	MaxResults *int   `json:"maxResults"`
+	Query      string    `json:"query"`
+	Systems    *[]string `json:"systems"`
+	MaxResults *int      `json:"maxResults"`
 }
 
-// TODO: not everything should be required
+type MediaIndexParams struct {
+	Systems *[]string `json:"systems"`
+}
+
 type LaunchParams struct {
-	Type string `json:"type"`
-	UID  string `json:"uid"`
-	Text string `json:"text"`
-	Data string `json:"data"`
+	Type *string `json:"type"`
+	UID  *string `json:"uid"`
+	Text *string `json:"text"`
+	Data *string `json:"data"`
 }
 
 type AddMappingParams struct {
@@ -24,11 +27,11 @@ type AddMappingParams struct {
 }
 
 type DeleteMappingParams struct {
-	Id string `json:"id"`
+	Id int `json:"id"`
 }
 
 type UpdateMappingParams struct {
-	Id       string  `json:"id"`
+	Id       int     `json:"id"`
 	Label    *string `json:"label"`
 	Enabled  *bool   `json:"enabled"`
 	Type     *string `json:"type"`

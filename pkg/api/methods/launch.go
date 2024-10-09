@@ -28,23 +28,59 @@ func HandleLaunch(env requests.RequestEnv) (any, error) {
 		return nil, ErrMissingParams
 	}
 
-	var params models.LaunchParams
-	err := json.Unmarshal(env.Params, &params)
-	if err != nil {
-		return nil, ErrInvalidParams
-	}
-
 	var t tokens.Token
 
-	t.UID = params.UID
-	t.Text = params.Text
-	t.Type = params.Type
-	t.Data = params.Data
+	var params models.LaunchParams
+	err := json.Unmarshal(env.Params, &params)
+	if err == nil {
+		log.Debug().Msgf("unmarshalled launch params: %+v", params)
+
+		if params.Type != nil {
+			t.Type = *params.Type
+		}
+
+		hasArg := false
+
+		if params.UID != nil {
+			// TODO: validate uid format (hex) and tidy
+			t.UID = *params.UID
+			hasArg = true
+		}
+
+		if params.Text != nil {
+			t.Text = *params.Text
+			hasArg = true
+		}
+
+		if params.Data != nil {
+			// TODO: validate hex format
+			t.Data = *params.Data
+			hasArg = true
+		}
+
+		if !hasArg {
+			return nil, ErrInvalidParams
+		}
+	} else {
+		log.Debug().Msgf("could not unmarshal launch params, trying string: %s", env.Params)
+
+		var text string
+		err := json.Unmarshal(env.Params, &text)
+		if err != nil {
+			return nil, ErrInvalidParams
+		}
+
+		if text == "" {
+			return nil, ErrMissingParams
+		}
+
+		t.Text = text
+	}
 
 	t.ScanTime = time.Now()
 	t.Remote = true // TODO: check if this is still necessary after api update
 
-	// TODO: how do we report back errors?
+	// TODO: how do we report back errors? put channel in queue
 	env.State.SetActiveCard(t)
 	env.TokenQueue.Enqueue(t)
 

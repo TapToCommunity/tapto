@@ -29,7 +29,7 @@ type ScanResult struct {
 type Launcher struct {
 	// Unique ID of the launcher, visible to user.
 	Id string
-	// System associated with this launcher.
+	// Systems associated with this launcher.
 	SystemId string
 	// Folders to scan for files, relative to the root folders of the platform.
 	// TODO: Support absolute paths?

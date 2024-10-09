@@ -24,13 +24,13 @@ const (
 	indexedSystemsKey = "meta:indexedSystems"
 )
 
-// Return the key for a name in the names index.
+// NameKey returns the key for a file name in the names index.
 func NameKey(systemId string, name string) string {
 	return systemId + ":" + name
 }
 
-// Check if the gamesdb exists on disk.
-func DbExists(platform platforms.Platform) bool {
+// Exists returns true if the media database exists on disk.
+func Exists(platform platforms.Platform) bool {
 	_, err := os.Stat(filepath.Join(platform.ConfigFolder(), config.GamesDbFilename))
 	return err == nil
 }
@@ -66,7 +66,7 @@ func open(platform platforms.Platform, options *bolt.Options) (*bolt.DB, error) 
 }
 
 // Open the gamesdb with default options for generating names index.
-func openNames(platform platforms.Platform) (*bolt.DB, error) {
+func openForGenerate(platform platforms.Platform) (*bolt.DB, error) {
 	return open(platform, &bolt.Options{
 		NoSync:         true,
 		NoFreelistSync: true,
@@ -114,20 +114,22 @@ type fileInfo struct {
 }
 
 // Delete all names in index for the given system.
-func deleteSystemNames(db *bolt.DB, systemId string) error {
-	return db.Batch(func(tx *bolt.Tx) error {
+func deleteSystemNames(db *bolt.DB, systemId string) (int, error) {
+	deleted := 0
+	err := db.Batch(func(tx *bolt.Tx) error {
 		bns := tx.Bucket([]byte(BucketNames))
-
 		c := bns.Cursor()
-		for k, _ := c.Seek([]byte(systemId + ":")); k != nil && strings.HasPrefix(string(k), systemId+":"); k, _ = c.Next() {
+		p := []byte(systemId + ":")
+		for k, _ := c.Seek(p); k != nil && strings.HasPrefix(string(k), string(p)); k, _ = c.Next() {
 			err := bns.Delete(k)
 			if err != nil {
 				return err
 			}
+			deleted++
 		}
-
 		return nil
 	})
+	return deleted, err
 }
 
 // Update the names index with the given files.
@@ -179,7 +181,7 @@ func NewNamesIndex(
 		Step:  1,
 	}
 
-	db, err := openNames(platform)
+	db, err := openForGenerate(platform)
 	if err != nil {
 		return status.Files, fmt.Errorf("error opening gamesdb: %s", err)
 	}
@@ -190,17 +192,26 @@ func NewNamesIndex(
 		}
 	}(db)
 
+	filteredIds := make([]string, 0)
+	for _, s := range systems {
+		filteredIds = append(filteredIds, s.Id)
+	}
+
 	indexed, err := readIndexedSystems(db)
 	if err != nil {
 		log.Info().Msg("no indexed systems found")
 	}
 
 	for _, v := range indexed {
-		err := deleteSystemNames(db, v)
+		if !utils.Contains(filteredIds, v) {
+			continue
+		}
+
+		count, err := deleteSystemNames(db, v)
 		if err != nil {
 			return status.Files, fmt.Errorf("error deleting system names: %s", err)
 		} else {
-			log.Debug().Msgf("deleted names for system: %s", v)
+			log.Debug().Msgf("deleted names for %s: %d", v, count)
 		}
 	}
 
@@ -246,10 +257,12 @@ func NewNamesIndex(
 		}
 
 		if len(files) == 0 {
+			log.Debug().Msgf("no files found for system: %s", systemId)
 			continue
 		}
 
 		status.Files += len(files)
+		log.Debug().Msgf("scanned %d files for system: %s", len(files), systemId)
 		scanned[systemId] = true
 
 		g.Go(func() error {
@@ -301,11 +314,13 @@ func NewNamesIndex(
 	}
 
 	indexedSystems := make([]string, 0)
+	log.Debug().Msgf("scanned systems: %v", scanned)
 	for k, v := range scanned {
 		if v {
-			indexedSystems = append(indexed, k)
+			indexedSystems = append(indexedSystems, k)
 		}
 	}
+	log.Debug().Msgf("indexed systems: %v", indexedSystems)
 
 	err = writeIndexedSystems(db, indexedSystems)
 	if err != nil {
@@ -333,7 +348,7 @@ func searchNamesGeneric(
 	query string,
 	test func(string, string) bool,
 ) ([]SearchResult, error) {
-	if !DbExists(platform) {
+	if !Exists(platform) {
 		return nil, fmt.Errorf("gamesdb does not exist")
 	}
 
@@ -453,7 +468,7 @@ func SearchNamesGlob(platform platforms.Platform, systems []System, query string
 
 // Return true if a specific system is indexed in the gamesdb
 func SystemIndexed(platform platforms.Platform, system System) bool {
-	if !DbExists(platform) {
+	if !Exists(platform) {
 		return false
 	}
 
@@ -478,7 +493,7 @@ func SystemIndexed(platform platforms.Platform, system System) bool {
 
 // Return all systems indexed in the gamesdb
 func IndexedSystems(platform platforms.Platform) ([]string, error) {
-	if !DbExists(platform) {
+	if !Exists(platform) {
 		return nil, fmt.Errorf("gamesdb does not exist")
 	}
 
@@ -503,7 +518,7 @@ func IndexedSystems(platform platforms.Platform) ([]string, error) {
 
 // Return a random game from specified systems.
 func RandomGame(platform platforms.Platform, systems []System) (SearchResult, error) {
-	if !DbExists(platform) {
+	if !Exists(platform) {
 		return SearchResult{}, fmt.Errorf("gamesdb does not exist")
 	}
 

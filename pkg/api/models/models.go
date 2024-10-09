@@ -3,12 +3,10 @@ package models
 import "github.com/google/uuid"
 
 const (
-	ReaderChanged        = "state.readerChanged"
-	ReaderRemoved        = "state.readerRemoved"
-	LaunchingState       = "state.launching"
-	ActiveCardState      = "state.activeCard"
-	SystemStopped        = "system.stopped" // TODO: REMOVE
-	SystemStarted        = "system.started" // TODO: REMOVE
+	ReadersConnected     = "readers.connected"
+	ReadersDisconnected  = "readers.disconnected"
+	TokensLaunching      = "tokens.launching"
+	TokensActive         = "tokens.active"
 	MediaStopped         = "media.stopped"
 	MediaStarted         = "media.started"
 	MediaIndexing        = "media.indexing"
@@ -22,7 +20,7 @@ const (
 	MethodClientsNew     = "clients.new"
 	MethodClientsDelete  = "clients.delete"
 	MethodSystems        = "systems"
-	MethodHistory        = "history"
+	MethodHistory        = "tokens.history"
 	MethodMappings       = "mappings"
 	MethodMappingsNew    = "mappings.new"
 	MethodMappingsDelete = "mappings.delete"
@@ -38,11 +36,10 @@ type Notification struct {
 }
 
 type RequestObject struct {
-	TapTo     int        `json:"tapto"`
-	Id        *uuid.UUID `json:"id,omitempty"` // UUID v1
-	Timestamp int64      `json:"timestamp"`    // unix timestamp (ms)
-	Method    string     `json:"method"`
-	Params    any        `json:"params,omitempty"`
+	JsonRpc string     `json:"jsonrpc"`
+	Id      *uuid.UUID `json:"id,omitempty"`
+	Method  string     `json:"method"`
+	Params  any        `json:"params,omitempty"`
 }
 
 type ErrorObject struct {
@@ -51,11 +48,10 @@ type ErrorObject struct {
 }
 
 type ResponseObject struct {
-	TapTo     int          `json:"tapto"`
-	Id        uuid.UUID    `json:"id"`        // UUID v1
-	Timestamp int64        `json:"timestamp"` // unix timestamp (ms)
-	Result    any          `json:"result,omitempty"`
-	Error     *ErrorObject `json:"error,omitempty"`
+	JsonRpc string       `json:"jsonrpc"`
+	Id      uuid.UUID    `json:"id"`
+	Result  any          `json:"result,omitempty"`
+	Error   *ErrorObject `json:"error,omitempty"`
 }
 
 type ClientResponse struct {
@@ -63,4 +59,11 @@ type ClientResponse struct {
 	Name    string    `json:"name"`
 	Address string    `json:"address"`
 	Secret  string    `json:"secret"`
+}
+
+type MediaStartedParams struct {
+	SystemId   string `json:"systemId"`
+	SystemName string `json:"systemName"`
+	MediaPath  string `json:"mediaPath"`
+	MediaName  string `json:"mediaName"`
 }

@@ -273,7 +273,7 @@ func displayServiceInfo(pl platforms.Platform, cfg *config.UserConfig, stdscr *g
 
 		clearLine(5)
 		dbExistsDisplay := "NOT CREATED"
-		if gamesdb.DbExists(pl) {
+		if gamesdb.Exists(pl) {
 			dbExistsDisplay = "CREATED"
 		}
 		printLeft(5, "Games DB:       "+dbExistsDisplay)
