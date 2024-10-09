@@ -39,8 +39,10 @@ RUN cd /internal && \
     git clone --depth 1 https://github.com/nfc-tools/libnfc.git
 # apply patches
 COPY patches/pcsc-initiator_poll_target.patch /internal/libnfc/pcsc-initiator_poll_target.patch
+COPY patches/uart_flock.patch /internal/libnfc/uart_flock.patch
 RUN cd /internal/libnfc && \
-    patch -p1 < pcsc-initiator_poll_target.patch
+    patch -p1 < pcsc-initiator_poll_target.patch && \
+    patch -p1 < uart_flock.patch
 # build and install libnfc
 RUN cd /internal/libnfc && \
     autoreconf -vis && \
