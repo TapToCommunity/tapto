@@ -62,6 +62,7 @@ func (r *Reader) Open(device string, iq chan<- readers.Scan) error {
 		connStr = ""
 	}
 
+	log.Debug().Msgf("opening device: %s", connStr)
 	pnd, err := openDeviceWithRetries(connStr)
 	if err != nil {
 		if device == autoConnStr {
@@ -132,6 +133,7 @@ func (r *Reader) Close() error {
 	if r.pnd == nil {
 		return nil
 	} else {
+		log.Debug().Msgf("closing device: %s", r.conn)
 		return r.pnd.Close()
 	}
 }
