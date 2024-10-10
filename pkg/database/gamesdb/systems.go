@@ -260,7 +260,7 @@ var Systems = map[string]System{
 		Id: SystemNeoGeo,
 	},
 	SystemNeoGeoCD: {
-		Id: SystemNeoGeo,
+		Id: SystemNeoGeoCD,
 	},
 	SystemNES: {
 		Id: SystemNES,
