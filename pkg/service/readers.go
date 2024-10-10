@@ -77,6 +77,7 @@ func connectReaders(
 			for _, r := range pl.SupportedReaders(cfg) {
 				ids := r.Ids()
 				if utils.Contains(ids, rt) {
+					log.Debug().Msgf("connecting to reader: %s", device)
 					err := r.Open(device, iq)
 					if err != nil {
 						log.Error().Msgf("error opening reader: %s", err)
