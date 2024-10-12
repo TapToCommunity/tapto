@@ -177,7 +177,7 @@ func NewNamesIndex(
 	update func(IndexStatus),
 ) (int, error) {
 	status := IndexStatus{
-		Total: len(systems) + 1,
+		Total: len(systems) + 2, // estimate steps
 		Step:  1,
 	}
 
@@ -227,7 +227,11 @@ func NewNamesIndex(
 		scanned[s.Id] = false
 	}
 
-	for _, k := range utils.AlphaMapKeys(systemPaths) {
+	sysPathIds := utils.AlphaMapKeys(systemPaths)
+	// update steps with true count
+	status.Total = len(sysPathIds) + 2
+
+	for _, k := range sysPathIds {
 		systemId := k
 		files := make([]platforms.ScanResult, 0)
 
