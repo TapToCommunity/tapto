@@ -282,13 +282,6 @@ var Launchers = []platforms.Launcher{
 		Launch:     launch,
 	},
 	{
-		Id:         gamesdb.SystemNeoGeo,
-		SystemId:   gamesdb.SystemNeoGeo,
-		Folders:    []string{"NEOGEO"},
-		Extensions: []string{".neo"}, // TODO: .zip and folder support
-		Launch:     launch,
-	},
-	{
 		Id:       "LLAPINeoGeo",
 		SystemId: gamesdb.SystemNeoGeo,
 		Launch:   launchAltCore(gamesdb.SystemNeoGeo, "_LLAPI/NeoGeo_LLAPI"),
