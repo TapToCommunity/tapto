@@ -342,6 +342,11 @@ var Launchers = []platforms.Launcher{
 		Launch:   launchAltCore(gamesdb.SystemNintendo64, "_LLAPI/N64_80MHz_LLAPI"),
 	},
 	{
+		Id:       "80MHzNintendo64",
+		SystemId: gamesdb.SystemNintendo64,
+		Launch:   launchAltCore(gamesdb.SystemNintendo64, "_Console/N64_80MHz"),
+	},
+	{
 		Id:         gamesdb.SystemOdyssey2,
 		SystemId:   gamesdb.SystemOdyssey2,
 		Folders:    []string{"ODYSSEY2"},
