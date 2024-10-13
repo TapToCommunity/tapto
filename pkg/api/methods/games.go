@@ -62,7 +62,7 @@ func (s *Index) GenerateIndex(
 	go func() {
 		defer s.mu.Unlock()
 
-		_, err := gamesdb.NewNamesIndex(pl, cfg, systems, func(status gamesdb.IndexStatus) {
+		total, err := gamesdb.NewNamesIndex(pl, cfg, systems, func(status gamesdb.IndexStatus) {
 			s.TotalSteps = status.Total
 			s.CurrentStep = status.Step
 			s.TotalFiles = status.Files
@@ -83,7 +83,7 @@ func (s *Index) GenerateIndex(
 					}
 				}
 			}
-			log.Info().Msgf("indexing status: %s", s.CurrentDesc)
+			log.Debug().Msgf("indexing status: %v", s)
 			ns <- models.Notification{
 				Method: models.MediaIndexing,
 				Params: models.IndexStatusResponse{
@@ -103,6 +103,7 @@ func (s *Index) GenerateIndex(
 		s.TotalSteps = 0
 		s.CurrentStep = 0
 		s.CurrentDesc = ""
+		s.TotalFiles = 0
 
 		log.Info().Msg("finished generating media index")
 		ns <- models.Notification{
@@ -112,7 +113,7 @@ func (s *Index) GenerateIndex(
 				TotalSteps:  0,
 				CurrentStep: 0,
 				CurrentDesc: "",
-				TotalFiles:  0,
+				TotalFiles:  total,
 			},
 		}
 	}()

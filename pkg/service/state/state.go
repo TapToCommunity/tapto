@@ -49,7 +49,13 @@ func (s *State) SetActiveCard(card tokens.Token) {
 
 	s.Notifications <- models.Notification{
 		Method: models.TokensActive,
-		Params: card,
+		Params: models.TokenResponse{
+			Type:     card.Type,
+			UID:      card.UID,
+			Text:     card.Text,
+			Data:     card.Data,
+			ScanTime: card.ScanTime,
+		},
 	}
 	s.mu.Unlock()
 }

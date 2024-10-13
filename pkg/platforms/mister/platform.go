@@ -3,13 +3,18 @@
 package mister
 
 import (
+	"bufio"
+	"encoding/xml"
 	"fmt"
 	"github.com/wizzomafizzo/tapto/pkg/api/models"
+	"github.com/wizzomafizzo/tapto/pkg/database/gamesdb"
 	"github.com/wizzomafizzo/tapto/pkg/readers/optical_drive"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"regexp"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/bendahl/uinput"
@@ -386,6 +391,157 @@ func (p *Platform) LookupMapping(t tokens.Token) (string, bool) {
 	return "", false
 }
 
+type Romset struct {
+	Name    string `xml:"name,attr"`
+	AltName string `xml:"altname,attr"`
+}
+
+type Romsets struct {
+	XMLName xml.Name `xml:"romsets"`
+	Romsets []Romset `xml:"romset"`
+}
+
+func readRomsets(filepath string) ([]Romset, error) {
+	f, err := os.Open(filepath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open file: %w", err)
+	}
+	defer f.Close()
+
+	var romsets Romsets
+	if err := xml.NewDecoder(f).Decode(&romsets); err != nil {
+		return nil, fmt.Errorf("failed to decode XML: %w", err)
+	}
+
+	return romsets.Romsets, nil
+}
+
 func (p *Platform) Launchers() []platforms.Launcher {
-	return Launchers
+	amiga := platforms.Launcher{
+		Id:         gamesdb.SystemAmiga,
+		SystemId:   gamesdb.SystemAmiga,
+		Folders:    []string{"Amiga"},
+		Extensions: []string{".adf"},
+		Launch:     launch,
+		Scanner: func(
+			cfg *config.UserConfig,
+			results []platforms.ScanResult,
+		) ([]platforms.ScanResult, error) {
+			log.Info().Msg("starting amigavision scan")
+			aGamesPath := "listings/games.txt"
+			aDemosPath := "listings/demos.txt"
+			var fullPaths []string
+
+			s, err := gamesdb.GetSystem(gamesdb.SystemAmiga)
+			if err != nil {
+				return results, err
+			}
+
+			sfs := gamesdb.GetSystemPaths(p, p.RootFolders(cfg), []gamesdb.System{*s})
+			for _, sf := range sfs {
+				for _, txt := range []string{aGamesPath, aDemosPath} {
+					tp, err := gamesdb.FindPath(filepath.Join(sf.Path, txt))
+					if err == nil {
+						f, err := os.Open(tp)
+						if err != nil {
+							log.Warn().Err(err).Msg("unable to open amiga txt")
+							continue
+						}
+
+						scanner := bufio.NewScanner(f)
+						for scanner.Scan() {
+							fp := filepath.Join(sf.Path, txt, scanner.Text())
+							fullPaths = append(fullPaths, fp)
+						}
+
+						err = f.Close()
+						if err != nil {
+							log.Warn().Err(err).Msg("unable to close amiga txt")
+						}
+					}
+				}
+			}
+
+			for _, p := range fullPaths {
+				results = append(results, platforms.ScanResult{
+					Path: p,
+					Name: filepath.Base(p),
+				})
+			}
+
+			return results, nil
+		},
+	}
+
+	neogeo := platforms.Launcher{
+		Id:         gamesdb.SystemNeoGeo,
+		SystemId:   gamesdb.SystemNeoGeo,
+		Folders:    []string{"NEOGEO"},
+		Extensions: []string{".neo"}, // TODO: .zip and folder support
+		Launch:     launch,
+		Scanner: func(
+			cfg *config.UserConfig,
+			results []platforms.ScanResult,
+		) ([]platforms.ScanResult, error) {
+			log.Info().Msg("starting neogeo scan")
+			romsetsFilename := "romsets.xml"
+			names := make(map[string]string)
+
+			s, err := gamesdb.GetSystem(gamesdb.SystemNeoGeo)
+			if err != nil {
+				return results, err
+			}
+
+			sfs := gamesdb.GetSystemPaths(p, p.RootFolders(cfg), []gamesdb.System{*s})
+			for _, sf := range sfs {
+				rsf, err := gamesdb.FindPath(filepath.Join(sf.Path, romsetsFilename))
+				if err == nil {
+					romsets, err := readRomsets(rsf)
+					if err != nil {
+						log.Warn().Err(err).Msg("unable to read romsets")
+						continue
+					}
+
+					for _, romset := range romsets {
+						names[romset.Name] = romset.AltName
+					}
+				}
+
+				// read directory
+				dir, err := os.Open(sf.Path)
+				if err != nil {
+					log.Warn().Err(err).Msg("unable to open neogeo directory")
+					continue
+				}
+
+				files, err := dir.Readdirnames(-1)
+				if err != nil {
+					log.Warn().Err(err).Msg("unable to read neogeo directory")
+					_ = dir.Close()
+					continue
+				}
+
+				for _, f := range files {
+					id := f
+					if filepath.Ext(strings.ToLower(f)) == ".zip" {
+						id = strings.TrimSuffix(f, filepath.Ext(f))
+					}
+
+					if altName, ok := names[id]; ok {
+						results = append(results, platforms.ScanResult{
+							Path: filepath.Join(sf.Path, f),
+							Name: altName,
+						})
+					}
+				}
+			}
+
+			return results, nil
+		},
+	}
+
+	ls := Launchers
+	ls = append(ls, amiga)
+	ls = append(ls, neogeo)
+	return ls
 }

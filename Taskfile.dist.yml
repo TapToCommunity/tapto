@@ -130,14 +130,12 @@ tasks:
   deploy-mister:
     cmds:
       - task: build-mister
-      - scp _build/mister_arm/taptui.sh root@${MISTER_IP}:/media/fat/Scripts/taptui.sh
       - scp _build/mister_arm/tapto.sh root@${MISTER_IP}:/media/fat/Scripts/tapto.sh
       - ssh root@${MISTER_IP} /media/fat/Scripts/tapto.sh -service restart
 
   deploy-mistex:
     cmds:
       - task: build-mistex
-      - scp _build/mistex_arm64/taptui.sh root@${MISTEX_IP}:/media/fat/Scripts/taptui.sh
       - scp _build/mistex_arm64/tapto.sh root@${MISTEX_IP}:/media/fat/Scripts/tapto.sh
       - ssh root@${MISTEX_IP} /media/fat/Scripts/tapto.sh -service restart
 

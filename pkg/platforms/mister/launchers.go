@@ -33,6 +33,22 @@ func launchSinden(
 	}
 }
 
+func launchAltCore(
+	systemId string,
+	rbfPath string,
+) func(*config.UserConfig, string) error {
+	return func(cfg *config.UserConfig, path string) error {
+		s, err := games.GetSystem(systemId)
+		if err != nil {
+			return err
+		}
+		sn := *s
+		sn.Rbf = rbfPath
+		log.Debug().Str("rbf", sn.Rbf).Msgf("launching alt core: %v", sn)
+		return mister.LaunchGame(UserConfigToMrext(cfg), sn, path)
+	}
+}
+
 var Launchers = []platforms.Launcher{
 	// Consoles
 	{
@@ -64,6 +80,11 @@ var Launchers = []platforms.Launcher{
 		Launch:     launch,
 	},
 	{
+		Id:       "LLAPIAtari2600",
+		SystemId: gamesdb.SystemAtari2600,
+		Launch:   launchAltCore(gamesdb.SystemAtari2600, "_LLAPI/Atari7800_LLAPI"),
+	},
+	{
 		Id:         gamesdb.SystemAtari5200,
 		SystemId:   gamesdb.SystemAtari5200,
 		Folders:    []string{"ATARI5200"},
@@ -76,6 +97,11 @@ var Launchers = []platforms.Launcher{
 		Folders:    []string{"ATARI7800"},
 		Extensions: []string{".a78"},
 		Launch:     launch,
+	},
+	{
+		Id:       "LLAPIAtari7800",
+		SystemId: gamesdb.SystemAtari7800,
+		Launch:   launchAltCore(gamesdb.SystemAtari7800, "_LLAPI/Atari7800_LLAPI"),
 	},
 	{
 		Id:         gamesdb.SystemAtariLynx,
@@ -134,6 +160,11 @@ var Launchers = []platforms.Launcher{
 		Launch:     launch,
 	},
 	{
+		Id:       "LLAPIGameboy",
+		SystemId: gamesdb.SystemGameboy,
+		Launch:   launchAltCore(gamesdb.SystemGameboy, "_LLAPI/Gameboy_LLAPI"),
+	},
+	{
 		Id:         gamesdb.SystemGameboyColor,
 		SystemId:   gamesdb.SystemGameboyColor,
 		Folders:    []string{"GAMEBOY", "GBC"},
@@ -169,6 +200,11 @@ var Launchers = []platforms.Launcher{
 		Launch:     launch,
 	},
 	{
+		Id:       "LLAPIGBA",
+		SystemId: gamesdb.SystemGBA,
+		Launch:   launchAltCore(gamesdb.SystemGBA, "_LLAPI/GBA_LLAPI"),
+	},
+	{
 		Id:         gamesdb.SystemGBA2P,
 		SystemId:   gamesdb.SystemGBA2P,
 		Folders:    []string{"GBA2P"},
@@ -193,6 +229,11 @@ var Launchers = []platforms.Launcher{
 		Launch:   launchSinden(gamesdb.SystemGenesis, "MegaDrive"),
 	},
 	{
+		Id:       "LLAPIMegaDrive",
+		SystemId: gamesdb.SystemGenesis,
+		Launch:   launchAltCore(gamesdb.SystemGenesis, "_LLAPI/MegaDrive_LLAPI"),
+	},
+	{
 		Id:         gamesdb.SystemIntellivision,
 		SystemId:   gamesdb.SystemIntellivision,
 		Folders:    []string{"Intellivision"},
@@ -212,6 +253,11 @@ var Launchers = []platforms.Launcher{
 		Launch:   launchSinden(gamesdb.SystemMasterSystem, "SMS"),
 	},
 	{
+		Id:       "LLAPISMS",
+		SystemId: gamesdb.SystemMasterSystem,
+		Launch:   launchAltCore(gamesdb.SystemMasterSystem, "_LLAPI/SMS_LLAPI"),
+	},
+	{
 		Id:         gamesdb.SystemMegaCD,
 		SystemId:   gamesdb.SystemMegaCD,
 		Folders:    []string{"MegaCD"},
@@ -224,6 +270,11 @@ var Launchers = []platforms.Launcher{
 		Launch:   launchSinden(gamesdb.SystemMegaCD, "MegaCD"),
 	},
 	{
+		Id:       "LLAPIMegaCD",
+		SystemId: gamesdb.SystemMegaCD,
+		Launch:   launchAltCore(gamesdb.SystemMegaCD, "_LLAPI/MegaCD_LLAPI"),
+	},
+	{
 		Id:         gamesdb.SystemMegaDuck,
 		SystemId:   gamesdb.SystemMegaDuck,
 		Folders:    []string{"GAMEBOY", "MegaDuck"},
@@ -231,15 +282,13 @@ var Launchers = []platforms.Launcher{
 		Launch:     launch,
 	},
 	{
-		Id:         gamesdb.SystemNeoGeo,
-		SystemId:   gamesdb.SystemNeoGeo,
-		Folders:    []string{"NEOGEO"},
-		Extensions: []string{".neo"}, // TODO: .zip and folder support
-		Launch:     launch,
+		Id:       "LLAPINeoGeo",
+		SystemId: gamesdb.SystemNeoGeo,
+		Launch:   launchAltCore(gamesdb.SystemNeoGeo, "_LLAPI/NeoGeo_LLAPI"),
 	},
 	{
-		Id:         gamesdb.SystemNeoGeo,
-		SystemId:   gamesdb.SystemNeoGeo,
+		Id:         gamesdb.SystemNeoGeoCD,
+		SystemId:   gamesdb.SystemNeoGeoCD,
 		Folders:    []string{"NeoGeo-CD", "NEOGEO"},
 		Extensions: []string{".cue", ".chd"},
 		Launch:     launch,
@@ -264,11 +313,41 @@ var Launchers = []platforms.Launcher{
 		Launch:     launch,
 	},
 	{
+		Id:       "LLAPINES",
+		SystemId: gamesdb.SystemNES,
+		Launch:   launchAltCore(gamesdb.SystemNES, "_LLAPI/NES_LLAPI"),
+	},
+	{
 		Id:         gamesdb.SystemNintendo64,
 		SystemId:   gamesdb.SystemNintendo64,
 		Folders:    []string{"N64"},
 		Extensions: []string{".n64", ".z64"},
 		Launch:     launch,
+	},
+	{
+		Id:       "LLAPINintendo64",
+		SystemId: gamesdb.SystemNintendo64,
+		Launch:   launchAltCore(gamesdb.SystemNintendo64, "_LLAPI/N64_LLAPI"),
+	},
+	{
+		Id:       "LLAPI80MHzNintendo64",
+		SystemId: gamesdb.SystemNintendo64,
+		Launch:   launchAltCore(gamesdb.SystemNintendo64, "_LLAPI/N64_80MHz_LLAPI"),
+	},
+	{
+		Id:       "80MHzNintendo64",
+		SystemId: gamesdb.SystemNintendo64,
+		Launch:   launchAltCore(gamesdb.SystemNintendo64, "_Console/N64_80MHz"),
+	},
+	{
+		Id:       "PWMNintendo64",
+		SystemId: gamesdb.SystemNintendo64,
+		Launch:   launchAltCore(gamesdb.SystemNintendo64, "_ConsolePWM/N64_PWM"),
+	},
+	{
+		Id:       "PWM80MHzNintendo64",
+		SystemId: gamesdb.SystemNintendo64,
+		Launch:   launchAltCore(gamesdb.SystemNintendo64, "_ConsolePWM/_Turbo/N64_80MHz_PWM"),
 	},
 	{
 		Id:         gamesdb.SystemOdyssey2,
@@ -299,9 +378,29 @@ var Launchers = []platforms.Launcher{
 		Launch:     launch,
 	},
 	{
+		Id:       "LLAPIPSX",
+		SystemId: gamesdb.SystemPSX,
+		Launch:   launchAltCore(gamesdb.SystemPSX, "_LLAPI/PSX_LLAPI"),
+	},
+	{
 		Id:       "SindenPSX",
 		SystemId: gamesdb.SystemPSX,
 		Launch:   launchSinden(gamesdb.SystemPSX, "PSX"),
+	},
+	{
+		Id:       "2XPSX",
+		SystemId: gamesdb.SystemPSX,
+		Launch:   launchAltCore(gamesdb.SystemPSX, "_Console/PSX2XCPU"),
+	},
+	{
+		Id:       "PWMPSX",
+		SystemId: gamesdb.SystemPSX,
+		Launch:   launchAltCore(gamesdb.SystemPSX, "_ConsolePWM/PSX_PWM"),
+	},
+	{
+		Id:       "PWM2XPSX",
+		SystemId: gamesdb.SystemPSX,
+		Launch:   launchAltCore(gamesdb.SystemPSX, "_ConsolePWM/_Turbo/PSX2XCPU_PWM"),
 	},
 	{
 		Id:         gamesdb.SystemSega32X,
@@ -309,6 +408,11 @@ var Launchers = []platforms.Launcher{
 		Folders:    []string{"S32X"},
 		Extensions: []string{".32x"},
 		Launch:     launch,
+	},
+	{
+		Id:       "LLAPIS32X",
+		SystemId: gamesdb.SystemSega32X,
+		Launch:   launchAltCore(gamesdb.SystemPSX, "_LLAPI/S32X_LLAPI"),
 	},
 	{
 		Id:         gamesdb.SystemSG1000,
@@ -325,6 +429,11 @@ var Launchers = []platforms.Launcher{
 		Launch:     launch,
 	},
 	{
+		Id:       "LLAPISuperGameboy",
+		SystemId: gamesdb.SystemSuperGameboy,
+		Launch:   launchAltCore(gamesdb.SystemSuperGameboy, "_LLAPI/SGB_LLAPI"),
+	},
+	{
 		Id:         gamesdb.SystemSuperVision,
 		SystemId:   gamesdb.SystemSuperVision,
 		Folders:    []string{"SuperVision"},
@@ -339,11 +448,26 @@ var Launchers = []platforms.Launcher{
 		Launch:     launch,
 	},
 	{
+		Id:       "LLAPISaturn",
+		SystemId: gamesdb.SystemSaturn,
+		Launch:   launchAltCore(gamesdb.SystemSaturn, "_LLAPI/Saturn_LLAPI"),
+	},
+	{
+		Id:       "PWMSaturn",
+		SystemId: gamesdb.SystemPSX,
+		Launch:   launchAltCore(gamesdb.SystemPSX, "_ConsolePWM/Saturn_PWM"),
+	},
+	{
 		Id:         gamesdb.SystemSNES,
 		SystemId:   gamesdb.SystemSNES,
 		Folders:    []string{"SNES"},
 		Extensions: []string{".sfc", ".smc", ".bin", ".bs"},
 		Launch:     launch,
+	},
+	{
+		Id:       "LLAPISNES",
+		SystemId: gamesdb.SystemSNES,
+		Launch:   launchAltCore(gamesdb.SystemSNES, "_LLAPI/SNES_LLAPI"),
 	},
 	{
 		Id:       "SindenSNES",
@@ -370,6 +494,11 @@ var Launchers = []platforms.Launcher{
 		Folders:    []string{"TGFX16"},
 		Extensions: []string{".pce", ".bin"},
 		Launch:     launch,
+	},
+	{
+		Id:       "LLAPITurboGrafx16",
+		SystemId: gamesdb.SystemTurboGrafx16,
+		Launch:   launchAltCore(gamesdb.SystemTurboGrafx16, "_LLAPI/TurboGrafx16_LLAPI"),
 	},
 	{
 		Id:         gamesdb.SystemTurboGrafx16CD,
@@ -426,13 +555,6 @@ var Launchers = []platforms.Launcher{
 		SystemId:   gamesdb.SystemAliceMC10,
 		Folders:    []string{"AliceMC10"},
 		Extensions: []string{".c10"},
-		Launch:     launch,
-	},
-	{
-		Id:         gamesdb.SystemAmiga,
-		SystemId:   gamesdb.SystemAmiga,
-		Folders:    []string{"Amiga"},
-		Extensions: []string{".adf"},
 		Launch:     launch,
 	},
 	{
