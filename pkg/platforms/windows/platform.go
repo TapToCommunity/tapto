@@ -54,9 +54,7 @@ func (p *Platform) ReadersUpdateHook(readers map[string]*readers.Reader) error {
 }
 
 func (p *Platform) RootFolders(cfg *config.UserConfig) []string {
-	return []string{
-		"C:\\scratch",
-	}
+	return []string{}
 }
 
 func (p *Platform) ZipsAsFolders() bool {
