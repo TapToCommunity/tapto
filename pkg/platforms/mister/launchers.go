@@ -565,13 +565,6 @@ var Launchers = []platforms.Launcher{
 		Launch:     launch,
 	},
 	{
-		Id:         gamesdb.SystemAmiga,
-		SystemId:   gamesdb.SystemAmiga,
-		Folders:    []string{"Amiga"},
-		Extensions: []string{".adf"},
-		Launch:     launch,
-	},
-	{
 		Id:         gamesdb.SystemAmstrad,
 		SystemId:   gamesdb.SystemAmstrad,
 		Folders:    []string{"Amstrad"},

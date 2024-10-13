@@ -3,11 +3,14 @@
 package mister
 
 import (
+	"bufio"
 	"fmt"
 	"github.com/wizzomafizzo/tapto/pkg/api/models"
+	"github.com/wizzomafizzo/tapto/pkg/database/gamesdb"
 	"github.com/wizzomafizzo/tapto/pkg/readers/optical_drive"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"regexp"
 	"strconv"
 	"time"
@@ -387,5 +390,63 @@ func (p *Platform) LookupMapping(t tokens.Token) (string, bool) {
 }
 
 func (p *Platform) Launchers() []platforms.Launcher {
-	return Launchers
+	amiga := platforms.Launcher{
+		Id:         gamesdb.SystemAmiga,
+		SystemId:   gamesdb.SystemAmiga,
+		Folders:    []string{"Amiga"},
+		Extensions: []string{".adf"},
+		Launch:     launch,
+		Scanner: func(
+			cfg *config.UserConfig,
+			results []platforms.ScanResult,
+		) ([]platforms.ScanResult, error) {
+			log.Info().Msg("starting amigavision scan")
+			aGamesPath := "listings/games.txt"
+			aDemosPath := "listings/demos.txt"
+			var fullPaths []string
+
+			s, err := gamesdb.GetSystem(gamesdb.SystemAmiga)
+			if err != nil {
+				return results, err
+			}
+
+			sfs := gamesdb.GetSystemPaths(p, p.RootFolders(cfg), []gamesdb.System{*s})
+			for _, sf := range sfs {
+				for _, txt := range []string{aGamesPath, aDemosPath} {
+					tp, err := gamesdb.FindPath(filepath.Join(sf.Path, txt))
+					if err == nil {
+						f, err := os.Open(tp)
+						if err != nil {
+							log.Warn().Err(err).Msg("unable to open amiga txt")
+							continue
+						}
+
+						scanner := bufio.NewScanner(f)
+						for scanner.Scan() {
+							fp := filepath.Join(sf.Path, txt, scanner.Text())
+							fullPaths = append(fullPaths, fp)
+						}
+
+						err = f.Close()
+						if err != nil {
+							log.Warn().Err(err).Msg("unable to close amiga txt")
+						}
+					}
+				}
+			}
+
+			for _, p := range fullPaths {
+				results = append(results, platforms.ScanResult{
+					Path: p,
+					Name: filepath.Base(p),
+				})
+			}
+
+			return results, nil
+		},
+	}
+
+	ls := Launchers
+	ls = append(ls, amiga)
+	return ls
 }
