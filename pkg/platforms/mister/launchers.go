@@ -385,6 +385,11 @@ var Launchers = []platforms.Launcher{
 		Launch:   launchSinden(gamesdb.SystemPSX, "PSX"),
 	},
 	{
+		Id:       "2XPSX",
+		SystemId: gamesdb.SystemPSX,
+		Launch:   launchAltCore(gamesdb.SystemPSX, "_Console/PSX2XCPU"),
+	},
+	{
 		Id:         gamesdb.SystemSega32X,
 		SystemId:   gamesdb.SystemSega32X,
 		Folders:    []string{"S32X"},
