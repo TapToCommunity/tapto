@@ -347,6 +347,16 @@ var Launchers = []platforms.Launcher{
 		Launch:   launchAltCore(gamesdb.SystemNintendo64, "_Console/N64_80MHz"),
 	},
 	{
+		Id:       "PWMNintendo64",
+		SystemId: gamesdb.SystemNintendo64,
+		Launch:   launchAltCore(gamesdb.SystemNintendo64, "_ConsolePWM/N64_PWM"),
+	},
+	{
+		Id:       "PWM80MHzNintendo64",
+		SystemId: gamesdb.SystemNintendo64,
+		Launch:   launchAltCore(gamesdb.SystemNintendo64, "_ConsolePWM/_Turbo/N64_80MHz_PWM"),
+	},
+	{
 		Id:         gamesdb.SystemOdyssey2,
 		SystemId:   gamesdb.SystemOdyssey2,
 		Folders:    []string{"ODYSSEY2"},
@@ -388,6 +398,16 @@ var Launchers = []platforms.Launcher{
 		Id:       "2XPSX",
 		SystemId: gamesdb.SystemPSX,
 		Launch:   launchAltCore(gamesdb.SystemPSX, "_Console/PSX2XCPU"),
+	},
+	{
+		Id:       "PWMPSX",
+		SystemId: gamesdb.SystemPSX,
+		Launch:   launchAltCore(gamesdb.SystemPSX, "_ConsolePWM/PSX_PWM"),
+	},
+	{
+		Id:       "PWM2XPSX",
+		SystemId: gamesdb.SystemPSX,
+		Launch:   launchAltCore(gamesdb.SystemPSX, "_ConsolePWM/_Turbo/PSX2XCPU_PWM"),
 	},
 	{
 		Id:         gamesdb.SystemSega32X,
@@ -438,6 +458,11 @@ var Launchers = []platforms.Launcher{
 		Id:       "LLAPISaturn",
 		SystemId: gamesdb.SystemSaturn,
 		Launch:   launchAltCore(gamesdb.SystemSaturn, "_LLAPI/Saturn_LLAPI"),
+	},
+	{
+		Id:       "PWMSaturn",
+		SystemId: gamesdb.SystemPSX,
+		Launch:   launchAltCore(gamesdb.SystemPSX, "_ConsolePWM/Saturn_PWM"),
 	},
 	{
 		Id:         gamesdb.SystemSNES,
