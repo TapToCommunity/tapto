@@ -38,8 +38,6 @@ import (
 	"github.com/wizzomafizzo/tapto/pkg/service"
 )
 
-const appName = "tapto"
-
 func main() {
 	versionOpt := flag.Bool("version", false, "print version and exit")
 	flag.Parse()
@@ -49,7 +47,7 @@ func main() {
 		os.Exit(0)
 	}
 
-	cfg, err := config.NewUserConfig(appName, &config.UserConfig{
+	cfg, err := config.NewUserConfig(&config.UserConfig{
 		TapTo: config.TapToConfig{
 			ProbeDevice:    true,
 			ConsoleLogging: true,
