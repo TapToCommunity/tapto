@@ -3,6 +3,7 @@ package windows
 import (
 	"encoding/xml"
 	"errors"
+	"fmt"
 	"github.com/wizzomafizzo/tapto/pkg/api/models"
 	"io"
 	"os"
@@ -403,6 +404,32 @@ type LaunchBoxGame struct {
 	ID    string `xml:"ID"`
 }
 
+func findLaunchBoxDir() (string, error) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", err
+	}
+
+	dirs := []string{
+		filepath.Join(home, "LaunchBox"),
+		filepath.Join(home, "Documents", "LaunchBox"),
+		filepath.Join(home, "My Games", "LaunchBox"),
+		"C:\\Program Files (x86)\\LaunchBox",
+		"C:\\Program Files\\LaunchBox",
+		"C:\\LaunchBox",
+		"D:\\LaunchBox",
+		"E:\\LaunchBox",
+	}
+
+	for _, dir := range dirs {
+		if _, err := os.Stat(dir); err == nil {
+			return dir, nil
+		}
+	}
+
+	return "", fmt.Errorf("launchbox directory not found")
+}
+
 func (p *Platform) Launchers() []platforms.Launcher {
 	return []platforms.Launcher{
 		{
@@ -512,17 +539,17 @@ func (p *Platform) Launchers() []platforms.Launcher {
 					return results, nil
 				}
 
-				home, err := os.UserHomeDir()
+				lbDir, err := findLaunchBoxDir()
 				if err != nil {
 					return results, err
 				}
 
-				lbDir := filepath.Join(home, "LaunchBox", "Data", "Platforms")
+				platformsDir := filepath.Join(lbDir, "LaunchBox", "Data", "Platforms")
 				if _, err := os.Stat(lbDir); os.IsNotExist(err) {
 					return results, errors.New("LaunchBox platforms dir not found")
 				}
 
-				xmlPath := filepath.Join(lbDir, lbSys+".xml")
+				xmlPath := filepath.Join(platformsDir, lbSys+".xml")
 				if _, err := os.Stat(xmlPath); os.IsNotExist(err) {
 					log.Debug().Msgf("LaunchBox platform xml not found: %s", xmlPath)
 					return results, nil
@@ -560,14 +587,9 @@ func (p *Platform) Launchers() []platforms.Launcher {
 				return results, nil
 			},
 			Launch: func(cfg *config.UserConfig, path string) error {
-				home, err := os.UserHomeDir()
+				lbDir, err := findLaunchBoxDir()
 				if err != nil {
 					return err
-				}
-
-				lbDir := filepath.Join(home, "LaunchBox")
-				if _, err := os.Stat(lbDir); os.IsNotExist(err) {
-					return errors.New("LaunchBox install not found")
 				}
 
 				cliLauncher := filepath.Join(lbDir, "ThirdParty", "CLI_Launcher", "CLI_Launcher.exe")
