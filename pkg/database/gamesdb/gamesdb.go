@@ -326,15 +326,17 @@ func NewNamesIndex(
 
 			log.Debug().Msgf("scanned %d files for system: %s", len(results), s.Id)
 
-			status.Files += len(results)
-
 			if len(results) > 0 {
+				status.Files += len(results)
+				scanned[s.Id] = true
+
+				systemId := s.Id
 				g.Go(func() error {
 					fis := make([]fileInfo, 0)
 					for _, p := range results {
-						fis = append(fis, fileInfo{SystemId: s.Id, Path: p.Path, Name: p.Name})
+						fis = append(fis, fileInfo{SystemId: systemId, Path: p.Path, Name: p.Name})
 					}
-					log.Debug().Msgf("updating names for system: %s", s.Id)
+					log.Debug().Msgf("updating names for system: %s", systemId)
 					return updateNames(db, fis)
 				})
 			}
