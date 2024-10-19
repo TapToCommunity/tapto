@@ -4,12 +4,13 @@ import (
 	"encoding/xml"
 	"errors"
 	"fmt"
-	"github.com/wizzomafizzo/tapto/pkg/api/models"
 	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
+
+	"github.com/wizzomafizzo/tapto/pkg/api/models"
 
 	"github.com/andygrunwald/vdf"
 	"github.com/rs/zerolog/log"
@@ -544,7 +545,7 @@ func (p *Platform) Launchers() []platforms.Launcher {
 					return results, err
 				}
 
-				platformsDir := filepath.Join(lbDir, "LaunchBox", "Data", "Platforms")
+				platformsDir := filepath.Join(lbDir, "Data", "Platforms")
 				if _, err := os.Stat(lbDir); os.IsNotExist(err) {
 					return results, errors.New("LaunchBox platforms dir not found")
 				}
