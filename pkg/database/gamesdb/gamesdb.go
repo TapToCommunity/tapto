@@ -231,6 +231,14 @@ func NewNamesIndex(
 	// update steps with true count
 	status.Total = len(sysPathIds) + 2
 
+	// launcher scanners with no system defined are run against every system
+	var anyScanners []platforms.Launcher
+	for _, l := range platform.Launchers() {
+		if l.SystemId == "" && l.Scanner != nil {
+			anyScanners = append(anyScanners, l)
+		}
+	}
+
 	for _, k := range sysPathIds {
 		systemId := k
 		files := make([]platforms.ScanResult, 0)
@@ -252,8 +260,9 @@ func NewNamesIndex(
 		// for each system launcher in platform, run the results through its
 		// custom scan function if one exists
 		for _, l := range platform.Launchers() {
-			if l.SystemId == k && l.Scanner != nil {
-				files, err = l.Scanner(cfg, files)
+			if (l.SystemId == k || l.SystemId == "") && l.Scanner != nil {
+				log.Debug().Msgf("running %s scanner for system: %s", l.Id, systemId)
+				files, err = l.Scanner(cfg, systemId, files)
 				if err != nil {
 					return status.Files, err
 				}
@@ -282,8 +291,9 @@ func NewNamesIndex(
 	// defined or results from regular index
 	for _, l := range platform.Launchers() {
 		systemId := l.SystemId
-		if !scanned[systemId] && l.Scanner != nil {
-			results, err := l.Scanner(cfg, []platforms.ScanResult{})
+		if (!scanned[systemId] || systemId == "") && l.Scanner != nil {
+			log.Debug().Msgf("running %s scanner for system: %s", l.Id, systemId)
+			results, err := l.Scanner(cfg, systemId, []platforms.ScanResult{})
 			if err != nil {
 				return status.Files, err
 			}

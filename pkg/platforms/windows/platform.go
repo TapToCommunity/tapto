@@ -214,6 +214,7 @@ func (p *Platform) Launchers() []platforms.Launcher {
 			Schemes:  []string{"steam"},
 			Scanner: func(
 				cfg *config.UserConfig,
+				systemId string,
 				results []platforms.ScanResult,
 			) ([]platforms.ScanResult, error) {
 				// TODO: detect this path from registry
@@ -299,6 +300,36 @@ func (p *Platform) Launchers() []platforms.Launcher {
 			AllowListOnly: true,
 			Launch: func(cfg *config.UserConfig, path string) error {
 				return exec.Command("cmd", "/c", path).Start()
+			},
+		},
+		{
+			Id:      "LaunchBox",
+			Schemes: []string{"launchbox"},
+			Scanner: func(
+				cfg *config.UserConfig,
+				systemId string,
+				results []platforms.ScanResult,
+			) ([]platforms.ScanResult, error) {
+				return results, nil
+			},
+			Launch: func(cfg *config.UserConfig, path string) error {
+				home, err := os.UserHomeDir()
+				if err != nil {
+					return err
+				}
+
+				lbDir := filepath.Join(home, "LaunchBox")
+				if _, err := os.Stat(lbDir); os.IsNotExist(err) {
+					return errors.New("LaunchBox install not found")
+				}
+
+				cliLauncher := filepath.Join(lbDir, "ThirdParty", "CLI_Launcher", "CLI_Launcher.exe")
+				if _, err := os.Stat(cliLauncher); os.IsNotExist(err) {
+					return errors.New("CLI_Launcher not found")
+				}
+
+				id := strings.TrimPrefix(path, "launchbox://")
+				return exec.Command(cliLauncher, "launch_by_id", id).Start()
 			},
 		},
 	}
