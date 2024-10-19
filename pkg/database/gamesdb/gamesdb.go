@@ -231,14 +231,6 @@ func NewNamesIndex(
 	// update steps with true count
 	status.Total = len(sysPathIds) + 2
 
-	// launcher scanners with no system defined are run against every system
-	var anyScanners []platforms.Launcher
-	for _, l := range platform.Launchers() {
-		if l.SystemId == "" && l.Scanner != nil {
-			anyScanners = append(anyScanners, l)
-		}
-	}
-
 	for _, k := range sysPathIds {
 		systemId := k
 		files := make([]platforms.ScanResult, 0)
@@ -260,7 +252,7 @@ func NewNamesIndex(
 		// for each system launcher in platform, run the results through its
 		// custom scan function if one exists
 		for _, l := range platform.Launchers() {
-			if (l.SystemId == k || l.SystemId == "") && l.Scanner != nil {
+			if l.SystemId == k && l.Scanner != nil {
 				log.Debug().Msgf("running %s scanner for system: %s", l.Id, systemId)
 				files, err = l.Scanner(cfg, systemId, files)
 				if err != nil {
@@ -291,7 +283,7 @@ func NewNamesIndex(
 	// defined or results from regular index
 	for _, l := range platform.Launchers() {
 		systemId := l.SystemId
-		if (!scanned[systemId] || systemId == "") && l.Scanner != nil {
+		if !scanned[systemId] && l.Scanner != nil {
 			log.Debug().Msgf("running %s scanner for system: %s", l.Id, systemId)
 			results, err := l.Scanner(cfg, systemId, []platforms.ScanResult{})
 			if err != nil {
@@ -299,7 +291,6 @@ func NewNamesIndex(
 			}
 
 			log.Debug().Msgf("scanned %d files for system: %s", len(results), systemId)
-			log.Debug().Msgf("files: %v", results)
 
 			status.Files += len(results)
 			scanned[systemId] = true
@@ -311,7 +302,39 @@ func NewNamesIndex(
 						fis = append(fis, fileInfo{SystemId: systemId, Path: p.Path, Name: p.Name})
 					}
 					log.Debug().Msgf("updating names for system: %s", systemId)
-					log.Debug().Msgf("files: %v", fis)
+					return updateNames(db, fis)
+				})
+			}
+		}
+	}
+
+	// launcher scanners with no system defined are run against every system
+	var anyScanners []platforms.Launcher
+	for _, l := range platform.Launchers() {
+		if l.SystemId == "" && l.Scanner != nil {
+			anyScanners = append(anyScanners, l)
+		}
+	}
+
+	for _, l := range anyScanners {
+		for _, s := range systems {
+			log.Debug().Msgf("running %s scanner for system: %s", l.Id, s.Id)
+			results, err := l.Scanner(cfg, s.Id, []platforms.ScanResult{})
+			if err != nil {
+				return status.Files, err
+			}
+
+			log.Debug().Msgf("scanned %d files for system: %s", len(results), s.Id)
+
+			status.Files += len(results)
+
+			if len(results) > 0 {
+				g.Go(func() error {
+					fis := make([]fileInfo, 0)
+					for _, p := range results {
+						fis = append(fis, fileInfo{SystemId: s.Id, Path: p.Path, Name: p.Name})
+					}
+					log.Debug().Msgf("updating names for system: %s", s.Id)
 					return updateNames(db, fis)
 				})
 			}

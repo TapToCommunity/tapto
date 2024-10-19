@@ -1,8 +1,10 @@
 package windows
 
 import (
+	"encoding/xml"
 	"errors"
 	"github.com/wizzomafizzo/tapto/pkg/api/models"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -206,6 +208,15 @@ func (p *Platform) LookupMapping(_ tokens.Token) (string, bool) {
 	return "", false
 }
 
+type LaunchBox struct {
+	Games []LaunchBoxGame `xml:"Game"`
+}
+
+type LaunchBoxGame struct {
+	Title string `xml:"Title"`
+	ID    string `xml:"ID"`
+}
+
 func (p *Platform) Launchers() []platforms.Launcher {
 	return []platforms.Launcher{
 		{
@@ -310,6 +321,61 @@ func (p *Platform) Launchers() []platforms.Launcher {
 				systemId string,
 				results []platforms.ScanResult,
 			) ([]platforms.ScanResult, error) {
+				lbSysMap := map[string]string{
+					"NES": "Nintendo Entertainment System",
+					"PC":  "Windows",
+				}
+
+				lbSys, ok := lbSysMap[systemId]
+				if !ok {
+					return results, nil
+				}
+
+				home, err := os.UserHomeDir()
+				if err != nil {
+					return results, err
+				}
+
+				lbDir := filepath.Join(home, "LaunchBox", "Data", "Platforms")
+				if _, err := os.Stat(lbDir); os.IsNotExist(err) {
+					return results, errors.New("LaunchBox platforms dir not found")
+				}
+
+				xmlPath := filepath.Join(lbDir, lbSys+".xml")
+				if _, err := os.Stat(xmlPath); os.IsNotExist(err) {
+					log.Debug().Msgf("LaunchBox platform xml not found: %s", xmlPath)
+					return results, nil
+				}
+
+				xmlFile, err := os.Open(xmlPath)
+				if err != nil {
+					return results, err
+				}
+				defer func(xmlFile *os.File) {
+					err := xmlFile.Close()
+					if err != nil {
+						log.Warn().Err(err).Msg("error closing xml file")
+					}
+				}(xmlFile)
+
+				data, err := io.ReadAll(xmlFile)
+				if err != nil {
+					return results, err
+				}
+
+				var lbXml LaunchBox
+				err = xml.Unmarshal(data, &lbXml)
+				if err != nil {
+					return results, err
+				}
+
+				for _, game := range lbXml.Games {
+					results = append(results, platforms.ScanResult{
+						Path: "launchbox://" + game.ID,
+						Name: game.Title,
+					})
+				}
+
 				return results, nil
 			},
 			Launch: func(cfg *config.UserConfig, path string) error {
