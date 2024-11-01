@@ -36,6 +36,7 @@ require (
 	github.com/yeqown/go-qrcode/writer/terminal v1.1.1 // indirect
 	github.com/yeqown/reedsolomon v1.0.0 // indirect
 	golang.org/x/term v0.22.0 // indirect
+	golang.org/x/text v0.19.0 // indirect
 	rsc.io/qr v0.2.0 // indirect
 )
 
@@ -55,5 +56,5 @@ require (
 	github.com/wizzomafizzo/mrext v0.0.0-20240804073054-39dcc9bccc81
 	go.bug.st/serial v1.6.2
 	go.etcd.io/bbolt v1.3.9
-	golang.org/x/sync v0.7.0
+	golang.org/x/sync v0.8.0
 )

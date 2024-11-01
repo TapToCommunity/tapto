@@ -5,6 +5,7 @@ import (
 	"errors"
 	"github.com/wizzomafizzo/tapto/pkg/api/models"
 	"github.com/wizzomafizzo/tapto/pkg/api/models/requests"
+	"golang.org/x/text/unicode/norm"
 	"net/http"
 	"net/url"
 	"time"
@@ -48,7 +49,7 @@ func HandleLaunch(env requests.RequestEnv) (any, error) {
 		}
 
 		if params.Text != nil {
-			t.Text = *params.Text
+			t.Text = norm.NFC.String(*params.Text)
 			hasArg = true
 		}
 
@@ -74,7 +75,7 @@ func HandleLaunch(env requests.RequestEnv) (any, error) {
 			return nil, ErrMissingParams
 		}
 
-		t.Text = text
+		t.Text = norm.NFC.String(text)
 	}
 
 	t.ScanTime = time.Now()
@@ -106,7 +107,7 @@ func HandleLaunchBasic(
 		log.Info().Msgf("launching basic token: %s", text)
 
 		t := tokens.Token{
-			Text:     text,
+			Text:     norm.NFC.String(text),
 			ScanTime: time.Now(),
 			Remote:   true,
 		}
