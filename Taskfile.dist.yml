@@ -75,9 +75,8 @@ tasks:
       IMG_MODCACHE: /home/build/go/pkg/mod
     cmds:
       - docker run --rm --platform linux/arm/v8 -v {{.BUILDCACHE}}:{{.IMG_BUILDCACHE}} -v {{.MODCACHE}}:{{.IMG_MODCACHE}} -v ${PWD}:/build --user 1000:1000 {{.IMAGE_NAME}} bash -c "PLATFORM=mistex TAPTO_BIN=tapto.sh task build"
-      - cp ./scripts/taptui/taptui.sh {{.BUILD_DIR}}
       - rm -f {{.BUILD_DIR}}/tapto-mistex_arm64.zip
-      - zip -j {{.BUILD_DIR}}/tapto-mistex_arm64.zip {{.BUILD_DIR}}/tapto.sh {{.BUILD_DIR}}/taptui.sh
+      - zip -j {{.BUILD_DIR}}/tapto-mistex_arm64.zip {{.BUILD_DIR}}/tapto.sh
 
   build-batocera-arm64:
     vars:
