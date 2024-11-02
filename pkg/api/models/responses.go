@@ -16,6 +16,7 @@ type SearchResults struct {
 }
 
 type IndexStatusResponse struct {
+	Exists      bool   `json:"exists"`
 	Indexing    bool   `json:"indexing"`
 	TotalSteps  int    `json:"totalSteps"`
 	CurrentStep int    `json:"currentStep"`

@@ -51,6 +51,7 @@ func (s *Index) GenerateIndex(
 	ns <- models.Notification{
 		Method: models.MediaIndexing,
 		Params: models.IndexStatusResponse{
+			Exists:      false,
 			Indexing:    true,
 			TotalSteps:  0,
 			CurrentStep: 0,
@@ -87,6 +88,7 @@ func (s *Index) GenerateIndex(
 			ns <- models.Notification{
 				Method: models.MediaIndexing,
 				Params: models.IndexStatusResponse{
+					Exists:      true,
 					Indexing:    true,
 					TotalSteps:  s.TotalSteps,
 					CurrentStep: s.CurrentStep,
@@ -109,6 +111,7 @@ func (s *Index) GenerateIndex(
 		ns <- models.Notification{
 			Method: models.MediaIndexing,
 			Params: models.IndexStatusResponse{
+				Exists:      true,
 				Indexing:    false,
 				TotalSteps:  0,
 				CurrentStep: 0,
