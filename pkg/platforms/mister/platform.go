@@ -425,6 +425,7 @@ func (p *Platform) Launchers() []platforms.Launcher {
 		Launch:     launch,
 		Scanner: func(
 			cfg *config.UserConfig,
+			systemId string,
 			results []platforms.ScanResult,
 		) ([]platforms.ScanResult, error) {
 			log.Info().Msg("starting amigavision scan")
@@ -481,6 +482,7 @@ func (p *Platform) Launchers() []platforms.Launcher {
 		Launch:     launch,
 		Scanner: func(
 			cfg *config.UserConfig,
+			systemId string,
 			results []platforms.ScanResult,
 		) ([]platforms.ScanResult, error) {
 			log.Info().Msg("starting neogeo scan")
