@@ -15,7 +15,6 @@ SCRATCH_FOLDER = "_scratch"
 REPO_FOLDER = "scripts/mister/repo"
 FILES = [
     "tapto.sh",
-    "taptui.sh",
 ]
 
 
