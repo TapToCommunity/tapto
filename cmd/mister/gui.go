@@ -21,16 +21,15 @@ along with TapTo.  If not, see <http://www.gnu.org/licenses/>.
 package main
 
 import (
-	"fmt"
+	"os/exec"
+	"path"
 	"strings"
 
 	"github.com/rs/zerolog/log"
 	"github.com/rthornton128/goncurses"
 	"github.com/wizzomafizzo/mrext/pkg/curses"
 	mrextMister "github.com/wizzomafizzo/mrext/pkg/mister"
-	"github.com/wizzomafizzo/tapto/pkg/assets"
 	"github.com/wizzomafizzo/tapto/pkg/config"
-	"github.com/wizzomafizzo/tapto/pkg/database/gamesdb"
 	"github.com/wizzomafizzo/tapto/pkg/platforms"
 	"github.com/wizzomafizzo/tapto/pkg/platforms/mister"
 	"github.com/wizzomafizzo/tapto/pkg/utils"
@@ -75,13 +74,13 @@ func tryAddStartup(stdscr *goncurses.Window) error {
 			if ch == goncurses.KEY_LEFT {
 				if selected == 0 {
 					selected = 1
-				} else if selected == 1 {
+				} else {
 					selected = 0
 				}
 			} else if ch == goncurses.KEY_RIGHT {
 				if selected == 0 {
 					selected = 1
-				} else if selected == 1 {
+				} else {
 					selected = 0
 				}
 			} else if ch == goncurses.KEY_ENTER || ch == 10 || ch == 13 {
@@ -108,105 +107,213 @@ func tryAddStartup(stdscr *goncurses.Window) error {
 	return nil
 }
 
-func generateIndexWindow(pl platforms.Platform, cfg *config.UserConfig, stdscr *goncurses.Window) error {
-	win, err := curses.NewWindow(stdscr, 4, 46, "", -1)
+func copyLogToSd(pl platforms.Platform, stdscr *goncurses.Window) error {
+	width := 46
+	win, err := curses.NewWindow(stdscr, 6, width, "Copy Log", -1)
 	if err != nil {
 		return err
 	}
-	defer win.Delete()
-
-	_, width := win.MaxYX()
-
-	drawProgressBar := func(current int, total int) {
-		pct := int(float64(current) / float64(total) * 100)
-		progressWidth := width - 4
-		progressPct := int(float64(pct) / float64(100) * float64(progressWidth))
-		if progressPct < 1 {
-			progressPct = 1
+	defer func(win *goncurses.Window) {
+		err := win.Delete()
+		if err != nil {
+			log.Error().Msgf("failed to delete window: %s", err)
 		}
-		for i := 0; i < progressPct; i++ {
-			win.MoveAddChar(2, 2+i, goncurses.ACS_BLOCK)
+	}(win)
+
+	logPath := path.Join(pl.LogFolder(), config.LogFilename)
+	newPath := path.Join("/media/fat", config.LogFilename)
+	err = utils.CopyFile(logPath, newPath)
+
+	printCenter := func(y int, text string) {
+		win.MovePrint(y, (width-len(text))/2, text)
+	}
+
+	if err != nil {
+		printCenter(1, "Unable to copy log file to SD card.")
+		log.Error().Err(err).Msgf("error copying log file")
+	} else {
+		printCenter(1, "Copied tapto.log to root of SD card.")
+	}
+	win.NoutRefresh()
+
+	curses.DrawActionButtons(win, []string{"OK"}, 0, 2)
+	win.NoutRefresh()
+
+	err = goncurses.Update()
+	if err != nil {
+		return err
+	}
+
+	_ = win.GetChar()
+	return nil
+}
+
+func uploadLog(pl platforms.Platform, stdscr *goncurses.Window) error {
+	width := 46
+	win, err := curses.NewWindow(stdscr, 6, width, "Upload Log", -1)
+	if err != nil {
+		return err
+	}
+	defer func(win *goncurses.Window) {
+		err := win.Delete()
+		if err != nil {
+			log.Error().Msgf("failed to delete window: %s", err)
+		}
+	}(win)
+
+	logPath := path.Join(pl.LogFolder(), config.LogFilename)
+
+	printCenter := func(y int, text string) {
+		win.MovePrint(y, (width-len(text))/2, text)
+	}
+
+	clearLine := func(y int) {
+		win.MovePrint(y, 2, strings.Repeat(" ", width-4))
+	}
+
+	printCenter(2, "Uploading log file...")
+	win.NoutRefresh()
+	err = goncurses.Update()
+	if err != nil {
+		return err
+	}
+
+	uploadCmd := "cat '" + logPath + "' | nc termbin.com 9999"
+	out, err := exec.Command("bash", "-c", uploadCmd).Output()
+	clearLine(2)
+	if err != nil {
+		printCenter(1, "Unable to upload log file.")
+		log.Error().Err(err).Msgf("error uploading log file to termbin")
+	} else {
+		printCenter(1, "Uploaded log file:")
+		printCenter(2, string(out))
+	}
+	win.NoutRefresh()
+
+	curses.DrawActionButtons(win, []string{"OK"}, 0, 2)
+	win.NoutRefresh()
+
+	err = goncurses.Update()
+	if err != nil {
+		return err
+	}
+
+	_ = win.GetChar()
+	return nil
+}
+
+func exportLog(pl platforms.Platform, stdscr *goncurses.Window) error {
+	width := 46
+	win, err := curses.NewWindow(stdscr, 6, width, "Export to...", -1)
+	if err != nil {
+		return err
+	}
+	defer func(win *goncurses.Window) {
+		err := win.Delete()
+		if err != nil {
+			log.Error().Msgf("failed to delete window: %s", err)
+		}
+	}(win)
+
+	printLeft := func(y int, text string) {
+		win.MovePrint(y, 2, text)
+	}
+
+	printCenter := func(y int, text string) {
+		win.MovePrint(y, (width-len(text))/2, text)
+	}
+
+	clearLine := func(y int) {
+		win.MovePrint(y, 2, strings.Repeat(" ", width-4))
+	}
+
+	var ch goncurses.Key
+	selectedButton := 1
+	selectedMenu := 0
+	display := true
+
+	for display {
+		printCenter(0, "Export to...")
+		win.NoutRefresh()
+
+		menuOnline := "Upload online (termbin.com)"
+		clearLine(1)
+		if selectedMenu == 0 {
+			printLeft(1, "> "+menuOnline)
+		} else {
+			printLeft(1, "  "+menuOnline)
 		}
 		win.NoutRefresh()
-	}
 
-	clearText := func() {
-		win.MovePrint(1, 2, strings.Repeat(" ", width-4))
-	}
-
-	status := struct {
-		Step        int
-		Total       int
-		SystemName  string
-		DisplayText string
-		Complete    bool
-		Error       error
-	}{
-		Step:        1,
-		Total:       100,
-		DisplayText: "Finding games folders...",
-	}
-
-	// TODO: this should index via the API as well
-	go func() {
-		_, err = gamesdb.NewNamesIndex(pl, cfg, gamesdb.AllSystems(), func(is gamesdb.IndexStatus) {
-			systemName := is.SystemId
-			system, err := gamesdb.GetSystem(is.SystemId)
-			if err == nil {
-				md, err := assets.GetSystemMetadata(system.Id)
-				if err == nil {
-					systemName = md.Name
-				}
-			}
-
-			text := fmt.Sprintf("Indexing %s...", systemName)
-			if is.Step == 1 {
-				text = "Finding games folders..."
-			} else if is.Step == is.Total {
-				text = "Writing database to disk..."
-			}
-
-			status.Step = is.Step
-			status.Total = is.Total
-			status.SystemName = systemName
-			status.DisplayText = text
-		})
-
-		status.Error = err
-		status.Complete = true
-	}()
-
-	spinnerSeq := []string{"|", "/", "-", "\\"}
-	spinnerCount := 0
-
-	for {
-		if status.Complete || status.Error != nil {
-			break
+		menuSd := "Copy to SD card"
+		clearLine(2)
+		if selectedMenu == 1 {
+			printLeft(2, "> "+menuSd)
+		} else {
+			printLeft(2, "  "+menuSd)
 		}
-
-		clearText()
-
-		spinnerCount++
-		if spinnerCount == len(spinnerSeq) {
-			spinnerCount = 0
-		}
-
-		win.MovePrint(1, width-3, spinnerSeq[spinnerCount])
-
-		win.MovePrint(1, 2, status.DisplayText)
-		drawProgressBar(status.Step, status.Total)
-
 		win.NoutRefresh()
-		_ = goncurses.Update()
-		goncurses.Nap(100)
+
+		curses.DrawActionButtons(win, []string{"Cancel", "OK"}, selectedButton, 2)
+		win.NoutRefresh()
+
+		err := goncurses.Update()
+		if err != nil {
+			return err
+		}
+
+		ch = win.GetChar()
+
+		switch ch {
+		case goncurses.KEY_LEFT:
+			if selectedButton == 0 {
+				selectedButton = 1
+			} else {
+				selectedButton = 0
+			}
+		case goncurses.KEY_RIGHT:
+			if selectedButton == 1 {
+				selectedButton = 0
+			} else {
+				selectedButton = 1
+			}
+		case goncurses.KEY_UP:
+			if selectedMenu == 0 {
+				selectedMenu = 1
+			} else {
+				selectedMenu = 0
+			}
+		case goncurses.KEY_DOWN:
+			if selectedMenu == 0 {
+				selectedMenu = 1
+			} else {
+				selectedMenu = 0
+			}
+		case goncurses.KEY_ESC:
+			return nil
+		case goncurses.KEY_ENTER, 10, 13:
+			if selectedButton == 0 {
+				return nil
+			} else {
+				display = false
+			}
+		}
 	}
 
-	return status.Error
+	if selectedButton == 1 {
+		if selectedMenu == 0 {
+			return uploadLog(pl, stdscr)
+		} else {
+			return copyLogToSd(pl, stdscr)
+		}
+	}
+
+	return nil
 }
 
 func displayServiceInfo(pl platforms.Platform, cfg *config.UserConfig, stdscr *goncurses.Window, service *mister.Service) error {
 	width := 50
-	height := 9
+	height := 8
 
 	win, err := curses.NewWindow(stdscr, height, width, "", -1)
 	if err != nil {
@@ -271,15 +378,8 @@ func displayServiceInfo(pl platforms.Platform, cfg *config.UserConfig, stdscr *g
 		clearLine(4)
 		printLeft(4, "Device address: "+ipDisplay)
 
-		clearLine(5)
-		dbExistsDisplay := "NOT CREATED"
-		if gamesdb.Exists(pl) {
-			dbExistsDisplay = "CREATED"
-		}
-		printLeft(5, "Games DB:       "+dbExistsDisplay)
-
 		clearLine(height - 2)
-		curses.DrawActionButtons(win, []string{"Update Games DB", "Exit"}, selected, 2)
+		curses.DrawActionButtons(win, []string{"Export Log", "Exit"}, selected, 2)
 
 		win.NoutRefresh()
 		err = goncurses.Update()
@@ -303,11 +403,11 @@ func displayServiceInfo(pl platforms.Platform, cfg *config.UserConfig, stdscr *g
 			}
 		} else if ch == goncurses.KEY_ENTER || ch == 10 || ch == 13 {
 			if selected == 0 {
-				err := generateIndexWindow(pl, cfg, stdscr)
+				err := exportLog(pl, stdscr)
 				if err != nil {
-					log.Error().Msgf("failed to display gamesdb window: %s", err)
+					log.Error().Msgf("failed to display export log window: %s", err)
 				}
-			} else if selected == 1 {
+			} else {
 				break
 			}
 		} else if ch == goncurses.KEY_ESC {
