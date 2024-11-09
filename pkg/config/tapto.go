@@ -1,7 +1,7 @@
 package config
 
 const (
-	Version         = "2.0.0"
+	Version         = "2.0.1"
 	GamesDbFilename = "games.db"
 	TapToDbFilename = "tapto.db"
 	DefaultApiPort  = "7497"
