@@ -169,3 +169,31 @@ func RandomElem[T any](xs []T) (T, error) {
 		return item, nil
 	}
 }
+
+func CopyFile(sourcePath, destPath string) error {
+	inputFile, err := os.Open(sourcePath)
+	if err != nil {
+		return err
+	}
+	defer func(inputFile *os.File) {
+		_ = inputFile.Close()
+	}(inputFile)
+
+	outputFile, err := os.Create(destPath)
+	if err != nil {
+		return err
+	}
+	defer func(outputFile *os.File) {
+		_ = outputFile.Close()
+	}(outputFile)
+
+	_, err = io.Copy(outputFile, inputFile)
+	if err != nil {
+		return err
+	}
+	err = outputFile.Sync()
+	if err != nil {
+		return err
+	}
+	return inputFile.Close()
+}
