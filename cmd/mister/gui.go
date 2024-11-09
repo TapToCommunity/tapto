@@ -109,7 +109,7 @@ func tryAddStartup(stdscr *goncurses.Window) error {
 
 func copyLogToSd(pl platforms.Platform, stdscr *goncurses.Window) error {
 	width := 46
-	win, err := curses.NewWindow(stdscr, 6, width, "Copy Log", -1)
+	win, err := curses.NewWindow(stdscr, 6, width, "", -1)
 	if err != nil {
 		return err
 	}
@@ -150,7 +150,7 @@ func copyLogToSd(pl platforms.Platform, stdscr *goncurses.Window) error {
 
 func uploadLog(pl platforms.Platform, stdscr *goncurses.Window) error {
 	width := 46
-	win, err := curses.NewWindow(stdscr, 6, width, "Upload Log", -1)
+	win, err := curses.NewWindow(stdscr, 6, width, "", -1)
 	if err != nil {
 		return err
 	}
@@ -168,10 +168,10 @@ func uploadLog(pl platforms.Platform, stdscr *goncurses.Window) error {
 	}
 
 	clearLine := func(y int) {
-		win.MovePrint(y, 2, strings.Repeat(" ", width-4))
+		win.MovePrint(y, 2, strings.Repeat(" ", width-3))
 	}
 
-	printCenter(2, "Uploading log file...")
+	printCenter(1, "Uploading log file...")
 	win.NoutRefresh()
 	err = goncurses.Update()
 	if err != nil {
@@ -180,14 +180,18 @@ func uploadLog(pl platforms.Platform, stdscr *goncurses.Window) error {
 
 	uploadCmd := "cat '" + logPath + "' | nc termbin.com 9999"
 	out, err := exec.Command("bash", "-c", uploadCmd).Output()
+	clearLine(1)
 	clearLine(2)
 	if err != nil {
 		printCenter(1, "Unable to upload log file.")
 		log.Error().Err(err).Msgf("error uploading log file to termbin")
 	} else {
-		printCenter(1, "Uploaded log file:")
-		printCenter(2, string(out))
+		printCenter(1, "Log file URL:")
+		printCenter(2, strings.TrimSpace(string(out)))
 	}
+	// no idea why but if i don't draw this box part of the windows border is
+	// cleared by the url being displayed
+	_ = win.Box(goncurses.ACS_VLINE, goncurses.ACS_HLINE)
 	win.NoutRefresh()
 
 	curses.DrawActionButtons(win, []string{"OK"}, 0, 2)
@@ -204,7 +208,7 @@ func uploadLog(pl platforms.Platform, stdscr *goncurses.Window) error {
 
 func exportLog(pl platforms.Platform, stdscr *goncurses.Window) error {
 	width := 46
-	win, err := curses.NewWindow(stdscr, 6, width, "Export to...", -1)
+	win, err := curses.NewWindow(stdscr, 6, width, "", -1)
 	if err != nil {
 		return err
 	}
@@ -219,10 +223,6 @@ func exportLog(pl platforms.Platform, stdscr *goncurses.Window) error {
 		win.MovePrint(y, 2, text)
 	}
 
-	printCenter := func(y int, text string) {
-		win.MovePrint(y, (width-len(text))/2, text)
-	}
-
 	clearLine := func(y int) {
 		win.MovePrint(y, 2, strings.Repeat(" ", width-4))
 	}
@@ -233,10 +233,7 @@ func exportLog(pl platforms.Platform, stdscr *goncurses.Window) error {
 	display := true
 
 	for display {
-		printCenter(0, "Export to...")
-		win.NoutRefresh()
-
-		menuOnline := "Upload online (termbin.com)"
+		menuOnline := "Upload to termbin.com"
 		clearLine(1)
 		if selectedMenu == 0 {
 			printLeft(1, "> "+menuOnline)
