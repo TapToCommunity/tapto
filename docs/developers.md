@@ -38,7 +38,7 @@ To start, you can run `go mod download` from the root of the project folder. Thi
 
 All build steps are done with the `task` command run from the root of the project folder. Run `task --list-all` by itself to see a list of available commands.
 
-Before building MiSTer binaries, you'll need to build the Docker image it uses. Just run `task build-mister-image` to add it to your system.
+Before building MiSTer binaries, you'll need to build the Docker image it uses. Just run `task build-image-mister` to add it to your system.
 
 Built binaries will be created in the `_build` directory under its appropriate platform and architecture subdirectory.
 
@@ -48,7 +48,7 @@ These are the important commands:
 
   Builds a MiSTer binary of TapTo and copies TapTUI to the build directory.
 
-- `mage deploy-mister`
+- `task deploy-mister`
 
   Runs the build task, copies the binaries to the MiSTer directory on the SD card via SSH, then restarts the TapTo service on the MiSTer. This requires the `MISTER_IP` environment variable to be set to the IP address of the MiSTer. Add to `.env` in the root of the project or add `MISTER_IP=1.2.3.4` to the start of the command.
 
