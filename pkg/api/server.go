@@ -132,7 +132,7 @@ func Start(
 	pl platforms.Platform,
 	cfg *config.UserConfig,
 	st *state.State,
-	tq *tokens.TokenQueue,
+	itq chan<- tokens.Token,
 	db *database.Database,
 	ns <-chan models.Notification,
 ) {
@@ -229,7 +229,7 @@ func Start(
 				Config:     cfg,
 				State:      st,
 				Database:   db,
-				TokenQueue: tq,
+				TokenQueue: itq,
 				IsLocal:    clientIp.IsLoopback(),
 			}, req)
 			if err != nil {
@@ -262,7 +262,7 @@ func Start(
 	})
 
 	// TODO: use allow list
-	r.Get("/l/*", methods.HandleLaunchBasic(st, tq))
+	r.Get("/l/*", methods.HandleLaunchBasic(st, itq))
 
 	err := http.ListenAndServe(":"+cfg.Api.Port, r)
 	if err != nil {

@@ -98,16 +98,16 @@ func processTokenQueue(
 	platform platforms.Platform,
 	cfg *config.UserConfig,
 	st *state.State,
-	tq *tokens.TokenQueue,
+	itq <-chan tokens.Token,
 	db *database.Database,
 	lsq chan<- *tokens.Token,
-	plsq chan *playlists.Playlist,
+	plq chan *playlists.Playlist,
 ) {
 	var activePlaylist *playlists.Playlist
 
 	for {
 		select {
-		case pls := <-plsq:
+		case pls := <-plq:
 			log.Info().Msgf("processing playlist update: %v", pls)
 
 			if pls == nil {
@@ -129,7 +129,7 @@ func processTokenQueue(
 					}
 					plsc := playlists.PlaylistController{
 						Active: activePlaylist,
-						Queue:  plsq,
+						Queue:  plq,
 					}
 					err := launchToken(platform, cfg, t, db, lsq, plsc)
 					if err != nil {
@@ -153,7 +153,7 @@ func processTokenQueue(
 					}
 					plsc := playlists.PlaylistController{
 						Active: activePlaylist,
-						Queue:  plsq,
+						Queue:  plq,
 					}
 					err := launchToken(platform, cfg, t, db, lsq, plsc)
 					if err != nil {
@@ -162,7 +162,7 @@ func processTokenQueue(
 				}()
 				continue
 			}
-		case t := <-tq.Tokens:
+		case t := <-itq:
 			// TODO: change this channel to send a token pointer or something
 			if t.ScanTime.IsZero() {
 				// ignore empty tokens
@@ -196,7 +196,7 @@ func processTokenQueue(
 			go func() {
 				plsc := playlists.PlaylistController{
 					Active: activePlaylist,
-					Queue:  plsq,
+					Queue:  plq,
 				}
 
 				err = launchToken(platform, cfg, t, db, lsq, plsc)
@@ -224,9 +224,10 @@ func Start(
 ) (func() error, error) {
 	// TODO: define the notifications chan here instead of in state
 	st, ns := state.NewState(platform)
-	tq := tokens.NewTokenQueue() // TODO: convert this to a *token channel
+	// TODO: convert this to a *token channel
+	itq := make(chan tokens.Token)
 	lsq := make(chan *tokens.Token)
-	plsq := make(chan *playlists.Playlist)
+	plq := make(chan *playlists.Playlist)
 
 	log.Info().Msgf("Zaparoo v%s", config.Version)
 	log.Info().Msgf("config path = %s", cfg.IniPath)
@@ -247,7 +248,7 @@ func Start(
 	}
 
 	log.Debug().Msg("starting API service")
-	go api.Start(platform, cfg, st, tq, db, ns)
+	go api.Start(platform, cfg, st, itq, db, ns)
 
 	log.Debug().Msg("running platform setup")
 	err = platform.Setup(cfg, st.Notifications)
@@ -261,20 +262,20 @@ func Start(
 	}
 
 	log.Debug().Msg("starting reader manager")
-	go readerManager(platform, cfg, st, tq, lsq)
+	go readerManager(platform, cfg, st, itq, lsq)
 
 	log.Debug().Msg("starting token queue manager")
-	go processTokenQueue(platform, cfg, st, tq, db, lsq, plsq)
+	go processTokenQueue(platform, cfg, st, itq, db, lsq, plq)
 
 	return func() error {
-		close(plsq)
-		close(lsq)
-		tq.Close()
-		st.StopService()
 		err = platform.Stop()
 		if err != nil {
 			log.Warn().Msgf("error stopping platform: %s", err)
 		}
+		st.StopService()
+		close(plq)
+		close(lsq)
+		close(itq)
 		return nil
 	}, nil
 }

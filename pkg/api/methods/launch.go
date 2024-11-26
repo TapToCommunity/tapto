@@ -5,7 +5,7 @@ import (
 	"errors"
 	"github.com/wizzomafizzo/tapto/pkg/api/models"
 	"github.com/wizzomafizzo/tapto/pkg/api/models/requests"
-	tokens2 "github.com/wizzomafizzo/tapto/pkg/service/tokens"
+	"github.com/wizzomafizzo/tapto/pkg/service/tokens"
 	"golang.org/x/text/unicode/norm"
 	"net/http"
 	"net/url"
@@ -29,7 +29,7 @@ func HandleLaunch(env requests.RequestEnv) (any, error) {
 		return nil, ErrMissingParams
 	}
 
-	var t tokens2.Token
+	var t tokens.Token
 
 	var params models.LaunchParams
 	err := json.Unmarshal(env.Params, &params)
@@ -83,7 +83,7 @@ func HandleLaunch(env requests.RequestEnv) (any, error) {
 
 	// TODO: how do we report back errors? put channel in queue
 	env.State.SetActiveCard(t)
-	env.TokenQueue.Enqueue(t)
+	env.TokenQueue <- t
 
 	return nil, nil
 }
@@ -91,7 +91,7 @@ func HandleLaunch(env requests.RequestEnv) (any, error) {
 // TODO: this is still insecure
 func HandleLaunchBasic(
 	st *state.State,
-	tq *tokens2.TokenQueue,
+	itq chan<- tokens.Token,
 ) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		log.Info().Msg("received basic launch request")
@@ -106,14 +106,14 @@ func HandleLaunchBasic(
 
 		log.Info().Msgf("launching basic token: %s", text)
 
-		t := tokens2.Token{
+		t := tokens.Token{
 			Text:     norm.NFC.String(text),
 			ScanTime: time.Now(),
 			Remote:   true,
 		}
 
 		st.SetActiveCard(t)
-		tq.Enqueue(t)
+		itq <- t
 	}
 }
 

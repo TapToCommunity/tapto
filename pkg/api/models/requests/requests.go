@@ -14,7 +14,7 @@ type RequestEnv struct {
 	Config     *config.UserConfig
 	State      *state.State
 	Database   *database.Database
-	TokenQueue *tokens.TokenQueue
+	TokenQueue chan<- tokens.Token
 	IsLocal    bool
 	Id         uuid.UUID
 	Params     []byte

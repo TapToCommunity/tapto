@@ -2,7 +2,7 @@ package service
 
 import (
 	"errors"
-	tokens2 "github.com/wizzomafizzo/tapto/pkg/service/tokens"
+	"github.com/wizzomafizzo/tapto/pkg/service/tokens"
 	"strings"
 	"time"
 
@@ -129,15 +129,15 @@ func readerManager(
 	pl platforms.Platform,
 	cfg *config.UserConfig,
 	st *state.State,
-	launchQueue *tokens2.TokenQueue,
-	softwareQueue chan *tokens2.Token,
+	itq chan<- tokens.Token,
+	lsq chan *tokens.Token,
 ) {
 	inputQueue := make(chan readers.Scan)
 
 	var err error
 	var lastError time.Time
 
-	var prevToken *tokens2.Token
+	var prevToken *tokens.Token
 	var exitTimer *time.Timer
 
 	readerTicker := time.NewTicker(1 * time.Second)
@@ -175,7 +175,7 @@ func readerManager(
 				log.Warn().Msgf("error killing launcher: %s", err)
 			}
 
-			softwareQueue <- nil
+			lsq <- nil
 		}()
 	}
 
@@ -205,7 +205,7 @@ func readerManager(
 
 	// token pre-processing loop
 	for !st.ShouldStopService() {
-		var scan *tokens2.Token
+		var scan *tokens.Token
 
 		select {
 		case t := <-inputQueue:
@@ -218,7 +218,7 @@ func readerManager(
 				continue
 			}
 			scan = t.Token
-		case stoken := <-softwareQueue:
+		case stoken := <-lsq:
 			// a token has been launched that starts software
 			log.Debug().Msgf("new software token: %v", st)
 
@@ -265,11 +265,11 @@ func readerManager(
 
 				log.Info().Msgf("sending token: %v", scan)
 				pl.PlaySuccessSound(cfg)
-				launchQueue.Enqueue(*scan)
+				itq <- *scan
 			}
 		} else {
 			log.Info().Msg("token was removed")
-			st.SetActiveCard(tokens2.Token{})
+			st.SetActiveCard(tokens.Token{})
 			if shouldExit(cfg, pl, st) {
 				startTimedExit()
 			}

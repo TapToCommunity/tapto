@@ -178,7 +178,9 @@ func (p *Platform) Stop() error {
 		}
 	}
 
-	p.stopSocket()
+	if p.stopSocket != nil {
+		p.stopSocket()
+	}
 
 	return nil
 }
