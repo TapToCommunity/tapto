@@ -22,13 +22,13 @@ along with TapTo.  If not, see <http://www.gnu.org/licenses/>.
 package service
 
 import (
+	"github.com/wizzomafizzo/tapto/pkg/service/tokens"
 	"regexp"
 	"strings"
 
 	"github.com/rs/zerolog/log"
 	"github.com/wizzomafizzo/tapto/pkg/database"
 	"github.com/wizzomafizzo/tapto/pkg/platforms"
-	"github.com/wizzomafizzo/tapto/pkg/tokens"
 )
 
 func checkMappingUid(m database.Mapping, t tokens.Token) bool {

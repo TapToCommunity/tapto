@@ -7,6 +7,7 @@ import (
 	"github.com/wizzomafizzo/tapto/pkg/api/methods"
 	"github.com/wizzomafizzo/tapto/pkg/api/models"
 	"github.com/wizzomafizzo/tapto/pkg/api/models/requests"
+	"github.com/wizzomafizzo/tapto/pkg/service/tokens"
 	"net"
 	"net/http"
 	"strings"
@@ -22,7 +23,6 @@ import (
 	"github.com/wizzomafizzo/tapto/pkg/database"
 	"github.com/wizzomafizzo/tapto/pkg/platforms"
 	"github.com/wizzomafizzo/tapto/pkg/service/state"
-	"github.com/wizzomafizzo/tapto/pkg/tokens"
 )
 
 // TODO: should there be a TTL for request timestamps? what about offline misters?

@@ -25,6 +25,7 @@ import (
 	"fmt"
 	"github.com/wizzomafizzo/tapto/pkg/api"
 	"github.com/wizzomafizzo/tapto/pkg/service/playlists"
+	tokens2 "github.com/wizzomafizzo/tapto/pkg/service/tokens"
 	"strings"
 	"time"
 
@@ -36,7 +37,6 @@ import (
 	"github.com/wizzomafizzo/tapto/pkg/launcher"
 	"github.com/wizzomafizzo/tapto/pkg/platforms"
 	"github.com/wizzomafizzo/tapto/pkg/service/state"
-	"github.com/wizzomafizzo/tapto/pkg/tokens"
 )
 
 func inExitGameBlocklist(platform platforms.Platform, cfg *config.UserConfig) bool {
@@ -50,9 +50,9 @@ func inExitGameBlocklist(platform platforms.Platform, cfg *config.UserConfig) bo
 func launchToken(
 	platform platforms.Platform,
 	cfg *config.UserConfig,
-	token tokens.Token,
+	token tokens2.Token,
 	db *database.Database,
-	lsq chan<- *tokens.Token,
+	lsq chan<- *tokens2.Token,
 	plsc playlists.PlaylistController,
 ) error {
 	text := token.Text
@@ -97,9 +97,9 @@ func processTokenQueue(
 	platform platforms.Platform,
 	cfg *config.UserConfig,
 	st *state.State,
-	tq *tokens.TokenQueue,
+	tq *tokens2.TokenQueue,
 	db *database.Database,
-	lsq chan<- *tokens.Token,
+	lsq chan<- *tokens2.Token,
 	plsq chan *playlists.Playlist,
 ) {
 	var activePlaylist *playlists.Playlist
@@ -171,8 +171,8 @@ func Start(
 ) (func() error, error) {
 	// TODO: define the notifications chan here instead of in state
 	st, ns := state.NewState(platform)
-	tq := tokens.NewTokenQueue() // TODO: convert this to a *token channel
-	lsq := make(chan *tokens.Token)
+	tq := tokens2.NewTokenQueue() // TODO: convert this to a *token channel
+	lsq := make(chan *tokens2.Token)
 	plsq := make(chan *playlists.Playlist)
 
 	log.Info().Msgf("Zaparoo v%s", config.Version)

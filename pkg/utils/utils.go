@@ -25,6 +25,7 @@ import (
 	"crypto/md5"
 	"fmt"
 	"github.com/rs/zerolog/log"
+	"github.com/wizzomafizzo/tapto/pkg/service/tokens"
 	"io"
 	"math/rand"
 	"net"
@@ -34,8 +35,6 @@ import (
 	"sort"
 	"strings"
 	"time"
-
-	"github.com/wizzomafizzo/tapto/pkg/tokens"
 )
 
 var r = rand.New(rand.NewSource(time.Now().UnixNano()))

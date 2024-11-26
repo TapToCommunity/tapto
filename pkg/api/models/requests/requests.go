@@ -6,7 +6,7 @@ import (
 	"github.com/wizzomafizzo/tapto/pkg/database"
 	"github.com/wizzomafizzo/tapto/pkg/platforms"
 	"github.com/wizzomafizzo/tapto/pkg/service/state"
-	"github.com/wizzomafizzo/tapto/pkg/tokens"
+	"github.com/wizzomafizzo/tapto/pkg/service/tokens"
 )
 
 type RequestEnv struct {

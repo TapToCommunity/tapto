@@ -2,6 +2,7 @@ package service
 
 import (
 	"errors"
+	tokens2 "github.com/wizzomafizzo/tapto/pkg/service/tokens"
 	"strings"
 	"time"
 
@@ -10,7 +11,6 @@ import (
 	"github.com/wizzomafizzo/tapto/pkg/platforms"
 	"github.com/wizzomafizzo/tapto/pkg/readers"
 	"github.com/wizzomafizzo/tapto/pkg/service/state"
-	"github.com/wizzomafizzo/tapto/pkg/tokens"
 	"github.com/wizzomafizzo/tapto/pkg/utils"
 )
 
@@ -129,15 +129,15 @@ func readerManager(
 	pl platforms.Platform,
 	cfg *config.UserConfig,
 	st *state.State,
-	launchQueue *tokens.TokenQueue,
-	softwareQueue chan *tokens.Token,
+	launchQueue *tokens2.TokenQueue,
+	softwareQueue chan *tokens2.Token,
 ) {
 	inputQueue := make(chan readers.Scan)
 
 	var err error
 	var lastError time.Time
 
-	var prevToken *tokens.Token
+	var prevToken *tokens2.Token
 	var exitTimer *time.Timer
 
 	readerTicker := time.NewTicker(1 * time.Second)
@@ -205,7 +205,7 @@ func readerManager(
 
 	// token pre-processing loop
 	for !st.ShouldStopService() {
-		var scan *tokens.Token
+		var scan *tokens2.Token
 
 		select {
 		case t := <-inputQueue:
@@ -269,7 +269,7 @@ func readerManager(
 			}
 		} else {
 			log.Info().Msg("token was removed")
-			st.SetActiveCard(tokens.Token{})
+			st.SetActiveCard(tokens2.Token{})
 			if shouldExit(cfg, pl, st) {
 				startTimedExit()
 			}

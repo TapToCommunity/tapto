@@ -4,10 +4,10 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"github.com/wizzomafizzo/tapto/pkg/service/tokens"
 	"time"
 
 	"github.com/rs/zerolog/log"
-	"github.com/wizzomafizzo/tapto/pkg/tokens"
 	"go.bug.st/serial"
 )
 

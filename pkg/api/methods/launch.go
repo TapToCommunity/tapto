@@ -5,6 +5,7 @@ import (
 	"errors"
 	"github.com/wizzomafizzo/tapto/pkg/api/models"
 	"github.com/wizzomafizzo/tapto/pkg/api/models/requests"
+	tokens2 "github.com/wizzomafizzo/tapto/pkg/service/tokens"
 	"golang.org/x/text/unicode/norm"
 	"net/http"
 	"net/url"
@@ -13,7 +14,6 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/rs/zerolog/log"
 	"github.com/wizzomafizzo/tapto/pkg/service/state"
-	"github.com/wizzomafizzo/tapto/pkg/tokens"
 )
 
 var (
@@ -29,7 +29,7 @@ func HandleLaunch(env requests.RequestEnv) (any, error) {
 		return nil, ErrMissingParams
 	}
 
-	var t tokens.Token
+	var t tokens2.Token
 
 	var params models.LaunchParams
 	err := json.Unmarshal(env.Params, &params)
@@ -91,7 +91,7 @@ func HandleLaunch(env requests.RequestEnv) (any, error) {
 // TODO: this is still insecure
 func HandleLaunchBasic(
 	st *state.State,
-	tq *tokens.TokenQueue,
+	tq *tokens2.TokenQueue,
 ) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		log.Info().Msg("received basic launch request")
@@ -106,7 +106,7 @@ func HandleLaunchBasic(
 
 		log.Info().Msgf("launching basic token: %s", text)
 
-		t := tokens.Token{
+		t := tokens2.Token{
 			Text:     norm.NFC.String(text),
 			ScanTime: time.Now(),
 			Remote:   true,

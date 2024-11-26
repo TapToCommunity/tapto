@@ -27,10 +27,10 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"github.com/wizzomafizzo/tapto/pkg/service/tokens"
 
 	"github.com/clausecker/nfc/v2"
 	"github.com/rs/zerolog/log"
-	"github.com/wizzomafizzo/tapto/pkg/tokens"
 )
 
 const (
