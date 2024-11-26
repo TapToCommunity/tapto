@@ -12,20 +12,26 @@ func NewPlaylist(media []string) *Playlist {
 	}
 }
 
-func (p *Playlist) Next() string {
-	p.Index++
-	if p.Index >= len(p.Media) {
-		p.Index = 0
+func Next(p Playlist) *Playlist {
+	idx := p.Index + 1
+	if idx >= len(p.Media) {
+		idx = 0
 	}
-	return p.Media[p.Index]
+	return &Playlist{
+		Media: p.Media,
+		Index: idx,
+	}
 }
 
-func (p *Playlist) Previous() string {
-	p.Index--
-	if p.Index < 0 {
-		p.Index = len(p.Media) - 1
+func Previous(p Playlist) *Playlist {
+	idx := p.Index - 1
+	if idx < 0 {
+		idx = len(p.Media) - 1
 	}
-	return p.Media[p.Index]
+	return &Playlist{
+		Media: p.Media,
+		Index: idx,
+	}
 }
 
 func (p *Playlist) Current() string {

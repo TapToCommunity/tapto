@@ -327,3 +327,23 @@ func cmdPlaylistPlay(_ platforms.Platform, env platforms.CmdEnv) error {
 
 	return nil
 }
+
+func cmdPlaylistNext(_ platforms.Platform, env platforms.CmdEnv) error {
+	if env.Playlist.Active == nil {
+		return fmt.Errorf("no playlist active")
+	}
+
+	env.Playlist.Queue <- playlists.Next(*env.Playlist.Active)
+
+	return nil
+}
+
+func cmdPlaylistPrevious(_ platforms.Platform, env platforms.CmdEnv) error {
+	if env.Playlist.Active == nil {
+		return fmt.Errorf("no playlist active")
+	}
+
+	env.Playlist.Queue <- playlists.Previous(*env.Playlist.Active)
+
+	return nil
+}

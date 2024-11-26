@@ -75,6 +75,7 @@ func launchToken(
 			platform,
 			cfg,
 			plsc,
+			token,
 			cfg.GetAllowCommands() || mapped,
 			cmd,
 			len(cmds),
@@ -126,7 +127,11 @@ func processTokenQueue(
 						ScanTime: time.Now(),
 						Source:   tokens.SourcePlaylist,
 					}
-					err := launchToken(platform, cfg, t, db, lsq, playlists.PlaylistController{})
+					plsc := playlists.PlaylistController{
+						Active: activePlaylist,
+						Queue:  plsq,
+					}
+					err := launchToken(platform, cfg, t, db, lsq, plsc)
 					if err != nil {
 						log.Error().Err(err).Msgf("error launching token")
 					}
@@ -146,7 +151,11 @@ func processTokenQueue(
 						ScanTime: time.Now(),
 						Source:   tokens.SourcePlaylist,
 					}
-					err := launchToken(platform, cfg, t, db, lsq, playlists.PlaylistController{})
+					plsc := playlists.PlaylistController{
+						Active: activePlaylist,
+						Queue:  plsq,
+					}
+					err := launchToken(platform, cfg, t, db, lsq, plsc)
 					if err != nil {
 						log.Error().Err(err).Msgf("error launching token")
 					}
