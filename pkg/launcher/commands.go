@@ -22,6 +22,7 @@ package launcher
 
 import (
 	"fmt"
+	"github.com/wizzomafizzo/tapto/pkg/service/playlists"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -43,6 +44,8 @@ var commandMappings = map[string]func(platforms.Platform, platforms.CmdEnv) erro
 	"launch.system": cmdSystem,
 	"launch.random": cmdRandom,
 	"launch.search": cmdSearch,
+
+	"playlist.play": cmdPlaylistPlay,
 
 	"shell": cmdShell,
 	"delay": cmdDelay,
@@ -126,6 +129,7 @@ func findFile(pl platforms.Platform, cfg *config.UserConfig, path string) (strin
 func LaunchToken(
 	pl platforms.Platform,
 	cfg *config.UserConfig,
+	plsc playlists.PlaylistController,
 	manual bool,
 	text string,
 	totalCommands int,
@@ -166,6 +170,7 @@ func LaunchToken(
 			Args:          args,
 			NamedArgs:     namedArgs,
 			Cfg:           cfg,
+			Playlist:      plsc,
 			Manual:        manual,
 			Text:          text,
 			TotalCommands: totalCommands,
@@ -173,6 +178,7 @@ func LaunchToken(
 		}
 
 		if f, ok := commandMappings[cmd]; ok {
+			log.Info().Msgf("launching command: %s", cmd)
 			return f(pl, env), slices.Contains(softwareChangeCommands, cmd)
 		} else {
 			return fmt.Errorf("unknown command: %s", cmd), false

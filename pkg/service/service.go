@@ -24,6 +24,7 @@ package service
 import (
 	"fmt"
 	"github.com/wizzomafizzo/tapto/pkg/api"
+	"github.com/wizzomafizzo/tapto/pkg/service/playlists"
 	"strings"
 	"time"
 
@@ -52,6 +53,7 @@ func launchToken(
 	token tokens.Token,
 	db *database.Database,
 	lsq chan<- *tokens.Token,
+	plsc playlists.PlaylistController,
 ) error {
 	text := token.Text
 
@@ -72,6 +74,7 @@ func launchToken(
 		err, softwareSwap := launcher.LaunchToken(
 			platform,
 			cfg,
+			plsc,
 			cfg.GetAllowCommands() || mapped,
 			cmd,
 			len(cmds),
@@ -90,16 +93,22 @@ func launchToken(
 	return nil
 }
 
-func processLaunchQueue(
+func processTokenQueue(
 	platform platforms.Platform,
 	cfg *config.UserConfig,
 	st *state.State,
 	tq *tokens.TokenQueue,
 	db *database.Database,
 	lsq chan<- *tokens.Token,
+	plsq chan *playlists.Playlist,
 ) {
+	var activePlaylist *playlists.Playlist
+
 	for {
 		select {
+		case pls := <-plsq:
+			log.Info().Msgf("processing playlist update: %v", pls)
+			activePlaylist = pls
 		case t := <-tq.Tokens:
 			// TODO: change this channel to send a token pointer or something
 			if t.ScanTime.IsZero() {
@@ -132,7 +141,12 @@ func processLaunchQueue(
 
 			// launch tokens in separate thread
 			go func() {
-				err = launchToken(platform, cfg, t, db, lsq)
+				plsc := playlists.PlaylistController{
+					Active: activePlaylist,
+					Queue:  plsq,
+				}
+
+				err = launchToken(platform, cfg, t, db, lsq, plsc)
 				if err != nil {
 					log.Error().Err(err).Msgf("error launching token")
 				}
@@ -145,8 +159,7 @@ func processLaunchQueue(
 			}()
 		case <-time.After(100 * time.Millisecond):
 			if st.ShouldStopService() {
-				tq.Close()
-				return
+				break
 			}
 		}
 	}
@@ -156,12 +169,13 @@ func Start(
 	platform platforms.Platform,
 	cfg *config.UserConfig,
 ) (func() error, error) {
-	// TODO: define the models chan here instead of in state
+	// TODO: define the notifications chan here instead of in state
 	st, ns := state.NewState(platform)
 	tq := tokens.NewTokenQueue() // TODO: convert this to a *token channel
 	lsq := make(chan *tokens.Token)
+	plsq := make(chan *playlists.Playlist)
 
-	log.Info().Msgf("TapTo v%s", config.Version)
+	log.Info().Msgf("Zaparoo v%s", config.Version)
 	log.Info().Msgf("config path = %s", cfg.IniPath)
 	log.Info().Msgf("app path = %s", cfg.AppPath)
 	log.Info().Msgf("connection_string = %s", cfg.GetConnectionString())
@@ -193,10 +207,15 @@ func Start(
 		st.DisableLauncher()
 	}
 
+	log.Debug().Msg("starting reader manager")
 	go readerManager(platform, cfg, st, tq, lsq)
-	go processLaunchQueue(platform, cfg, st, tq, db, lsq)
+
+	log.Debug().Msg("starting token queue manager")
+	go processTokenQueue(platform, cfg, st, tq, db, lsq, plsq)
 
 	return func() error {
+		close(plsq)
+		close(lsq)
 		tq.Close()
 		st.StopService()
 		err = platform.Stop()
