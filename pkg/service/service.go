@@ -25,7 +25,7 @@ import (
 	"fmt"
 	"github.com/wizzomafizzo/tapto/pkg/api"
 	"github.com/wizzomafizzo/tapto/pkg/service/playlists"
-	tokens2 "github.com/wizzomafizzo/tapto/pkg/service/tokens"
+	"github.com/wizzomafizzo/tapto/pkg/service/tokens"
 	"strings"
 	"time"
 
@@ -50,9 +50,9 @@ func inExitGameBlocklist(platform platforms.Platform, cfg *config.UserConfig) bo
 func launchToken(
 	platform platforms.Platform,
 	cfg *config.UserConfig,
-	token tokens2.Token,
+	token tokens.Token,
 	db *database.Database,
-	lsq chan<- *tokens2.Token,
+	lsq chan<- *tokens.Token,
 	plsc playlists.PlaylistController,
 ) error {
 	text := token.Text
@@ -97,9 +97,9 @@ func processTokenQueue(
 	platform platforms.Platform,
 	cfg *config.UserConfig,
 	st *state.State,
-	tq *tokens2.TokenQueue,
+	tq *tokens.TokenQueue,
 	db *database.Database,
-	lsq chan<- *tokens2.Token,
+	lsq chan<- *tokens.Token,
 	plsq chan *playlists.Playlist,
 ) {
 	var activePlaylist *playlists.Playlist
@@ -108,7 +108,51 @@ func processTokenQueue(
 		select {
 		case pls := <-plsq:
 			log.Info().Msgf("processing playlist update: %v", pls)
-			activePlaylist = pls
+
+			if pls == nil {
+				if activePlaylist != nil {
+					log.Info().Msg("clearing active playlist")
+				} else {
+					log.Debug().Msg("no active playlist to clear")
+				}
+				activePlaylist = nil
+				continue
+			} else if activePlaylist == nil {
+				log.Info().Msg("setting new active playlist, launching token")
+				activePlaylist = pls
+				go func() {
+					t := tokens.Token{
+						Text:     pls.Current(),
+						ScanTime: time.Now(),
+						Source:   tokens.SourcePlaylist,
+					}
+					err := launchToken(platform, cfg, t, db, lsq, playlists.PlaylistController{})
+					if err != nil {
+						log.Error().Err(err).Msgf("error launching token")
+					}
+				}()
+				continue
+			} else {
+				if pls.Current() == activePlaylist.Current() {
+					log.Debug().Msg("playlist current token unchanged, skipping")
+					continue
+				}
+
+				log.Info().Msg("updating active playlist, launching token")
+				activePlaylist = pls
+				go func() {
+					t := tokens.Token{
+						Text:     pls.Current(),
+						ScanTime: time.Now(),
+						Source:   tokens.SourcePlaylist,
+					}
+					err := launchToken(platform, cfg, t, db, lsq, playlists.PlaylistController{})
+					if err != nil {
+						log.Error().Err(err).Msgf("error launching token")
+					}
+				}()
+				continue
+			}
 		case t := <-tq.Tokens:
 			// TODO: change this channel to send a token pointer or something
 			if t.ScanTime.IsZero() {
@@ -171,8 +215,8 @@ func Start(
 ) (func() error, error) {
 	// TODO: define the notifications chan here instead of in state
 	st, ns := state.NewState(platform)
-	tq := tokens2.NewTokenQueue() // TODO: convert this to a *token channel
-	lsq := make(chan *tokens2.Token)
+	tq := tokens.NewTokenQueue() // TODO: convert this to a *token channel
+	lsq := make(chan *tokens.Token)
 	plsq := make(chan *playlists.Playlist)
 
 	log.Info().Msgf("Zaparoo v%s", config.Version)
