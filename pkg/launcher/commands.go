@@ -72,6 +72,7 @@ var commandMappings = map[string]func(platforms.Platform, platforms.CmdEnv) erro
 }
 
 var softwareChangeCommands = []string{
+	"random", // DEPRECATED
 	"launch",
 	"launch.system",
 	"launch.random",
