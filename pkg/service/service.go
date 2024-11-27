@@ -24,6 +24,8 @@ package service
 import (
 	"fmt"
 	"github.com/wizzomafizzo/tapto/pkg/api"
+	"github.com/wizzomafizzo/tapto/pkg/service/playlists"
+	"github.com/wizzomafizzo/tapto/pkg/service/tokens"
 	"strings"
 	"time"
 
@@ -35,7 +37,6 @@ import (
 	"github.com/wizzomafizzo/tapto/pkg/launcher"
 	"github.com/wizzomafizzo/tapto/pkg/platforms"
 	"github.com/wizzomafizzo/tapto/pkg/service/state"
-	"github.com/wizzomafizzo/tapto/pkg/tokens"
 )
 
 func inExitGameBlocklist(platform platforms.Platform, cfg *config.UserConfig) bool {
@@ -52,6 +53,7 @@ func launchToken(
 	token tokens.Token,
 	db *database.Database,
 	lsq chan<- *tokens.Token,
+	plsc playlists.PlaylistController,
 ) error {
 	text := token.Text
 
@@ -72,6 +74,8 @@ func launchToken(
 		err, softwareSwap := launcher.LaunchToken(
 			platform,
 			cfg,
+			plsc,
+			token,
 			cfg.GetAllowCommands() || mapped,
 			cmd,
 			len(cmds),
@@ -90,17 +94,75 @@ func launchToken(
 	return nil
 }
 
-func processLaunchQueue(
+func processTokenQueue(
 	platform platforms.Platform,
 	cfg *config.UserConfig,
 	st *state.State,
-	tq *tokens.TokenQueue,
+	itq <-chan tokens.Token,
 	db *database.Database,
 	lsq chan<- *tokens.Token,
+	plq chan *playlists.Playlist,
 ) {
+	var activePlaylist *playlists.Playlist
+
 	for {
 		select {
-		case t := <-tq.Tokens:
+		case pls := <-plq:
+			log.Info().Msgf("processing playlist update: %v", pls)
+
+			if pls == nil {
+				if activePlaylist != nil {
+					log.Info().Msg("clearing active playlist")
+				} else {
+					log.Debug().Msg("no active playlist to clear")
+				}
+				activePlaylist = nil
+				continue
+			} else if activePlaylist == nil {
+				log.Info().Msg("setting new active playlist, launching token")
+				activePlaylist = pls
+				go func() {
+					t := tokens.Token{
+						Text:     pls.Current(),
+						ScanTime: time.Now(),
+						Source:   tokens.SourcePlaylist,
+					}
+					plsc := playlists.PlaylistController{
+						Active: activePlaylist,
+						Queue:  plq,
+					}
+					err := launchToken(platform, cfg, t, db, lsq, plsc)
+					if err != nil {
+						log.Error().Err(err).Msgf("error launching token")
+					}
+				}()
+				continue
+			} else {
+				if pls.Current() == activePlaylist.Current() {
+					log.Debug().Msg("playlist current token unchanged, skipping")
+					continue
+				}
+
+				log.Info().Msg("updating active playlist, launching token")
+				activePlaylist = pls
+				go func() {
+					t := tokens.Token{
+						Text:     pls.Current(),
+						ScanTime: time.Now(),
+						Source:   tokens.SourcePlaylist,
+					}
+					plsc := playlists.PlaylistController{
+						Active: activePlaylist,
+						Queue:  plq,
+					}
+					err := launchToken(platform, cfg, t, db, lsq, plsc)
+					if err != nil {
+						log.Error().Err(err).Msgf("error launching token")
+					}
+				}()
+				continue
+			}
+		case t := <-itq:
 			// TODO: change this channel to send a token pointer or something
 			if t.ScanTime.IsZero() {
 				// ignore empty tokens
@@ -132,7 +194,12 @@ func processLaunchQueue(
 
 			// launch tokens in separate thread
 			go func() {
-				err = launchToken(platform, cfg, t, db, lsq)
+				plsc := playlists.PlaylistController{
+					Active: activePlaylist,
+					Queue:  plq,
+				}
+
+				err = launchToken(platform, cfg, t, db, lsq, plsc)
 				if err != nil {
 					log.Error().Err(err).Msgf("error launching token")
 				}
@@ -145,8 +212,7 @@ func processLaunchQueue(
 			}()
 		case <-time.After(100 * time.Millisecond):
 			if st.ShouldStopService() {
-				tq.Close()
-				return
+				break
 			}
 		}
 	}
@@ -156,12 +222,14 @@ func Start(
 	platform platforms.Platform,
 	cfg *config.UserConfig,
 ) (func() error, error) {
-	// TODO: define the models chan here instead of in state
+	// TODO: define the notifications chan here instead of in state
 	st, ns := state.NewState(platform)
-	tq := tokens.NewTokenQueue() // TODO: convert this to a *token channel
+	// TODO: convert this to a *token channel
+	itq := make(chan tokens.Token)
 	lsq := make(chan *tokens.Token)
+	plq := make(chan *playlists.Playlist)
 
-	log.Info().Msgf("TapTo v%s", config.Version)
+	log.Info().Msgf("Zaparoo v%s", config.Version)
 	log.Info().Msgf("config path = %s", cfg.IniPath)
 	log.Info().Msgf("app path = %s", cfg.AppPath)
 	log.Info().Msgf("connection_string = %s", cfg.GetConnectionString())
@@ -180,7 +248,7 @@ func Start(
 	}
 
 	log.Debug().Msg("starting API service")
-	go api.Start(platform, cfg, st, tq, db, ns)
+	go api.Start(platform, cfg, st, itq, db, ns)
 
 	log.Debug().Msg("running platform setup")
 	err = platform.Setup(cfg, st.Notifications)
@@ -193,16 +261,21 @@ func Start(
 		st.DisableLauncher()
 	}
 
-	go readerManager(platform, cfg, st, tq, lsq)
-	go processLaunchQueue(platform, cfg, st, tq, db, lsq)
+	log.Debug().Msg("starting reader manager")
+	go readerManager(platform, cfg, st, itq, lsq)
+
+	log.Debug().Msg("starting token queue manager")
+	go processTokenQueue(platform, cfg, st, itq, db, lsq, plq)
 
 	return func() error {
-		tq.Close()
-		st.StopService()
 		err = platform.Stop()
 		if err != nil {
 			log.Warn().Msgf("error stopping platform: %s", err)
 		}
+		st.StopService()
+		close(plq)
+		close(lsq)
+		close(itq)
 		return nil
 	}, nil
 }

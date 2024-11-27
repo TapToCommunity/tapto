@@ -2,12 +2,13 @@ package platforms
 
 import (
 	"github.com/wizzomafizzo/tapto/pkg/api/models"
+	"github.com/wizzomafizzo/tapto/pkg/service/playlists"
+	"github.com/wizzomafizzo/tapto/pkg/service/tokens"
 	"path/filepath"
 	"strings"
 
 	"github.com/wizzomafizzo/tapto/pkg/config"
 	"github.com/wizzomafizzo/tapto/pkg/readers"
-	"github.com/wizzomafizzo/tapto/pkg/tokens"
 )
 
 type CmdEnv struct {
@@ -15,6 +16,7 @@ type CmdEnv struct {
 	Args          string
 	NamedArgs     map[string]string
 	Cfg           *config.UserConfig
+	Playlist      playlists.PlaylistController
 	Manual        bool
 	Text          string
 	TotalCommands int

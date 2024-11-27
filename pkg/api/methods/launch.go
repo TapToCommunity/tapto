@@ -5,6 +5,7 @@ import (
 	"errors"
 	"github.com/wizzomafizzo/tapto/pkg/api/models"
 	"github.com/wizzomafizzo/tapto/pkg/api/models/requests"
+	"github.com/wizzomafizzo/tapto/pkg/service/tokens"
 	"golang.org/x/text/unicode/norm"
 	"net/http"
 	"net/url"
@@ -13,7 +14,6 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/rs/zerolog/log"
 	"github.com/wizzomafizzo/tapto/pkg/service/state"
-	"github.com/wizzomafizzo/tapto/pkg/tokens"
 )
 
 var (
@@ -83,7 +83,7 @@ func HandleLaunch(env requests.RequestEnv) (any, error) {
 
 	// TODO: how do we report back errors? put channel in queue
 	env.State.SetActiveCard(t)
-	env.TokenQueue.Enqueue(t)
+	env.TokenQueue <- t
 
 	return nil, nil
 }
@@ -91,7 +91,7 @@ func HandleLaunch(env requests.RequestEnv) (any, error) {
 // TODO: this is still insecure
 func HandleLaunchBasic(
 	st *state.State,
-	tq *tokens.TokenQueue,
+	itq chan<- tokens.Token,
 ) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		log.Info().Msg("received basic launch request")
@@ -113,7 +113,7 @@ func HandleLaunchBasic(
 		}
 
 		st.SetActiveCard(t)
-		tq.Enqueue(t)
+		itq <- t
 	}
 }
 

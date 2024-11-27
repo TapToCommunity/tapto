@@ -26,9 +26,9 @@ package tags
 import (
 	"encoding/hex"
 	"fmt"
+	"github.com/wizzomafizzo/tapto/pkg/service/tokens"
 
 	"github.com/clausecker/nfc/v2"
-	"github.com/wizzomafizzo/tapto/pkg/tokens"
 )
 
 const (

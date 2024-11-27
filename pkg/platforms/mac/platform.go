@@ -2,6 +2,7 @@ package mac
 
 import (
 	"github.com/wizzomafizzo/tapto/pkg/api/models"
+	"github.com/wizzomafizzo/tapto/pkg/service/tokens"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -13,7 +14,6 @@ import (
 	"github.com/wizzomafizzo/tapto/pkg/readers/file"
 	"github.com/wizzomafizzo/tapto/pkg/readers/pn532_uart"
 	"github.com/wizzomafizzo/tapto/pkg/readers/simple_serial"
-	"github.com/wizzomafizzo/tapto/pkg/tokens"
 )
 
 type Platform struct {

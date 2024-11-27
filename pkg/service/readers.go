@@ -2,6 +2,7 @@ package service
 
 import (
 	"errors"
+	"github.com/wizzomafizzo/tapto/pkg/service/tokens"
 	"strings"
 	"time"
 
@@ -10,7 +11,6 @@ import (
 	"github.com/wizzomafizzo/tapto/pkg/platforms"
 	"github.com/wizzomafizzo/tapto/pkg/readers"
 	"github.com/wizzomafizzo/tapto/pkg/service/state"
-	"github.com/wizzomafizzo/tapto/pkg/tokens"
 	"github.com/wizzomafizzo/tapto/pkg/utils"
 )
 
@@ -129,8 +129,8 @@ func readerManager(
 	pl platforms.Platform,
 	cfg *config.UserConfig,
 	st *state.State,
-	launchQueue *tokens.TokenQueue,
-	softwareQueue chan *tokens.Token,
+	itq chan<- tokens.Token,
+	lsq chan *tokens.Token,
 ) {
 	inputQueue := make(chan readers.Scan)
 
@@ -175,7 +175,7 @@ func readerManager(
 				log.Warn().Msgf("error killing launcher: %s", err)
 			}
 
-			softwareQueue <- nil
+			lsq <- nil
 		}()
 	}
 
@@ -218,7 +218,7 @@ func readerManager(
 				continue
 			}
 			scan = t.Token
-		case stoken := <-softwareQueue:
+		case stoken := <-lsq:
 			// a token has been launched that starts software
 			log.Debug().Msgf("new software token: %v", st)
 
@@ -265,7 +265,7 @@ func readerManager(
 
 				log.Info().Msgf("sending token: %v", scan)
 				pl.PlaySuccessSound(cfg)
-				launchQueue.Enqueue(*scan)
+				itq <- *scan
 			}
 		} else {
 			log.Info().Msg("token was removed")

@@ -4,6 +4,7 @@ import (
 	"encoding/xml"
 	"errors"
 	"fmt"
+	"github.com/wizzomafizzo/tapto/pkg/service/tokens"
 	"io"
 	"os"
 	"os/exec"
@@ -22,7 +23,6 @@ import (
 	"github.com/wizzomafizzo/tapto/pkg/readers/file"
 	"github.com/wizzomafizzo/tapto/pkg/readers/pn532_uart"
 	"github.com/wizzomafizzo/tapto/pkg/readers/simple_serial"
-	"github.com/wizzomafizzo/tapto/pkg/tokens"
 )
 
 type Platform struct {

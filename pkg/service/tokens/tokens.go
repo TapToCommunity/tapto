@@ -17,4 +17,5 @@ const (
 	TypeMifare         = "MIFARE"
 	TypeAmiibo         = "Amiibo"
 	TypeLegoDimensions = "LegoDimensions"
+	SourcePlaylist     = "Playlist"
 )

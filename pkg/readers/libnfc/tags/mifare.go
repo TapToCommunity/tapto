@@ -28,9 +28,9 @@ import (
 	"errors"
 	"fmt"
 	"github.com/rs/zerolog/log"
+	"github.com/wizzomafizzo/tapto/pkg/service/tokens"
 
 	"github.com/clausecker/nfc/v2"
-	"github.com/wizzomafizzo/tapto/pkg/tokens"
 	"golang.org/x/exp/slices"
 )
 

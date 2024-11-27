@@ -22,6 +22,8 @@ package launcher
 
 import (
 	"fmt"
+	"github.com/wizzomafizzo/tapto/pkg/service/playlists"
+	"github.com/wizzomafizzo/tapto/pkg/service/tokens"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -43,6 +45,10 @@ var commandMappings = map[string]func(platforms.Platform, platforms.CmdEnv) erro
 	"launch.system": cmdSystem,
 	"launch.random": cmdRandom,
 	"launch.search": cmdSearch,
+
+	"playlist.play":     cmdPlaylistPlay,
+	"playlist.next":     cmdPlaylistNext,
+	"playlist.previous": cmdPlaylistPrevious,
 
 	"shell": cmdShell,
 	"delay": cmdDelay,
@@ -72,6 +78,7 @@ var commandMappings = map[string]func(platforms.Platform, platforms.CmdEnv) erro
 }
 
 var softwareChangeCommands = []string{
+	"random", // DEPRECATED
 	"launch",
 	"launch.system",
 	"launch.random",
@@ -125,6 +132,8 @@ func findFile(pl platforms.Platform, cfg *config.UserConfig, path string) (strin
 func LaunchToken(
 	pl platforms.Platform,
 	cfg *config.UserConfig,
+	plsc playlists.PlaylistController,
+	t tokens.Token,
 	manual bool,
 	text string,
 	totalCommands int,
@@ -152,6 +161,11 @@ func LaunchToken(
 
 	// explicit commands must begin with **
 	if strings.HasPrefix(text, "**") {
+		if t.Source == tokens.SourcePlaylist {
+			log.Debug().Str("text", text).Msgf("playlists cannot run commands, skipping")
+			return nil, false
+		}
+
 		text = strings.TrimPrefix(text, "**")
 		ps := strings.SplitN(text, ":", 2)
 		if len(ps) < 2 {
@@ -165,6 +179,7 @@ func LaunchToken(
 			Args:          args,
 			NamedArgs:     namedArgs,
 			Cfg:           cfg,
+			Playlist:      plsc,
 			Manual:        manual,
 			Text:          text,
 			TotalCommands: totalCommands,
@@ -172,10 +187,23 @@ func LaunchToken(
 		}
 
 		if f, ok := commandMappings[cmd]; ok {
-			return f(pl, env), slices.Contains(softwareChangeCommands, cmd)
+			log.Info().Msgf("launching command: %s", cmd)
+			softwareChange := slices.Contains(softwareChangeCommands, cmd)
+			if softwareChange {
+				// a launch triggered outside a playlist itself
+				log.Debug().Msg("clearing current playlist")
+				plsc.Queue <- nil
+			}
+			return f(pl, env), softwareChange
 		} else {
 			return fmt.Errorf("unknown command: %s", cmd), false
 		}
+	}
+
+	if t.Source != tokens.SourcePlaylist {
+		// a launch triggered outside a playlist itself
+		log.Debug().Msg("clearing current playlist")
+		plsc.Queue <- nil
 	}
 
 	// if it's not a command, treat it as a generic launch command

@@ -6,7 +6,7 @@ import (
 	"github.com/wizzomafizzo/tapto/pkg/database"
 	"github.com/wizzomafizzo/tapto/pkg/platforms"
 	"github.com/wizzomafizzo/tapto/pkg/service/state"
-	"github.com/wizzomafizzo/tapto/pkg/tokens"
+	"github.com/wizzomafizzo/tapto/pkg/service/tokens"
 )
 
 type RequestEnv struct {
@@ -14,7 +14,7 @@ type RequestEnv struct {
 	Config     *config.UserConfig
 	State      *state.State
 	Database   *database.Database
-	TokenQueue *tokens.TokenQueue
+	TokenQueue chan<- tokens.Token
 	IsLocal    bool
 	Id         uuid.UUID
 	Params     []byte
