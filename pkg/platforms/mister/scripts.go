@@ -14,7 +14,7 @@ import (
 	"github.com/wizzomafizzo/mrext/pkg/input"
 )
 
-func openConsole(kbd input.Keyboard) error {
+func openConsole(kbd input.Keyboard, num string) error {
 	getTty := func() (string, error) {
 		sys := "/sys/devices/virtual/tty/tty0/active"
 		if _, err := os.Stat(sys); err != nil {
@@ -36,7 +36,7 @@ func openConsole(kbd input.Keyboard) error {
 	// which sets tty to 1 on success, then check in a loop if it actually did change to 1 and keep pressing F9
 	// until it's switched
 
-	err := exec.Command("chvt", "3").Run()
+	err := exec.Command("chvt", num).Run()
 	if err != nil {
 		return err
 	}
@@ -45,7 +45,7 @@ func openConsole(kbd input.Keyboard) error {
 	tty := ""
 	for {
 		if tries > 10 {
-			return fmt.Errorf("could not switch to tty1")
+			return fmt.Errorf("could not switch to tty" + num)
 		}
 		kbd.Console()
 		time.Sleep(50 * time.Millisecond)
@@ -53,7 +53,7 @@ func openConsole(kbd input.Keyboard) error {
 		if err != nil {
 			return err
 		}
-		if tty == "tty1" {
+		if tty == "tty"+num {
 			break
 		}
 		tries++
@@ -78,7 +78,7 @@ func runScript(pl Platform, bin string, args string, hidden bool) error {
 	}
 
 	if !hidden {
-		err := openConsole(pl.kbd)
+		err := openConsole(pl.kbd, "3")
 		if err != nil {
 			hidden = true
 			log.Warn().Msg("error opening console, running script headless")

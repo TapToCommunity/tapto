@@ -42,6 +42,8 @@ type Launcher struct {
 	Schemes []string
 	// Launch function, takes a direct as possible path/ID media file.
 	Launch func(*config.UserConfig, string) error
+	// Kill function kills the current active launcher, if possible.
+	Kill func(*config.UserConfig) error
 	// Optional function to perform custom media scanning. Takes the list of
 	// results from the standard scan, if any, and returns the final list.
 	Scanner func(*config.UserConfig, string, []ScanResult) ([]ScanResult, error)

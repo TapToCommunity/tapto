@@ -480,7 +480,7 @@ func (p *Platform) Launchers() []platforms.Launcher {
 		Id:         gamesdb.SystemNeoGeo,
 		SystemId:   gamesdb.SystemNeoGeo,
 		Folders:    []string{"NEOGEO"},
-		Extensions: []string{".neo"}, // TODO: .zip and folder support
+		Extensions: []string{".neo"},
 		Launch:     launch,
 		Scanner: func(
 			cfg *config.UserConfig,
@@ -544,8 +544,18 @@ func (p *Platform) Launchers() []platforms.Launcher {
 		},
 	}
 
+	mplayerVideo := platforms.Launcher{
+		Id:         "MPlayer",
+		SystemId:   gamesdb.SystemVideo,
+		Folders:    []string{"Video", "Movies", "TV"},
+		Extensions: []string{".mp4", ".mkv", ".avi"},
+		Launch:     launchMPlayer(p.kbd),
+		Kill:       killMPlayer,
+	}
+
 	ls := Launchers
 	ls = append(ls, amiga)
 	ls = append(ls, neogeo)
+	ls = append(ls, mplayerVideo)
 	return ls
 }

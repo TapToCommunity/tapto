@@ -3,12 +3,18 @@
 package mister
 
 import (
+	"fmt"
 	"github.com/rs/zerolog/log"
 	"github.com/wizzomafizzo/mrext/pkg/games"
+	"github.com/wizzomafizzo/mrext/pkg/input"
 	"github.com/wizzomafizzo/mrext/pkg/mister"
 	"github.com/wizzomafizzo/tapto/pkg/config"
 	"github.com/wizzomafizzo/tapto/pkg/database/gamesdb"
 	"github.com/wizzomafizzo/tapto/pkg/platforms"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"strings"
 )
 
 func launch(cfg *config.UserConfig, path string) error {
@@ -47,6 +53,107 @@ func launchAltCore(
 		log.Debug().Str("rbf", sn.Rbf).Msgf("launching alt core: %v", sn)
 		return mister.LaunchGame(UserConfigToMrext(cfg), sn, path)
 	}
+}
+
+func killCore(_ *config.UserConfig) error {
+	return mister.LaunchMenu()
+}
+
+func writeTty(id string, s string) error {
+	tty := "/dev/tty" + id
+
+	f, err := os.OpenFile(tty, os.O_WRONLY, 0)
+	if err != nil {
+		return err
+	}
+
+	_, err = f.WriteString(s)
+	if err != nil {
+		return err
+	}
+
+	return f.Close()
+}
+
+func hideCursor(vt string) error {
+	return writeTty(vt, "\033[?25l")
+}
+
+func showCursor(vt string) error {
+	return writeTty(vt, "\033[?25h")
+}
+
+func launchMPlayer(kbd input.Keyboard) func(*config.UserConfig, string) error {
+	return func(_ *config.UserConfig, path string) error {
+		if len(path) == 0 {
+			return fmt.Errorf("no path specified")
+		}
+
+		err := hideCursor("4")
+		if err != nil {
+			return err
+		}
+
+		err = openConsole(kbd, "4")
+		if err != nil {
+			return err
+		}
+
+		err = mister.SetVideoMode(640, 480)
+		if err != nil {
+			return fmt.Errorf("error setting video mode: %w", err)
+		}
+
+		cmd := exec.Command(
+			"nice",
+			"-n",
+			"-20",
+			filepath.Join(LinuxFolder, "mplayer"),
+			"-cache",
+			"8192",
+			path,
+		)
+		cmd.Env = append(os.Environ(), "LD_LIBRARY_PATH="+LinuxFolder)
+		cmd.Stdin = os.Stdin
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+
+		return cmd.Run()
+	}
+}
+
+func killMPlayer(_ *config.UserConfig) error {
+	psCmd := exec.Command("sh", "-c", "ps aux | grep mplayer | grep -v grep")
+	output, err := psCmd.Output()
+	if err != nil {
+		log.Info().Msgf("mplayer processes not detected.")
+		return nil
+	}
+
+	lines := strings.Split(string(output), "\n")
+	for _, line := range lines {
+		if line == "" {
+			continue
+		}
+
+		log.Debug().Msgf("processing line: %s", line)
+
+		fields := strings.Fields(line)
+		if len(fields) < 2 {
+			log.Warn().Msgf("unexpected line format: %s", line)
+			continue
+		}
+
+		pid := fields[0]
+		log.Info().Msgf("killing mplayer process with PID: %s", pid)
+
+		killCmd := exec.Command("kill", "-9", pid)
+		if err := killCmd.Run(); err != nil {
+			log.Error().Msgf("failed to kill process %s: %v", pid, err)
+		}
+	}
+
+	return nil
 }
 
 var Launchers = []platforms.Launcher{
