@@ -2,13 +2,10 @@ package platforms
 
 import (
 	"github.com/wizzomafizzo/tapto/pkg/api/models"
-	"github.com/wizzomafizzo/tapto/pkg/service/playlists"
-	"github.com/wizzomafizzo/tapto/pkg/service/tokens"
-	"path/filepath"
-	"strings"
-
 	"github.com/wizzomafizzo/tapto/pkg/config"
 	"github.com/wizzomafizzo/tapto/pkg/readers"
+	"github.com/wizzomafizzo/tapto/pkg/service/playlists"
+	"github.com/wizzomafizzo/tapto/pkg/service/tokens"
 )
 
 type CmdEnv struct {
@@ -50,31 +47,6 @@ type Launcher struct {
 	// If true, all resolved paths must be in the allow list before they
 	// can be launched.
 	AllowListOnly bool
-}
-
-// MatchSystemFile returns true if a given file's extension is valid for a system.
-func MatchSystemFile(pl Platform, systemId string, path string) bool {
-	var launchers []Launcher
-	for _, l := range pl.Launchers() {
-		if l.SystemId == systemId {
-			launchers = append(launchers, l)
-		}
-	}
-
-	// ignore dot files
-	if strings.HasPrefix(filepath.Base(path), ".") {
-		return false
-	}
-
-	for _, l := range launchers {
-		for _, ext := range l.Extensions {
-			if strings.HasSuffix(strings.ToLower(path), ext) {
-				return true
-			}
-		}
-	}
-
-	return false
 }
 
 type Platform interface {

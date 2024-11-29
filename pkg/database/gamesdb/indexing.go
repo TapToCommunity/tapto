@@ -2,6 +2,7 @@ package gamesdb
 
 import (
 	"fmt"
+	"github.com/wizzomafizzo/tapto/pkg/config"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -108,6 +109,7 @@ func (r *resultsStack) get() (*[]string, error) {
 // files. This function deep searches .zip files and handles symlinks at all
 // levels.
 func GetFiles(
+	cfg *config.UserConfig,
 	platform platforms.Platform,
 	systemId string,
 	path string,
@@ -195,14 +197,14 @@ func GetFiles(
 			}
 
 			for i := range zipFiles {
-				if platforms.MatchSystemFile(platform, (*system).Id, zipFiles[i]) {
+				if utils.MatchSystemFile(cfg, platform, (*system).Id, zipFiles[i]) {
 					abs := filepath.Join(path, zipFiles[i])
 					*results = append(*results, abs)
 				}
 			}
 		} else {
 			// regular files
-			if platforms.MatchSystemFile(platform, (*system).Id, path) {
+			if utils.MatchSystemFile(cfg, platform, (*system).Id, path) {
 				*results = append(*results, path)
 			}
 		}
