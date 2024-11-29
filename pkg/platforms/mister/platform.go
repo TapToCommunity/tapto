@@ -545,7 +545,7 @@ func (p *Platform) Launchers() []platforms.Launcher {
 	}
 
 	mplayerVideo := platforms.Launcher{
-		Id:         "MPlayer",
+		Id:         "MPlayerVideo",
 		SystemId:   gamesdb.SystemVideo,
 		Folders:    []string{"Video", "Movies", "TV"},
 		Extensions: []string{".mp4", ".mkv", ".avi"},
