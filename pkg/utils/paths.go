@@ -15,6 +15,10 @@ func PathIsLauncher(
 	l platforms.Launcher,
 	path string,
 ) bool {
+	if len(path) == 0 {
+		return false
+	}
+
 	lp := strings.ToLower(path)
 
 	// ignore dot files
@@ -24,7 +28,7 @@ func PathIsLauncher(
 
 	// check uri scheme
 	for _, scheme := range l.Schemes {
-		if strings.HasPrefix(lp+":", scheme) {
+		if strings.HasPrefix(lp, scheme+":") {
 			return true
 		}
 	}
@@ -32,7 +36,6 @@ func PathIsLauncher(
 	// check root folder if it's not a generic launcher
 	if len(l.Folders) > 0 {
 		inRoot := false
-
 		for _, folder := range pl.RootFolders(cfg) {
 			if strings.HasPrefix(lp, strings.ToLower(folder)) {
 				inRoot = true
@@ -42,10 +45,8 @@ func PathIsLauncher(
 
 		if !inRoot {
 			return false
-		}
-
-		// skip extension check if it's a folder
-		if path[len(path)-1] == filepath.Separator {
+		} else if path[len(path)-1] == filepath.Separator {
+			// skip extension check if it's a folder
 			return true
 		}
 	}
@@ -78,7 +79,7 @@ func MatchSystemFile(
 }
 
 // PathToLaunchers is a reverse lookup to match a given path against all
-// possible launchers in a platform. Returns all matches launchers.
+// possible launchers in a platform. Returns all matched launchers.
 func PathToLaunchers(
 	cfg *config.UserConfig,
 	pl platforms.Platform,
