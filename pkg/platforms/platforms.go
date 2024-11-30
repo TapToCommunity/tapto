@@ -106,3 +106,8 @@ type Platform interface {
 	LookupMapping(tokens.Token) (string, bool)
 	Launchers() []Launcher
 }
+
+type LaunchToken struct {
+	Token    tokens.Token
+	Launcher Launcher
+}

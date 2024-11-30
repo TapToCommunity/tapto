@@ -132,7 +132,7 @@ func readerManager(
 	itq chan<- tokens.Token,
 	lsq chan *tokens.Token,
 ) {
-	inputQueue := make(chan readers.Scan)
+	scanQueue := make(chan readers.Scan)
 
 	var err error
 	var lastError time.Time
@@ -195,7 +195,7 @@ func readerManager(
 					}
 				}
 
-				err := connectReaders(pl, cfg, st, inputQueue)
+				err := connectReaders(pl, cfg, st, scanQueue)
 				if err != nil {
 					log.Error().Msgf("error connecting rs: %s", err)
 				}
@@ -208,7 +208,7 @@ func readerManager(
 		var scan *tokens.Token
 
 		select {
-		case t := <-inputQueue:
+		case t := <-scanQueue:
 			// a reader has sent a token for pre-processing
 			log.Debug().Msgf("pre-processing token: %v", t)
 			if t.Error != nil {

@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"github.com/rs/zerolog/log"
 	"github.com/wizzomafizzo/mrext/pkg/games"
-	"github.com/wizzomafizzo/mrext/pkg/input"
 	"github.com/wizzomafizzo/mrext/pkg/mister"
 	"github.com/wizzomafizzo/tapto/pkg/config"
 	"github.com/wizzomafizzo/tapto/pkg/database/gamesdb"
@@ -15,6 +14,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
 func launch(cfg *config.UserConfig, path string) error {
@@ -59,46 +59,35 @@ func killCore(_ *config.UserConfig) error {
 	return mister.LaunchMenu()
 }
 
-func writeTty(id string, s string) error {
-	tty := "/dev/tty" + id
-
-	f, err := os.OpenFile(tty, os.O_WRONLY, 0)
-	if err != nil {
-		return err
-	}
-
-	_, err = f.WriteString(s)
-	if err != nil {
-		return err
-	}
-
-	return f.Close()
-}
-
-func hideCursor(vt string) error {
-	return writeTty(vt, "\033[?25l")
-}
-
-func showCursor(vt string) error {
-	return writeTty(vt, "\033[?25h")
-}
-
-func launchMPlayer(kbd input.Keyboard) func(*config.UserConfig, string) error {
+func launchMPlayer(pl Platform) func(*config.UserConfig, string) error {
 	return func(_ *config.UserConfig, path string) error {
 		if len(path) == 0 {
 			return fmt.Errorf("no path specified")
 		}
 
-		err := hideCursor("4")
+		vt := "4"
+
+		if pl.ActiveSystem() != "" {
+
+		}
+
+		//err := mister.LaunchMenu()
+		//if err != nil {
+		//	return err
+		//}
+		//time.Sleep(3 * time.Second)
+
+		err := cleanConsole(vt)
 		if err != nil {
 			return err
 		}
 
-		err = openConsole(kbd, "4")
+		err = openConsole(pl.kbd, vt)
 		if err != nil {
 			return err
 		}
 
+		time.Sleep(500 * time.Millisecond)
 		err = mister.SetVideoMode(640, 480)
 		if err != nil {
 			return fmt.Errorf("error setting video mode: %w", err)
@@ -118,7 +107,32 @@ func launchMPlayer(kbd input.Keyboard) func(*config.UserConfig, string) error {
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 
-		return cmd.Run()
+		restore := func() {
+			err := mister.LaunchMenu()
+			if err != nil {
+				log.Warn().Err(err).Msg("error launching menu")
+			}
+
+			err = restoreConsole(vt)
+			if err != nil {
+				log.Warn().Err(err).Msg("error restoring console")
+			}
+		}
+
+		err = cmd.Start()
+		if err != nil {
+			restore()
+			return err
+		}
+
+		err = cmd.Wait()
+		if err != nil {
+			restore()
+			return err
+		}
+
+		restore()
+		return nil
 	}
 }
 
@@ -157,6 +171,11 @@ func killMPlayer(_ *config.UserConfig) error {
 }
 
 var Launchers = []platforms.Launcher{
+	{
+		Id:         "Generic",
+		Extensions: []string{".mgl", ".rbf", ".mra"},
+		Launch:     launch,
+	},
 	// Consoles
 	{
 		Id:         gamesdb.SystemAdventureVision,
