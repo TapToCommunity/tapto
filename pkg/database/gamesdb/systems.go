@@ -164,6 +164,7 @@ const (
 	SystemArcade  = "Arcade"
 	SystemArduboy = "Arduboy"
 	SystemChip8   = "Chip8"
+	SystemVideo   = "Video"
 )
 
 var Systems = map[string]System{
@@ -510,5 +511,8 @@ var Systems = map[string]System{
 	},
 	SystemChip8: {
 		Id: SystemChip8,
+	},
+	SystemVideo: {
+		Id: SystemVideo,
 	},
 }

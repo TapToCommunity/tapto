@@ -1,6 +1,16 @@
 package tokens
 
-import "time"
+import (
+	"time"
+)
+
+const (
+	TypeNTAG           = "NTAG"
+	TypeMifare         = "MIFARE"
+	TypeAmiibo         = "Amiibo"
+	TypeLegoDimensions = "LegoDimensions"
+	SourcePlaylist     = "Playlist"
+)
 
 type Token struct {
 	Type     string
@@ -11,11 +21,3 @@ type Token struct {
 	Remote   bool
 	Source   string
 }
-
-const (
-	TypeNTAG           = "NTAG"
-	TypeMifare         = "MIFARE"
-	TypeAmiibo         = "Amiibo"
-	TypeLegoDimensions = "LegoDimensions"
-	SourcePlaylist     = "Playlist"
-)

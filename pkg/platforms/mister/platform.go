@@ -5,11 +5,13 @@ package mister
 import (
 	"bufio"
 	"encoding/xml"
+	"errors"
 	"fmt"
 	"github.com/wizzomafizzo/tapto/pkg/api/models"
 	"github.com/wizzomafizzo/tapto/pkg/database/gamesdb"
 	"github.com/wizzomafizzo/tapto/pkg/readers/optical_drive"
 	"github.com/wizzomafizzo/tapto/pkg/service/tokens"
+	"github.com/wizzomafizzo/tapto/pkg/utils"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -292,7 +294,14 @@ func (p *Platform) LaunchSystem(cfg *config.UserConfig, id string) error {
 }
 
 func (p *Platform) LaunchFile(cfg *config.UserConfig, path string) error {
-	return mister.LaunchGenericFile(UserConfigToMrext(cfg), path)
+	launchers := utils.PathToLaunchers(cfg, p, path)
+
+	if len(launchers) == 0 {
+		return errors.New("no launcher found")
+	}
+
+	// just pick the first one for now
+	return launchers[0].Launch(cfg, path)
 }
 
 func (p *Platform) Shell(cmd string) error {
@@ -480,7 +489,7 @@ func (p *Platform) Launchers() []platforms.Launcher {
 		Id:         gamesdb.SystemNeoGeo,
 		SystemId:   gamesdb.SystemNeoGeo,
 		Folders:    []string{"NEOGEO"},
-		Extensions: []string{".neo"}, // TODO: .zip and folder support
+		Extensions: []string{".neo"},
 		Launch:     launch,
 		Scanner: func(
 			cfg *config.UserConfig,
@@ -544,8 +553,18 @@ func (p *Platform) Launchers() []platforms.Launcher {
 		},
 	}
 
+	mplayerVideo := platforms.Launcher{
+		Id:         "MPlayerVideo",
+		SystemId:   gamesdb.SystemVideo,
+		Folders:    []string{"Video", "Movies", "TV"},
+		Extensions: []string{".mp4", ".mkv", ".avi"},
+		Launch:     launchMPlayer(*p),
+		Kill:       killMPlayer,
+	}
+
 	ls := Launchers
 	ls = append(ls, amiga)
 	ls = append(ls, neogeo)
+	ls = append(ls, mplayerVideo)
 	return ls
 }

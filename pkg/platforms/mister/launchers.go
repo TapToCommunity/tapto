@@ -3,12 +3,18 @@
 package mister
 
 import (
+	"fmt"
 	"github.com/rs/zerolog/log"
 	"github.com/wizzomafizzo/mrext/pkg/games"
 	"github.com/wizzomafizzo/mrext/pkg/mister"
 	"github.com/wizzomafizzo/tapto/pkg/config"
 	"github.com/wizzomafizzo/tapto/pkg/database/gamesdb"
 	"github.com/wizzomafizzo/tapto/pkg/platforms"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"strings"
+	"time"
 )
 
 func launch(cfg *config.UserConfig, path string) error {
@@ -49,7 +55,127 @@ func launchAltCore(
 	}
 }
 
+func killCore(_ *config.UserConfig) error {
+	return mister.LaunchMenu()
+}
+
+func launchMPlayer(pl Platform) func(*config.UserConfig, string) error {
+	return func(_ *config.UserConfig, path string) error {
+		if len(path) == 0 {
+			return fmt.Errorf("no path specified")
+		}
+
+		vt := "4"
+
+		if pl.ActiveSystem() != "" {
+
+		}
+
+		//err := mister.LaunchMenu()
+		//if err != nil {
+		//	return err
+		//}
+		//time.Sleep(3 * time.Second)
+
+		err := cleanConsole(vt)
+		if err != nil {
+			return err
+		}
+
+		err = openConsole(pl.kbd, vt)
+		if err != nil {
+			return err
+		}
+
+		time.Sleep(500 * time.Millisecond)
+		err = mister.SetVideoMode(640, 480)
+		if err != nil {
+			return fmt.Errorf("error setting video mode: %w", err)
+		}
+
+		cmd := exec.Command(
+			"nice",
+			"-n",
+			"-20",
+			filepath.Join(LinuxFolder, "mplayer"),
+			"-cache",
+			"8192",
+			path,
+		)
+		cmd.Env = append(os.Environ(), "LD_LIBRARY_PATH="+LinuxFolder)
+		cmd.Stdin = os.Stdin
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+
+		restore := func() {
+			err := mister.LaunchMenu()
+			if err != nil {
+				log.Warn().Err(err).Msg("error launching menu")
+			}
+
+			err = restoreConsole(vt)
+			if err != nil {
+				log.Warn().Err(err).Msg("error restoring console")
+			}
+		}
+
+		err = cmd.Start()
+		if err != nil {
+			restore()
+			return err
+		}
+
+		err = cmd.Wait()
+		if err != nil {
+			restore()
+			return err
+		}
+
+		restore()
+		return nil
+	}
+}
+
+func killMPlayer(_ *config.UserConfig) error {
+	psCmd := exec.Command("sh", "-c", "ps aux | grep mplayer | grep -v grep")
+	output, err := psCmd.Output()
+	if err != nil {
+		log.Info().Msgf("mplayer processes not detected.")
+		return nil
+	}
+
+	lines := strings.Split(string(output), "\n")
+	for _, line := range lines {
+		if line == "" {
+			continue
+		}
+
+		log.Debug().Msgf("processing line: %s", line)
+
+		fields := strings.Fields(line)
+		if len(fields) < 2 {
+			log.Warn().Msgf("unexpected line format: %s", line)
+			continue
+		}
+
+		pid := fields[0]
+		log.Info().Msgf("killing mplayer process with PID: %s", pid)
+
+		killCmd := exec.Command("kill", "-9", pid)
+		if err := killCmd.Run(); err != nil {
+			log.Error().Msgf("failed to kill process %s: %v", pid, err)
+		}
+	}
+
+	return nil
+}
+
 var Launchers = []platforms.Launcher{
+	{
+		Id:         "Generic",
+		Extensions: []string{".mgl", ".rbf", ".mra"},
+		Launch:     launch,
+	},
 	// Consoles
 	{
 		Id:         gamesdb.SystemAdventureVision,
