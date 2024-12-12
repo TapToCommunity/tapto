@@ -64,15 +64,15 @@ func (p *Platform) Stop() error {
 	return nil
 }
 
-func (p *Platform) AfterScanHook(token tokens.Token) error {
+func (p *Platform) AfterScanHook(_ tokens.Token) error {
 	return nil
 }
 
-func (p *Platform) ReadersUpdateHook(readers map[string]*readers.Reader) error {
+func (p *Platform) ReadersUpdateHook(_ map[string]*readers.Reader) error {
 	return nil
 }
 
-func (p *Platform) RootFolders(cfg *config.UserConfig) []string {
+func (p *Platform) RootFolders(_ *config.UserConfig) []string {
 	return []string{}
 }
 
@@ -88,7 +88,7 @@ func (p *Platform) LogFolder() string {
 	return filepath.Join(os.TempDir(), "zaparoo")
 }
 
-func (p *Platform) NormalizePath(cfg *config.UserConfig, path string) string {
+func (p *Platform) NormalizePath(_ *config.UserConfig, path string) string {
 	return path
 }
 
@@ -104,7 +104,7 @@ func (p *Platform) LaunchingEnabled() bool {
 	return true
 }
 
-func (p *Platform) SetLaunching(disabled bool) error {
+func (p *Platform) SetLaunching(_ bool) error {
 	return nil
 }
 
@@ -112,10 +112,10 @@ func (p *Platform) GetActiveLauncher() string {
 	return ""
 }
 
-func (p *Platform) PlayFailSound(cfg *config.UserConfig) {
+func (p *Platform) PlayFailSound(_ *config.UserConfig) {
 }
 
-func (p *Platform) PlaySuccessSound(cfg *config.UserConfig) {
+func (p *Platform) PlaySuccessSound(_ *config.UserConfig) {
 }
 
 func (p *Platform) ActiveSystem() string {
@@ -134,27 +134,24 @@ func (p *Platform) ActiveGamePath() string {
 	return ""
 }
 
-func (p *Platform) LaunchSystem(cfg *config.UserConfig, id string) error {
+func (p *Platform) LaunchSystem(_ *config.UserConfig, _ string) error {
 	return nil
 }
 
 func (p *Platform) LaunchFile(cfg *config.UserConfig, path string) error {
 	log.Info().Msgf("launching file: %s", path)
-
 	launchers := utils.PathToLaunchers(cfg, p, path)
-
 	if len(launchers) == 0 {
 		return errors.New("no launcher found")
 	}
-
 	return launchers[0].Launch(cfg, path)
 }
 
 func (p *Platform) Shell(cmd string) error {
-	return nil
+	return exec.Command("bash", "-c", cmd).Start()
 }
 
-func (p *Platform) KeyboardInput(input string) error {
+func (p *Platform) KeyboardInput(_ string) error {
 	return nil
 }
 
@@ -166,7 +163,7 @@ func (p *Platform) GamepadPress(name string) error {
 	return nil
 }
 
-func (p *Platform) ForwardCmd(env platforms.CmdEnv) error {
+func (p *Platform) ForwardCmd(_ platforms.CmdEnv) error {
 	return nil
 }
 
