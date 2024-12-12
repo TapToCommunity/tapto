@@ -3,6 +3,7 @@ package utils
 import (
 	"github.com/ZaparooProject/zaparoo-core/pkg/config"
 	"github.com/ZaparooProject/zaparoo-core/pkg/platforms"
+	"os"
 	"path/filepath"
 	"strings"
 )
@@ -92,4 +93,13 @@ func PathToLaunchers(
 		}
 	}
 	return launchers
+}
+
+func ExeDir() string {
+	exe, err := os.Executable()
+	if err != nil {
+		return ""
+	}
+
+	return filepath.Dir(exe)
 }

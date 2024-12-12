@@ -79,7 +79,7 @@ func (f *Flags) Pre(pl platforms.Platform) {
 	flag.Parse()
 
 	if *f.Version {
-		fmt.Printf("TapTo v%s (%s)\n", config.Version, pl.Id())
+		fmt.Printf("Zaparoo v%s (%s)\n", config.Version, pl.Id())
 		os.Exit(0)
 	}
 }
