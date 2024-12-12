@@ -158,6 +158,11 @@ tasks:
       - scp _build/mistex_arm64/tapto.sh root@${MISTEX_IP}:/media/fat/Scripts/tapto.sh
       - ssh root@${MISTEX_IP} /media/fat/Scripts/tapto.sh -service restart
 
+  deploy-steamos:
+    cmds:
+      - task: build-steamos-amd64
+      - scp _build/steamos_amd64/tapto deck@${STEAMOS_IP}:/home/deck/zaparoo/tapto
+
   clean: rm -rf _build
 
   test: go test ./...
