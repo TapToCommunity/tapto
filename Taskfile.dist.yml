@@ -41,6 +41,13 @@ tasks:
     cmds:
       - docker build --platform linux/amd64 -t {{.IMAGE_NAME}} {{.DOCKERFILE}}
 
+  build-image-steamos-amd64:
+    vars:
+      IMAGE_NAME: zaparoo/steamos-amd64-build
+      DOCKERFILE: "./scripts/linux_amd64/build"
+    cmds:
+      - docker build --platform linux/amd64 -t {{.IMAGE_NAME}} {{.DOCKERFILE}}
+
   build-mister:
     vars:
       BUILD_DIR: "./_build/mister_arm"
@@ -103,6 +110,19 @@ tasks:
       - docker run --rm --platform linux/amd64 -v {{.BUILDCACHE}}:{{.IMG_BUILDCACHE}} -v {{.MODCACHE}}:{{.IMG_MODCACHE}} -v ${PWD}:/build --user 1000:1000 {{.IMAGE_NAME}} bash -c "PLATFORM=batocera TAPTO_BIN=tapto task build"
       - rm -f {{.BUILD_DIR}}/tapto-batocera_amd64.zip
       - zip -j {{.BUILD_DIR}}/tapto-batocera_amd64.zip {{.BUILD_DIR}}/tapto
+
+  build-steamos-amd64:
+    vars:
+      BUILD_DIR: "./_build/steamos_amd64"
+      BUILDCACHE: "{{.BUILD_DIR}}/.go-buildcache"
+      MODCACHE: "{{.BUILD_DIR}}/.go-modcache"
+      IMAGE_NAME: zaparoo/steamos-amd64-build
+      IMG_BUILDCACHE: /home/build/.cache/go-build
+      IMG_MODCACHE: /home/build/go/pkg/mod
+    cmds:
+      - docker run --rm --platform linux/amd64 -v {{.BUILDCACHE}}:{{.IMG_BUILDCACHE}} -v {{.MODCACHE}}:{{.IMG_MODCACHE}} -v ${PWD}:/build --user 1000:1000 {{.IMAGE_NAME}} bash -c "PLATFORM=steamos TAPTO_BIN=tapto task build"
+      - rm -f {{.BUILD_DIR}}/zaparoo-steamos_amd64.zip
+      - zip -j {{.BUILD_DIR}}/zaparoo-steamos_amd64.zip {{.BUILD_DIR}}/tapto
 
   build-windows:
     vars:
