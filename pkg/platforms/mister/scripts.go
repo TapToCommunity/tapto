@@ -14,7 +14,7 @@ import (
 	"github.com/wizzomafizzo/mrext/pkg/input"
 )
 
-func openConsole(kbd input.Keyboard) error {
+func openConsole(kbd input.Keyboard, vt string) error {
 	getTty := func() (string, error) {
 		sys := "/sys/devices/virtual/tty/tty0/active"
 		if _, err := os.Stat(sys); err != nil {
@@ -36,7 +36,7 @@ func openConsole(kbd input.Keyboard) error {
 	// which sets tty to 1 on success, then check in a loop if it actually did change to 1 and keep pressing F9
 	// until it's switched
 
-	err := exec.Command("chvt", "3").Run()
+	err := exec.Command("chvt", vt).Run()
 	if err != nil {
 		return err
 	}
@@ -78,7 +78,7 @@ func runScript(pl Platform, bin string, args string, hidden bool) error {
 	}
 
 	if !hidden {
-		err := openConsole(pl.kbd)
+		err := openConsole(pl.kbd, "3")
 		if err != nil {
 			hidden = true
 			log.Warn().Msg("error opening console, running script headless")
@@ -134,4 +134,46 @@ cd $(dirname "%s")
 		cmd.Dir = filepath.Dir(bin)
 		return cmd.Run()
 	}
+}
+
+func echoFile(path string, s string) error {
+	f, err := os.OpenFile(path, os.O_WRONLY, 0)
+	if err != nil {
+		return err
+	}
+
+	_, err = f.WriteString(s)
+	if err != nil {
+		return err
+	}
+
+	return f.Close()
+}
+
+func writeTty(id string, s string) error {
+	tty := "/dev/tty" + id
+	return echoFile(tty, s)
+}
+
+func cleanConsole(vt string) error {
+	err := writeTty(vt, "\033[?25l")
+	if err != nil {
+		return err
+	}
+
+	err = echoFile("/sys/class/graphics/fbcon/cursor_blink", "0")
+	if err != nil {
+		return err
+	}
+
+	return writeTty(vt, "\033[?17;0;0c")
+}
+
+func restoreConsole(vt string) error {
+	err := writeTty(vt, "\033[?25h")
+	if err != nil {
+		return err
+	}
+
+	return echoFile("/sys/class/graphics/fbcon/cursor_blink", "1")
 }

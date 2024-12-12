@@ -240,7 +240,7 @@ func NewNamesIndex(
 		update(status)
 
 		for _, path := range systemPaths[k] {
-			pathFiles, err := GetFiles(platform, k, path)
+			pathFiles, err := GetFiles(cfg, platform, k, path)
 			if err != nil {
 				return status.Files, fmt.Errorf("error getting files: %s", err)
 			}

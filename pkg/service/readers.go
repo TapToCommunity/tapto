@@ -5,7 +5,6 @@ import (
 	"github.com/wizzomafizzo/tapto/pkg/service/tokens"
 	"strings"
 	"time"
-    	"os/exec"
 
 	"github.com/rs/zerolog/log"
 	"github.com/wizzomafizzo/tapto/pkg/config"
@@ -126,39 +125,6 @@ func connectReaders(
 	return nil
 }
 
-func stopMPlayer() {
-    psCmd := exec.Command("sh", "-c", "ps aux | grep mplayer | grep -v grep")
-    output, err := psCmd.Output()
-    if err != nil {
-        log.Info().Msgf("mplayer processes not detected.")
-        return
-    }
-
-    lines := strings.Split(string(output), "\n")
-    for _, line := range lines {
-        if line == "" {
-            continue
-        }
-
-        log.Debug().Msgf("Processing line: %s", line)
-
-        fields := strings.Fields(line)
-        if len(fields) < 2 {
-            log.Warn().Msgf("Unexpected line format: %s", line)
-            continue
-        }
-
-        pid := fields[0]
-        log.Info().Msgf("Killing mplayer process with PID: %s", pid)
-
-        killCmd := exec.Command("kill", "-9", pid)
-        if err := killCmd.Run(); err != nil {
-            log.Error().Msgf("Failed to kill process %s: %v", pid, err)
-        }
-    }
-}
-
-
 func readerManager(
 	pl platforms.Platform,
 	cfg *config.UserConfig,
@@ -166,7 +132,7 @@ func readerManager(
 	itq chan<- tokens.Token,
 	lsq chan *tokens.Token,
 ) {
-	inputQueue := make(chan readers.Scan)
+	scanQueue := make(chan readers.Scan)
 
 	var err error
 	var lastError time.Time
@@ -229,7 +195,7 @@ func readerManager(
 					}
 				}
 
-				err := connectReaders(pl, cfg, st, inputQueue)
+				err := connectReaders(pl, cfg, st, scanQueue)
 				if err != nil {
 					log.Error().Msgf("error connecting rs: %s", err)
 				}
@@ -242,7 +208,7 @@ func readerManager(
 		var scan *tokens.Token
 
 		select {
-		case t := <-inputQueue:
+		case t := <-scanQueue:
 			// a reader has sent a token for pre-processing
 			log.Debug().Msgf("pre-processing token: %v", t)
 			if t.Error != nil {
@@ -304,7 +270,7 @@ func readerManager(
 		} else {
 			log.Info().Msg("token was removed")
 			st.SetActiveCard(tokens.Token{})
-			stopMPlayer()
+			//stopMPlayer()
 			if shouldExit(cfg, pl, st) {
 				startTimedExit()
 			}
