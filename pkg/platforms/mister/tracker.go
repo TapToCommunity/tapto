@@ -7,7 +7,7 @@ package mister
 
 import (
 	"fmt"
-	"github.com/wizzomafizzo/tapto/pkg/api/models"
+	"github.com/ZaparooProject/zaparoo-core/pkg/api/models"
 	"os"
 	"path/filepath"
 	"strings"

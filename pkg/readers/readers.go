@@ -1,7 +1,7 @@
 package readers
 
 import (
-	"github.com/wizzomafizzo/tapto/pkg/service/tokens"
+	"github.com/ZaparooProject/zaparoo-core/pkg/service/tokens"
 )
 
 type Scan struct {

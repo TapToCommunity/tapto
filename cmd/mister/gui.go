@@ -25,14 +25,14 @@ import (
 	"path"
 	"strings"
 
+	"github.com/ZaparooProject/zaparoo-core/pkg/config"
+	"github.com/ZaparooProject/zaparoo-core/pkg/platforms"
+	"github.com/ZaparooProject/zaparoo-core/pkg/platforms/mister"
+	"github.com/ZaparooProject/zaparoo-core/pkg/utils"
 	"github.com/rs/zerolog/log"
 	"github.com/rthornton128/goncurses"
 	"github.com/wizzomafizzo/mrext/pkg/curses"
 	mrextMister "github.com/wizzomafizzo/mrext/pkg/mister"
-	"github.com/wizzomafizzo/tapto/pkg/config"
-	"github.com/wizzomafizzo/tapto/pkg/platforms"
-	"github.com/wizzomafizzo/tapto/pkg/platforms/mister"
-	"github.com/wizzomafizzo/tapto/pkg/utils"
 )
 
 func tryAddStartup(stdscr *goncurses.Window) error {

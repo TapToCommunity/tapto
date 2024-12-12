@@ -10,9 +10,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ZaparooProject/zaparoo-core/pkg/platforms"
 	"github.com/rs/zerolog/log"
 	"github.com/wizzomafizzo/mrext/pkg/mister"
-	"github.com/wizzomafizzo/tapto/pkg/platforms"
 )
 
 func CmdIni(_ platforms.Platform, env platforms.CmdEnv) error {

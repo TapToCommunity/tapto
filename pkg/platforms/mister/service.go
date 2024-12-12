@@ -14,8 +14,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/ZaparooProject/zaparoo-core/pkg/config"
 	"github.com/rs/zerolog/log"
-	"github.com/wizzomafizzo/tapto/pkg/config"
 )
 
 type ServiceEntry func() (func() error, error)

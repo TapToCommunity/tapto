@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/wizzomafizzo/tapto/pkg/utils"
+	"github.com/ZaparooProject/zaparoo-core/pkg/utils"
 )
 
 // The Systems list contains all the supported systems such as consoles,

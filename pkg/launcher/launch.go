@@ -2,7 +2,7 @@ package launcher
 
 import (
 	"fmt"
-	"github.com/wizzomafizzo/tapto/pkg/service/playlists"
+	"github.com/ZaparooProject/zaparoo-core/pkg/service/playlists"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -10,9 +10,9 @@ import (
 
 	"github.com/rs/zerolog/log"
 
-	"github.com/wizzomafizzo/tapto/pkg/database/gamesdb"
-	"github.com/wizzomafizzo/tapto/pkg/platforms"
-	"github.com/wizzomafizzo/tapto/pkg/utils"
+	"github.com/ZaparooProject/zaparoo-core/pkg/database/gamesdb"
+	"github.com/ZaparooProject/zaparoo-core/pkg/platforms"
+	"github.com/ZaparooProject/zaparoo-core/pkg/utils"
 )
 
 func cmdSystem(pl platforms.Platform, env platforms.CmdEnv) error {

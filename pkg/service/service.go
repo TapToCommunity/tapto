@@ -23,20 +23,20 @@ package service
 
 import (
 	"fmt"
-	"github.com/wizzomafizzo/tapto/pkg/api"
-	"github.com/wizzomafizzo/tapto/pkg/service/playlists"
-	"github.com/wizzomafizzo/tapto/pkg/service/tokens"
+	"github.com/ZaparooProject/zaparoo-core/pkg/api"
+	"github.com/ZaparooProject/zaparoo-core/pkg/service/playlists"
+	"github.com/ZaparooProject/zaparoo-core/pkg/service/tokens"
 	"strings"
 	"time"
 
 	"golang.org/x/exp/slices"
 
+	"github.com/ZaparooProject/zaparoo-core/pkg/config"
+	"github.com/ZaparooProject/zaparoo-core/pkg/database"
+	"github.com/ZaparooProject/zaparoo-core/pkg/launcher"
+	"github.com/ZaparooProject/zaparoo-core/pkg/platforms"
+	"github.com/ZaparooProject/zaparoo-core/pkg/service/state"
 	"github.com/rs/zerolog/log"
-	"github.com/wizzomafizzo/tapto/pkg/config"
-	"github.com/wizzomafizzo/tapto/pkg/database"
-	"github.com/wizzomafizzo/tapto/pkg/launcher"
-	"github.com/wizzomafizzo/tapto/pkg/platforms"
-	"github.com/wizzomafizzo/tapto/pkg/service/state"
 )
 
 func inExitGameBlocklist(platform platforms.Platform, cfg *config.UserConfig) bool {

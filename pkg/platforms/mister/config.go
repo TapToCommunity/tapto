@@ -3,8 +3,8 @@
 package mister
 
 import (
+	"github.com/ZaparooProject/zaparoo-core/pkg/config"
 	mrextConfig "github.com/wizzomafizzo/mrext/pkg/config"
-	"github.com/wizzomafizzo/tapto/pkg/config"
 )
 
 const (

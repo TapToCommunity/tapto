@@ -1,4 +1,4 @@
-module github.com/wizzomafizzo/tapto
+module github.com/ZaparooProject/zaparoo-core
 
 go 1.19
 

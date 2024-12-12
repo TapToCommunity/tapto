@@ -27,8 +27,8 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"github.com/ZaparooProject/zaparoo-core/pkg/service/tokens"
 	"github.com/rs/zerolog/log"
-	"github.com/wizzomafizzo/tapto/pkg/service/tokens"
 
 	"github.com/clausecker/nfc/v2"
 	"golang.org/x/exp/slices"

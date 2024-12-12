@@ -2,9 +2,9 @@ package methods
 
 import (
 	"encoding/json"
+	"github.com/ZaparooProject/zaparoo-core/pkg/api/models"
+	"github.com/ZaparooProject/zaparoo-core/pkg/api/models/requests"
 	"github.com/rs/zerolog/log"
-	"github.com/wizzomafizzo/tapto/pkg/api/models"
-	"github.com/wizzomafizzo/tapto/pkg/api/models/requests"
 )
 
 func HandleSettings(env requests.RequestEnv) (any, error) {

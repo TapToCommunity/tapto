@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"encoding/hex"
 	"errors"
-	"github.com/wizzomafizzo/tapto/pkg/service/tokens"
+	"github.com/ZaparooProject/zaparoo-core/pkg/service/tokens"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -12,10 +12,10 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ZaparooProject/zaparoo-core/pkg/config"
+	"github.com/ZaparooProject/zaparoo-core/pkg/readers"
+	"github.com/ZaparooProject/zaparoo-core/pkg/utils"
 	"github.com/rs/zerolog/log"
-	"github.com/wizzomafizzo/tapto/pkg/config"
-	"github.com/wizzomafizzo/tapto/pkg/readers"
-	"github.com/wizzomafizzo/tapto/pkg/utils"
 
 	"go.bug.st/serial"
 )

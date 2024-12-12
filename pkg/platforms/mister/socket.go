@@ -4,12 +4,12 @@ package mister
 
 import (
 	"fmt"
-	"github.com/wizzomafizzo/tapto/pkg/service/tokens"
+	"github.com/ZaparooProject/zaparoo-core/pkg/service/tokens"
 	"net"
 	"strings"
 
+	"github.com/ZaparooProject/zaparoo-core/pkg/readers"
 	"github.com/rs/zerolog/log"
-	"github.com/wizzomafizzo/tapto/pkg/readers"
 )
 
 const (

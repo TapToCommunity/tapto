@@ -1,12 +1,12 @@
 package methods
 
 import (
+	"github.com/ZaparooProject/zaparoo-core/pkg/api/models"
+	"github.com/ZaparooProject/zaparoo-core/pkg/api/models/requests"
+	"github.com/ZaparooProject/zaparoo-core/pkg/config"
+	"github.com/ZaparooProject/zaparoo-core/pkg/platforms"
+	"github.com/ZaparooProject/zaparoo-core/pkg/service/state"
 	"github.com/rs/zerolog/log"
-	"github.com/wizzomafizzo/tapto/pkg/api/models"
-	"github.com/wizzomafizzo/tapto/pkg/api/models/requests"
-	"github.com/wizzomafizzo/tapto/pkg/config"
-	"github.com/wizzomafizzo/tapto/pkg/platforms"
-	"github.com/wizzomafizzo/tapto/pkg/service/state"
 )
 
 func newStatus(
