@@ -49,7 +49,7 @@ func main() {
 		os.Exit(0)
 	}
 
-	cfg, err := config.NewUserConfig(appName, &config.UserConfig{
+	cfg, err := config.NewUserConfig(&config.UserConfig{
 		TapTo: config.TapToConfig{
 			ProbeDevice: true,
 		},

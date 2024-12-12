@@ -35,7 +35,6 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/ZaparooProject/zaparoo-core/pkg/config"
-	"github.com/ZaparooProject/zaparoo-core/pkg/platforms/mister"
 	"github.com/ZaparooProject/zaparoo-core/pkg/service"
 )
 
@@ -112,10 +111,11 @@ func main() {
 		},
 	})
 
-	svc, err := mister.NewService(mister.ServiceArgs{
+	svc, err := utils.NewService(utils.ServiceArgs{
 		Entry: func() (func() error, error) {
 			return service.Start(pl, cfg)
 		},
+		Platform: pl,
 	})
 	if err != nil {
 		log.Error().Err(err).Msg("error creating service")

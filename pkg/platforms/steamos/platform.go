@@ -22,6 +22,7 @@ package steamos
 
 import (
 	"errors"
+	"github.com/ZaparooProject/zaparoo-core/pkg/readers/acr122_pcsc"
 	"github.com/ZaparooProject/zaparoo-core/pkg/readers/libnfc"
 	"github.com/ZaparooProject/zaparoo-core/pkg/service/tokens"
 	"github.com/ZaparooProject/zaparoo-core/pkg/utils"
@@ -53,6 +54,7 @@ func (p *Platform) SupportedReaders(cfg *config.UserConfig) []readers.Reader {
 		file.NewReader(cfg),
 		simple_serial.NewReader(cfg),
 		libnfc.NewReader(cfg),
+		acr122_pcsc.NewAcr122Pcsc(cfg),
 	}
 }
 
