@@ -194,7 +194,13 @@ func (p *Platform) Launchers() []platforms.Launcher {
 			Launch: func(cfg *config.UserConfig, path string) error {
 				id := strings.TrimPrefix(path, "steam://")
 				id = strings.TrimPrefix(id, "rungameid/")
-				return exec.Command("steam", "steam://rungameid/"+id).Start()
+				return exec.Command(
+					"sudo",
+					"-u",
+					"deck",
+					"steam",
+					"steam://rungameid/"+id,
+				).Start()
 			},
 		},
 		{

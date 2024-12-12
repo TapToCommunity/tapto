@@ -1,0 +1,10 @@
+[Unit]
+Description=Zaparoo service
+
+[Service]
+Type=forking
+Restart=no
+ExecStart=/home/deck/zaparoo/tapto -service start
+
+[Install]
+WantedBy=multi-user.target
