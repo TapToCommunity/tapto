@@ -3,6 +3,8 @@ package utils
 import (
 	"github.com/ZaparooProject/zaparoo-core/pkg/config"
 	"github.com/ZaparooProject/zaparoo-core/pkg/platforms"
+	"github.com/andygrunwald/vdf"
+	"github.com/rs/zerolog/log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -102,4 +104,68 @@ func ExeDir() string {
 	}
 
 	return filepath.Dir(exe)
+}
+
+func ScanSteamApps(steamDir string) ([]platforms.ScanResult, error) {
+	var results []platforms.ScanResult
+
+	f, err := os.Open(filepath.Join(steamDir, "libraryfolders.vdf"))
+	if err != nil {
+		log.Error().Err(err).Msg("error opening libraryfolders.vdf")
+		return results, nil
+	}
+
+	p := vdf.NewParser(f)
+	m, err := p.Parse()
+	if err != nil {
+		log.Error().Err(err).Msg("error parsing libraryfolders.vdf")
+		return results, nil
+	}
+
+	lfs := m["libraryfolders"].(map[string]interface{})
+	for l, v := range lfs {
+		log.Debug().Msgf("library id: %s", l)
+		ls := v.(map[string]interface{})
+
+		libraryPath := ls["path"].(string)
+		steamApps, err := os.ReadDir(filepath.Join(libraryPath, "steamapps"))
+		if err != nil {
+			log.Error().Err(err).Msg("error listing steamapps folder")
+			continue
+		}
+
+		var manifestFiles []string
+		for _, mf := range steamApps {
+			if strings.HasPrefix(mf.Name(), "appmanifest_") {
+				manifestFiles = append(manifestFiles, filepath.Join(libraryPath, "steamapps", mf.Name()))
+			}
+		}
+
+		for _, mf := range manifestFiles {
+			log.Debug().Msgf("manifest file: %s", mf)
+
+			af, err := os.Open(mf)
+			if err != nil {
+				log.Error().Err(err).Msgf("error opening manifest: %s", mf)
+				return results, nil
+			}
+
+			ap := vdf.NewParser(af)
+			am, err := ap.Parse()
+			if err != nil {
+				log.Error().Err(err).Msgf("error parsing manifest: %s", mf)
+				return results, nil
+			}
+
+			appState := am["AppState"].(map[string]interface{})
+			log.Debug().Msgf("app name: %v", appState["name"])
+
+			results = append(results, platforms.ScanResult{
+				Path: "steam://" + appState["appid"].(string),
+				Name: appState["name"].(string),
+			})
+		}
+	}
+
+	return results, nil
 }

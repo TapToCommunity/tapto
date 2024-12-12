@@ -38,7 +38,6 @@ import (
 	"github.com/ZaparooProject/zaparoo-core/pkg/readers"
 	"github.com/ZaparooProject/zaparoo-core/pkg/readers/file"
 	"github.com/ZaparooProject/zaparoo-core/pkg/readers/simple_serial"
-	"github.com/andygrunwald/vdf"
 	"github.com/rs/zerolog/log"
 )
 
@@ -82,12 +81,11 @@ func (p *Platform) ZipsAsFolders() bool {
 }
 
 func (p *Platform) ConfigFolder() string {
-	// this could be AppData instead
-	return filepath.Join(utils.ExeDir(), "data")
+	return utils.ExeDir()
 }
 
 func (p *Platform) LogFolder() string {
-	return filepath.Join(utils.ExeDir(), "logs")
+	return filepath.Join(os.TempDir(), "zaparoo")
 }
 
 func (p *Platform) NormalizePath(cfg *config.UserConfig, path string) string {
@@ -137,7 +135,6 @@ func (p *Platform) ActiveGamePath() string {
 }
 
 func (p *Platform) LaunchSystem(cfg *config.UserConfig, id string) error {
-	log.Info().Msgf("launching system: %s", id)
 	return nil
 }
 
@@ -188,58 +185,12 @@ func (p *Platform) Launchers() []platforms.Launcher {
 				systemId string,
 				results []platforms.ScanResult,
 			) ([]platforms.ScanResult, error) {
-				// TODO: check for external folders
 				root := "/home/deck/.steam/steam/steamapps"
-
-				f, err := os.Open(filepath.Join(root, "libraryfolders.vdf"))
+				appResults, err := utils.ScanSteamApps(root)
 				if err != nil {
-					log.Error().Err(err).Msg("error opening libraryfolders.vdf")
-					return results, nil
+					return nil, err
 				}
-
-				p := vdf.NewParser(f)
-				m, err := p.Parse()
-				if err != nil {
-					log.Error().Err(err).Msg("error parsing libraryfolders.vdf")
-					return results, nil
-				}
-
-				lfs := m["libraryfolders"].(map[string]interface{})
-				for l, v := range lfs {
-					log.Debug().Msgf("library id: %s", l)
-					ls := v.(map[string]interface{})
-
-					libraryPath := ls["path"].(string)
-					apps := ls["apps"].(map[string]interface{})
-
-					for id := range apps {
-						log.Debug().Msgf("app id: %s", id)
-
-						manifestPath := filepath.Join(libraryPath, "steamapps", "appmanifest_"+id+".acf")
-						af, err := os.Open(manifestPath)
-						if err != nil {
-							log.Error().Err(err).Msgf("error opening manifest: %s", manifestPath)
-							return results, nil
-						}
-
-						ap := vdf.NewParser(af)
-						am, err := ap.Parse()
-						if err != nil {
-							log.Error().Err(err).Msgf("error parsing manifest: %s", manifestPath)
-							return results, nil
-						}
-
-						appState := am["AppState"].(map[string]interface{})
-						log.Debug().Msgf("app name: %v", appState["name"])
-
-						results = append(results, platforms.ScanResult{
-							Path: "steam://" + id,
-							Name: appState["name"].(string),
-						})
-					}
-				}
-
-				return results, nil
+				return append(results, appResults...), nil
 			},
 			Launch: func(cfg *config.UserConfig, path string) error {
 				id := strings.TrimPrefix(path, "steam://")
