@@ -22,68 +22,48 @@ along with Zaparoo Core.  If not, see <http://www.gnu.org/licenses/>.
 package main
 
 import (
-	"flag"
-	"fmt"
 	"github.com/ZaparooProject/zaparoo-core/pkg/cli"
 	"github.com/ZaparooProject/zaparoo-core/pkg/config"
 	"github.com/ZaparooProject/zaparoo-core/pkg/platforms/steamos"
 	"github.com/ZaparooProject/zaparoo-core/pkg/service"
-	"github.com/ZaparooProject/zaparoo-core/pkg/utils"
 	"github.com/rs/zerolog/log"
 	"os"
+	"os/signal"
+	"syscall"
 )
 
+// TODO: fix permissions on files in ~/zaparoo so root doesn't lock them
+
 func main() {
+	sigs := make(chan os.Signal, 1)
+	defer close(sigs)
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+
 	pl := &steamos.Platform{}
+	flags := cli.SetupFlags()
+	flags.Pre(pl)
 	cfg := cli.Setup(pl, &config.UserConfig{
 		TapTo: config.TapToConfig{
-			ProbeDevice: true,
+			ProbeDevice:    true,
+			ConsoleLogging: true,
 		},
 		Api: config.ApiConfig{
 			Port: config.DefaultApiPort,
 		},
 	})
-
-	flags := cli.SetupFlags()
-	serviceFlag := flag.String(
-		"service",
-		"",
-		"manage Zaparoo service (start|stop|restart|status)",
-	)
-	flags.Pre(pl)
-	svc, err := utils.NewService(utils.ServiceArgs{
-		Entry: func() (func() error, error) {
-			return service.Start(pl, cfg)
-		},
-		Platform: pl,
-	})
-	if err != nil {
-		log.Error().Err(err).Msg("error creating service")
-		_, _ = fmt.Fprintf(os.Stderr, "Error creating service: %v\n", err)
-		os.Exit(1)
-	}
-	svc.ServiceHandler(serviceFlag)
 	flags.Post(cfg)
 
-	if !svc.Running() {
-		err := svc.Start()
-		fmt.Println("Service not running, starting...")
-		if err != nil {
-			log.Error().Err(err).Msg("error starting service")
-			fmt.Println("Error starting service:", err)
-		} else {
-			log.Info().Msg("service started manually")
-			fmt.Println("Service started.")
-		}
-	} else {
-		fmt.Println("Service is running.")
+	stop, err := service.Start(pl, cfg)
+	if err != nil {
+		log.Error().Err(err).Msg("error starting service")
+		os.Exit(1)
 	}
 
-	ip, err := utils.GetLocalIp()
+	<-sigs
+	err = stop()
 	if err != nil {
-		fmt.Println("Device address: Unknown")
-	} else {
-		fmt.Println("Device address:", ip.String())
+		log.Error().Err(err).Msg("error stopping service")
+		os.Exit(1)
 	}
 
 	os.Exit(0)

@@ -27,7 +27,8 @@ func InitLogging(cfg *config.UserConfig, pl platforms.Platform) error {
 	}}
 
 	if cfg.TapTo.ConsoleLogging {
-		BaseLogWriters = append(BaseLogWriters, zerolog.ConsoleWriter{Out: os.Stderr})
+		// BaseLogWriters = append(BaseLogWriters, zerolog.ConsoleWriter{Out: os.Stderr})
+		BaseLogWriters = append(BaseLogWriters, os.Stderr)
 	}
 
 	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix

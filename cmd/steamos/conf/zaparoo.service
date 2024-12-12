@@ -1,9 +1,12 @@
 [Unit]
-Description=Zaparoo service
+Description=Zaparoo Core service
 
 [Service]
-Type=forking
-Restart=no
+Type=exec
+Restart=on-failure
+RestartSec=5
+StandardError=syslog
+WorkingDirectory=/home/deck/zaparoo
 ExecStart=/home/deck/zaparoo/tapto -service start
 
 [Install]
