@@ -6,8 +6,8 @@ Type=exec
 Restart=on-failure
 RestartSec=5
 StandardError=syslog
-WorkingDirectory=/home/deck/zaparoo
-ExecStart=/home/deck/zaparoo/tapto -service start
+WorkingDirectory=%%INSTALL_DIR%%
+ExecStart=%%INSTALL_DIR%%/tapto -daemon
 
 [Install]
 WantedBy=multi-user.target

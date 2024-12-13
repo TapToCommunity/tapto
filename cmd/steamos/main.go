@@ -22,6 +22,8 @@ along with Zaparoo Core.  If not, see <http://www.gnu.org/licenses/>.
 package main
 
 import (
+	"flag"
+	"fmt"
 	"github.com/ZaparooProject/zaparoo-core/pkg/cli"
 	"github.com/ZaparooProject/zaparoo-core/pkg/config"
 	"github.com/ZaparooProject/zaparoo-core/pkg/platforms/steamos"
@@ -30,6 +32,8 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+
+	_ "embed"
 )
 
 // TODO: fix permissions on files in ~/zaparoo so root doesn't lock them
@@ -41,6 +45,10 @@ func main() {
 
 	pl := &steamos.Platform{}
 	flags := cli.SetupFlags()
+
+	doInstall := flag.Bool("install", false, "install zaparoo service")
+	doUninstall := flag.Bool("uninstall", false, "uninstall zaparoo service")
+
 	flags.Pre(pl)
 	cfg := cli.Setup(pl, &config.UserConfig{
 		TapTo: config.TapToConfig{
@@ -51,6 +59,27 @@ func main() {
 			Port: config.DefaultApiPort,
 		},
 	})
+
+	if *doInstall {
+		err := install()
+		if err != nil {
+			_, _ = fmt.Fprintf(os.Stderr, "Error installing service: %v\n", err)
+			log.Error().Err(err).Msg("error installing service")
+			os.Exit(1)
+		}
+		fmt.Println("Service installed, restart SteamOS")
+		os.Exit(0)
+	} else if *doUninstall {
+		err := uninstall()
+		if err != nil {
+			_, _ = fmt.Fprintf(os.Stderr, "Error uninstalling service: %v\n", err)
+			log.Error().Err(err).Msg("error uninstalling service")
+			os.Exit(1)
+		}
+		fmt.Println("Service uninstalled")
+		os.Exit(0)
+	}
+
 	flags.Post(cfg)
 
 	stop, err := service.Start(pl, cfg)
