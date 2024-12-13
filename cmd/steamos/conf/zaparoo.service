@@ -8,8 +8,8 @@ RestartSec=5
 StandardError=syslog
 User=deck
 Group=deck
-WorkingDirectory=/home/deck/zaparoo
-ExecStart=/home/deck/zaparoo/tapto
+WorkingDirectory=%%WORKING%%
+ExecStart=%%EXEC%%
 
 [Install]
 WantedBy=multi-user.target
