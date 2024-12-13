@@ -1,12 +1,9 @@
 package main
 
 import (
-	"github.com/ZaparooProject/zaparoo-core/pkg/utils"
+	_ "embed"
 	"os"
 	"os/exec"
-	"strings"
-
-	_ "embed"
 )
 
 // TODO: allow updating if files have changed
@@ -29,11 +26,6 @@ const (
 func install() error {
 	// install and prep systemd service
 	if _, err := os.Stat(servicePath); os.IsNotExist(err) {
-		serviceFile = strings.ReplaceAll(
-			serviceFile,
-			"%%INSTALL_DIR%%",
-			utils.ExeDir(),
-		)
 		err = os.WriteFile(servicePath, []byte(serviceFile), 0644)
 		if err != nil {
 			return err
