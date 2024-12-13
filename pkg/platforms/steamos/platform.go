@@ -25,7 +25,7 @@ import (
 	"github.com/ZaparooProject/zaparoo-core/pkg/readers/libnfc"
 	"github.com/ZaparooProject/zaparoo-core/pkg/service/tokens"
 	"github.com/ZaparooProject/zaparoo-core/pkg/utils"
-	"os"
+	"github.com/adrg/xdg"
 	"os/exec"
 	"path/filepath"
 	"strings"
@@ -81,11 +81,11 @@ func (p *Platform) ZipsAsFolders() bool {
 }
 
 func (p *Platform) ConfigFolder() string {
-	return utils.ExeDir()
+	return filepath.Join(xdg.DataHome, config.AppName)
 }
 
 func (p *Platform) LogFolder() string {
-	return filepath.Join(os.TempDir(), "zaparoo")
+	return filepath.Join(xdg.DataHome, config.AppName)
 }
 
 func (p *Platform) NormalizePath(_ *config.UserConfig, path string) string {

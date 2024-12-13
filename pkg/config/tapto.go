@@ -18,7 +18,7 @@ const (
 )
 
 func TempDir() string {
-	path := filepath.Join(os.TempDir(), "tapto")
+	path := filepath.Join(os.TempDir(), AppName)
 	err := os.MkdirAll(path, 0755)
 	if err != nil {
 		log.Error().Err(err).Msg("error creating temp folder")

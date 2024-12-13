@@ -28,9 +28,11 @@ import (
 	"github.com/ZaparooProject/zaparoo-core/pkg/config"
 	"github.com/ZaparooProject/zaparoo-core/pkg/platforms/steamos"
 	"github.com/ZaparooProject/zaparoo-core/pkg/service"
+	"github.com/adrg/xdg"
 	"github.com/rs/zerolog/log"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 
 	_ "embed"
@@ -50,6 +52,43 @@ func main() {
 	doUninstall := flag.Bool("uninstall", false, "uninstall zaparoo service")
 
 	flags.Pre(pl)
+
+	uid := os.Getuid()
+	if *doInstall {
+		if uid != 0 {
+			_, _ = fmt.Fprintf(os.Stderr, "Install must be run as root\n")
+			os.Exit(1)
+		}
+		err := install()
+		if err != nil {
+			_, _ = fmt.Fprintf(os.Stderr, "Error installing service: %v\n", err)
+			os.Exit(1)
+		}
+		os.Exit(0)
+	} else if *doUninstall {
+		if uid != 0 {
+			_, _ = fmt.Fprintf(os.Stderr, "Uninstall must be run as root\n")
+			os.Exit(1)
+		}
+		err := uninstall()
+		if err != nil {
+			_, _ = fmt.Fprintf(os.Stderr, "Error uninstalling service: %v\n", err)
+			os.Exit(1)
+		}
+		os.Exit(0)
+	}
+
+	if uid == 0 {
+		_, _ = fmt.Fprintf(os.Stderr, "Service must not be run as root\n")
+		os.Exit(1)
+	}
+
+	err := os.MkdirAll(filepath.Join(xdg.DataHome, config.AppName), 0755)
+	if err != nil {
+		_, _ = fmt.Fprintf(os.Stderr, "Error creating data directory: %v\n", err)
+		os.Exit(1)
+	}
+
 	cfg := cli.Setup(pl, &config.UserConfig{
 		TapTo: config.TapToConfig{
 			ProbeDevice:    true,
@@ -59,26 +98,6 @@ func main() {
 			Port: config.DefaultApiPort,
 		},
 	})
-
-	if *doInstall {
-		err := install()
-		if err != nil {
-			_, _ = fmt.Fprintf(os.Stderr, "Error installing service: %v\n", err)
-			log.Error().Err(err).Msg("error installing service")
-			os.Exit(1)
-		}
-		fmt.Println("Service installed, restart SteamOS")
-		os.Exit(0)
-	} else if *doUninstall {
-		err := uninstall()
-		if err != nil {
-			_, _ = fmt.Fprintf(os.Stderr, "Error uninstalling service: %v\n", err)
-			log.Error().Err(err).Msg("error uninstalling service")
-			os.Exit(1)
-		}
-		fmt.Println("Service uninstalled")
-		os.Exit(0)
-	}
 
 	flags.Post(cfg)
 

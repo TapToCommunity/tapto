@@ -17,12 +17,13 @@ require (
 	github.com/txn2/txeh v1.4.0 // indirect
 	golang.org/x/mod v0.18.0 // indirect
 	golang.org/x/net v0.26.0 // indirect
-	golang.org/x/sys v0.22.0 // indirect
+	golang.org/x/sys v0.26.0 // indirect
 	golang.org/x/tools v0.22.0 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0
 )
 
 require (
+	github.com/adrg/xdg v0.5.3 // indirect
 	github.com/ajg/form v1.5.1 // indirect
 	github.com/creack/goselect v0.1.2 // indirect
 	github.com/gorilla/websocket v1.5.3 // indirect
