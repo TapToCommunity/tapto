@@ -23,6 +23,7 @@ package steamos
 import (
 	"errors"
 	"github.com/ZaparooProject/zaparoo-core/pkg/readers/libnfc"
+	"github.com/ZaparooProject/zaparoo-core/pkg/readers/optical_drive"
 	"github.com/ZaparooProject/zaparoo-core/pkg/service/tokens"
 	"github.com/ZaparooProject/zaparoo-core/pkg/utils"
 	"github.com/adrg/xdg"
@@ -41,8 +42,7 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-type Platform struct {
-}
+type Platform struct{}
 
 func (p *Platform) Id() string {
 	return "steamos"
@@ -53,6 +53,7 @@ func (p *Platform) SupportedReaders(cfg *config.UserConfig) []readers.Reader {
 		file.NewReader(cfg),
 		simple_serial.NewReader(cfg),
 		libnfc.NewReader(cfg),
+		optical_drive.NewReader(cfg),
 	}
 }
 
@@ -109,6 +110,7 @@ func (p *Platform) SetLaunching(_ bool) error {
 }
 
 func (p *Platform) GetActiveLauncher() string {
+	// TODO: is this possible?
 	return ""
 }
 
@@ -123,6 +125,7 @@ func (p *Platform) ActiveSystem() string {
 }
 
 func (p *Platform) ActiveGame() string {
+	// TODO: can this go?
 	return ""
 }
 
