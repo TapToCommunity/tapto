@@ -7,7 +7,7 @@ Restart=on-failure
 RestartSec=5
 StandardError=syslog
 WorkingDirectory=%%INSTALL_DIR%%
-ExecStart=%%INSTALL_DIR%%/tapto -daemon
+ExecStart=%%INSTALL_DIR%%/tapto
 
 [Install]
 WantedBy=multi-user.target
