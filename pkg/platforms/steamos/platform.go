@@ -196,9 +196,6 @@ func (p *Platform) Launchers() []platforms.Launcher {
 				id := strings.TrimPrefix(path, "steam://")
 				id = strings.TrimPrefix(id, "rungameid/")
 				return exec.Command(
-					"sudo",
-					"-u",
-					"deck",
 					"steam",
 					"steam://rungameid/"+id,
 				).Start()
