@@ -112,6 +112,13 @@ See the [Contributors](https://wiki.zaparoo.org/Contributors) page for a complet
                     <sub><b>protogem</b></sub>
                 </a>
             </td>
+            <td align="center">
+                <a href="https://github.com/staydata">
+                    <img src="https://avatars.githubusercontent.com/u/130571429?v=4" width="100;" alt="staydata"/>
+                    <br />
+                    <sub><b>staydata</b></sub>
+                </a>
+            </td>
 		</tr>
 	<tbody>
 </table>
