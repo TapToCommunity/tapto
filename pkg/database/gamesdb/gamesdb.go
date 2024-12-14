@@ -12,11 +12,11 @@ import (
 	bolt "go.etcd.io/bbolt"
 	"golang.org/x/sync/errgroup"
 
+	"github.com/ZaparooProject/zaparoo-core/pkg/config"
+	"github.com/ZaparooProject/zaparoo-core/pkg/platforms"
+	"github.com/ZaparooProject/zaparoo-core/pkg/utils"
 	"github.com/gobwas/glob"
 	"github.com/rs/zerolog/log"
-	"github.com/wizzomafizzo/tapto/pkg/config"
-	"github.com/wizzomafizzo/tapto/pkg/platforms"
-	"github.com/wizzomafizzo/tapto/pkg/utils"
 )
 
 const (

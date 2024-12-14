@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/wizzomafizzo/tapto/pkg/utils"
+	"github.com/ZaparooProject/zaparoo-core/pkg/utils"
 	bolt "go.etcd.io/bbolt"
 )
 

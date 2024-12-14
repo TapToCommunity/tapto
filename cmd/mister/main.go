@@ -24,16 +24,17 @@ package main
 import (
 	"flag"
 	"fmt"
+	"github.com/ZaparooProject/zaparoo-core/pkg/cli"
+	"github.com/ZaparooProject/zaparoo-core/pkg/utils"
 	"github.com/rs/zerolog/log"
-	"github.com/wizzomafizzo/tapto/pkg/cli"
 	"os"
 
+	"github.com/ZaparooProject/zaparoo-core/pkg/platforms/mister"
 	gc "github.com/rthornton128/goncurses"
 	"github.com/wizzomafizzo/mrext/pkg/curses"
-	"github.com/wizzomafizzo/tapto/pkg/platforms/mister"
 
-	"github.com/wizzomafizzo/tapto/pkg/config"
-	"github.com/wizzomafizzo/tapto/pkg/service"
+	"github.com/ZaparooProject/zaparoo-core/pkg/config"
+	"github.com/ZaparooProject/zaparoo-core/pkg/service"
 
 	mrextMister "github.com/wizzomafizzo/mrext/pkg/mister"
 )
@@ -95,10 +96,11 @@ func main() {
 		},
 	})
 
-	svc, err := mister.NewService(mister.ServiceArgs{
+	svc, err := utils.NewService(utils.ServiceArgs{
 		Entry: func() (func() error, error) {
 			return service.Start(pl, cfg)
 		},
+		Platform: pl,
 	})
 	if err != nil {
 		log.Error().Err(err).Msg("error creating service")

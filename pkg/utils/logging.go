@@ -5,10 +5,10 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/ZaparooProject/zaparoo-core/pkg/config"
+	"github.com/ZaparooProject/zaparoo-core/pkg/platforms"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
-	"github.com/wizzomafizzo/tapto/pkg/config"
-	"github.com/wizzomafizzo/tapto/pkg/platforms"
 	"gopkg.in/natefinch/lumberjack.v2"
 )
 
@@ -27,7 +27,8 @@ func InitLogging(cfg *config.UserConfig, pl platforms.Platform) error {
 	}}
 
 	if cfg.TapTo.ConsoleLogging {
-		BaseLogWriters = append(BaseLogWriters, zerolog.ConsoleWriter{Out: os.Stderr})
+		// BaseLogWriters = append(BaseLogWriters, zerolog.ConsoleWriter{Out: os.Stderr})
+		BaseLogWriters = append(BaseLogWriters, os.Stderr)
 	}
 
 	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix

@@ -7,13 +7,13 @@ import (
 	"os/exec"
 	"strings"
 
+	"github.com/ZaparooProject/zaparoo-core/pkg/assets"
+	"github.com/ZaparooProject/zaparoo-core/pkg/config"
 	"github.com/rs/zerolog/log"
 	mrextConfig "github.com/wizzomafizzo/mrext/pkg/config"
 	"github.com/wizzomafizzo/mrext/pkg/games"
 	mrextMister "github.com/wizzomafizzo/mrext/pkg/mister"
 	"github.com/wizzomafizzo/mrext/pkg/utils"
-	"github.com/wizzomafizzo/tapto/pkg/assets"
-	"github.com/wizzomafizzo/tapto/pkg/config"
 )
 
 // TODO: don't want to depend on external aplay command, but i'm out of

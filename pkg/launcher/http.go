@@ -7,7 +7,7 @@ import (
 
 	"github.com/rs/zerolog/log"
 
-	"github.com/wizzomafizzo/tapto/pkg/platforms"
+	"github.com/ZaparooProject/zaparoo-core/pkg/platforms"
 )
 
 func cmdHttpGet(_ platforms.Platform, env platforms.CmdEnv) error {

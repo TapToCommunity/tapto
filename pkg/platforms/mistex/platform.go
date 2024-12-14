@@ -4,26 +4,26 @@ package mistex
 
 import (
 	"fmt"
-	"github.com/wizzomafizzo/tapto/pkg/api/models"
-	"github.com/wizzomafizzo/tapto/pkg/service/tokens"
+	"github.com/ZaparooProject/zaparoo-core/pkg/api/models"
+	"github.com/ZaparooProject/zaparoo-core/pkg/service/tokens"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strconv"
 	"time"
 
+	"github.com/ZaparooProject/zaparoo-core/pkg/config"
+	"github.com/ZaparooProject/zaparoo-core/pkg/platforms"
+	"github.com/ZaparooProject/zaparoo-core/pkg/platforms/mister"
+	"github.com/ZaparooProject/zaparoo-core/pkg/readers"
+	"github.com/ZaparooProject/zaparoo-core/pkg/readers/file"
+	"github.com/ZaparooProject/zaparoo-core/pkg/readers/libnfc"
+	"github.com/ZaparooProject/zaparoo-core/pkg/readers/simple_serial"
 	"github.com/bendahl/uinput"
 	mrextConfig "github.com/wizzomafizzo/mrext/pkg/config"
 	"github.com/wizzomafizzo/mrext/pkg/games"
 	"github.com/wizzomafizzo/mrext/pkg/input"
 	mm "github.com/wizzomafizzo/mrext/pkg/mister"
-	"github.com/wizzomafizzo/tapto/pkg/config"
-	"github.com/wizzomafizzo/tapto/pkg/platforms"
-	"github.com/wizzomafizzo/tapto/pkg/platforms/mister"
-	"github.com/wizzomafizzo/tapto/pkg/readers"
-	"github.com/wizzomafizzo/tapto/pkg/readers/file"
-	"github.com/wizzomafizzo/tapto/pkg/readers/libnfc"
-	"github.com/wizzomafizzo/tapto/pkg/readers/simple_serial"
 )
 
 type Platform struct {

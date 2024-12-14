@@ -2,14 +2,14 @@ package gamesdb
 
 import (
 	"fmt"
-	"github.com/wizzomafizzo/tapto/pkg/config"
+	"github.com/ZaparooProject/zaparoo-core/pkg/config"
 	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
 
-	"github.com/wizzomafizzo/tapto/pkg/platforms"
-	"github.com/wizzomafizzo/tapto/pkg/utils"
+	"github.com/ZaparooProject/zaparoo-core/pkg/platforms"
+	"github.com/ZaparooProject/zaparoo-core/pkg/utils"
 )
 
 type PathResult struct {

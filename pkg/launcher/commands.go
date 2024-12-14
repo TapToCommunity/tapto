@@ -22,8 +22,8 @@ package launcher
 
 import (
 	"fmt"
-	"github.com/wizzomafizzo/tapto/pkg/service/playlists"
-	"github.com/wizzomafizzo/tapto/pkg/service/tokens"
+	"github.com/ZaparooProject/zaparoo-core/pkg/service/playlists"
+	"github.com/ZaparooProject/zaparoo-core/pkg/service/tokens"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -33,8 +33,8 @@ import (
 
 	"github.com/rs/zerolog/log"
 
-	"github.com/wizzomafizzo/tapto/pkg/config"
-	"github.com/wizzomafizzo/tapto/pkg/platforms"
+	"github.com/ZaparooProject/zaparoo-core/pkg/config"
+	"github.com/ZaparooProject/zaparoo-core/pkg/platforms"
 )
 
 // TODO: adding some logging for each command

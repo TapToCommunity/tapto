@@ -1,11 +1,11 @@
 package platforms
 
 import (
-	"github.com/wizzomafizzo/tapto/pkg/api/models"
-	"github.com/wizzomafizzo/tapto/pkg/config"
-	"github.com/wizzomafizzo/tapto/pkg/readers"
-	"github.com/wizzomafizzo/tapto/pkg/service/playlists"
-	"github.com/wizzomafizzo/tapto/pkg/service/tokens"
+	"github.com/ZaparooProject/zaparoo-core/pkg/api/models"
+	"github.com/ZaparooProject/zaparoo-core/pkg/config"
+	"github.com/ZaparooProject/zaparoo-core/pkg/readers"
+	"github.com/ZaparooProject/zaparoo-core/pkg/service/playlists"
+	"github.com/ZaparooProject/zaparoo-core/pkg/service/tokens"
 )
 
 type CmdEnv struct {

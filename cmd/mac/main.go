@@ -31,11 +31,11 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 
-	"github.com/wizzomafizzo/tapto/pkg/platforms/mac"
-	"github.com/wizzomafizzo/tapto/pkg/utils"
+	"github.com/ZaparooProject/zaparoo-core/pkg/platforms/mac"
+	"github.com/ZaparooProject/zaparoo-core/pkg/utils"
 
-	"github.com/wizzomafizzo/tapto/pkg/config"
-	"github.com/wizzomafizzo/tapto/pkg/service"
+	"github.com/ZaparooProject/zaparoo-core/pkg/config"
+	"github.com/ZaparooProject/zaparoo-core/pkg/service"
 )
 
 const appName = "tapto"
@@ -49,7 +49,7 @@ func main() {
 		os.Exit(0)
 	}
 
-	cfg, err := config.NewUserConfig(appName, &config.UserConfig{
+	cfg, err := config.NewUserConfig(&config.UserConfig{
 		TapTo: config.TapToConfig{
 			ProbeDevice: true,
 		},

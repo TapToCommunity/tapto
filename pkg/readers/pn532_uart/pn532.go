@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"github.com/wizzomafizzo/tapto/pkg/service/tokens"
+	"github.com/ZaparooProject/zaparoo-core/pkg/service/tokens"
 	"time"
 
 	"github.com/rs/zerolog/log"

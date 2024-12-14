@@ -26,17 +26,16 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/wizzomafizzo/tapto/pkg/cli"
-	"github.com/wizzomafizzo/tapto/pkg/platforms/mistex"
-	"github.com/wizzomafizzo/tapto/pkg/utils"
+	"github.com/ZaparooProject/zaparoo-core/pkg/cli"
+	"github.com/ZaparooProject/zaparoo-core/pkg/platforms/mistex"
+	"github.com/ZaparooProject/zaparoo-core/pkg/utils"
 	"os"
 	"os/exec"
 
 	"github.com/rs/zerolog/log"
 
-	"github.com/wizzomafizzo/tapto/pkg/config"
-	"github.com/wizzomafizzo/tapto/pkg/platforms/mister"
-	"github.com/wizzomafizzo/tapto/pkg/service"
+	"github.com/ZaparooProject/zaparoo-core/pkg/config"
+	"github.com/ZaparooProject/zaparoo-core/pkg/service"
 )
 
 func tryAddToStartup() (bool, error) {
@@ -112,10 +111,11 @@ func main() {
 		},
 	})
 
-	svc, err := mister.NewService(mister.ServiceArgs{
+	svc, err := utils.NewService(utils.ServiceArgs{
 		Entry: func() (func() error, error) {
 			return service.Start(pl, cfg)
 		},
+		Platform: pl,
 	})
 	if err != nil {
 		log.Error().Err(err).Msg("error creating service")

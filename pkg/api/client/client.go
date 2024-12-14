@@ -3,12 +3,12 @@ package client
 import (
 	"encoding/json"
 	"errors"
+	"github.com/ZaparooProject/zaparoo-core/pkg/api"
+	"github.com/ZaparooProject/zaparoo-core/pkg/api/models"
+	"github.com/ZaparooProject/zaparoo-core/pkg/config"
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 	"github.com/rs/zerolog/log"
-	"github.com/wizzomafizzo/tapto/pkg/api"
-	"github.com/wizzomafizzo/tapto/pkg/api/models"
-	"github.com/wizzomafizzo/tapto/pkg/config"
 	"net/url"
 	"time"
 )

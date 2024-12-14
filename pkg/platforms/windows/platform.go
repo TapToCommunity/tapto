@@ -4,25 +4,25 @@ import (
 	"encoding/xml"
 	"errors"
 	"fmt"
-	"github.com/wizzomafizzo/tapto/pkg/service/tokens"
+	"github.com/ZaparooProject/zaparoo-core/pkg/service/tokens"
+	"github.com/ZaparooProject/zaparoo-core/pkg/utils"
 	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 
-	"github.com/wizzomafizzo/tapto/pkg/api/models"
+	"github.com/ZaparooProject/zaparoo-core/pkg/api/models"
 
-	"github.com/andygrunwald/vdf"
+	"github.com/ZaparooProject/zaparoo-core/pkg/config"
+	"github.com/ZaparooProject/zaparoo-core/pkg/database/gamesdb"
+	"github.com/ZaparooProject/zaparoo-core/pkg/platforms"
+	"github.com/ZaparooProject/zaparoo-core/pkg/readers"
+	"github.com/ZaparooProject/zaparoo-core/pkg/readers/acr122_pcsc"
+	"github.com/ZaparooProject/zaparoo-core/pkg/readers/file"
+	"github.com/ZaparooProject/zaparoo-core/pkg/readers/pn532_uart"
+	"github.com/ZaparooProject/zaparoo-core/pkg/readers/simple_serial"
 	"github.com/rs/zerolog/log"
-	"github.com/wizzomafizzo/tapto/pkg/config"
-	"github.com/wizzomafizzo/tapto/pkg/database/gamesdb"
-	"github.com/wizzomafizzo/tapto/pkg/platforms"
-	"github.com/wizzomafizzo/tapto/pkg/readers"
-	"github.com/wizzomafizzo/tapto/pkg/readers/acr122_pcsc"
-	"github.com/wizzomafizzo/tapto/pkg/readers/file"
-	"github.com/wizzomafizzo/tapto/pkg/readers/pn532_uart"
-	"github.com/wizzomafizzo/tapto/pkg/readers/simple_serial"
 )
 
 type Platform struct {
@@ -444,56 +444,11 @@ func (p *Platform) Launchers() []platforms.Launcher {
 			) ([]platforms.ScanResult, error) {
 				// TODO: detect this path from registry
 				root := "C:\\Program Files (x86)\\Steam\\steamapps"
-
-				f, err := os.Open(filepath.Join(root, "libraryfolders.vdf"))
+				appResults, err := utils.ScanSteamApps(root)
 				if err != nil {
-					log.Error().Err(err).Msg("error opening libraryfolders.vdf")
-					return results, nil
+					return nil, err
 				}
-
-				p := vdf.NewParser(f)
-				m, err := p.Parse()
-				if err != nil {
-					log.Error().Err(err).Msg("error parsing libraryfolders.vdf")
-					return results, nil
-				}
-
-				lfs := m["libraryfolders"].(map[string]interface{})
-				for l, v := range lfs {
-					log.Debug().Msgf("library id: %s", l)
-					ls := v.(map[string]interface{})
-
-					libraryPath := ls["path"].(string)
-					apps := ls["apps"].(map[string]interface{})
-
-					for id := range apps {
-						log.Debug().Msgf("app id: %s", id)
-
-						manifestPath := filepath.Join(libraryPath, "steamapps", "appmanifest_"+id+".acf")
-						af, err := os.Open(manifestPath)
-						if err != nil {
-							log.Error().Err(err).Msgf("error opening manifest: %s", manifestPath)
-							return results, nil
-						}
-
-						ap := vdf.NewParser(af)
-						am, err := ap.Parse()
-						if err != nil {
-							log.Error().Err(err).Msgf("error parsing manifest: %s", manifestPath)
-							return results, nil
-						}
-
-						appState := am["AppState"].(map[string]interface{})
-						log.Debug().Msgf("app name: %v", appState["name"])
-
-						results = append(results, platforms.ScanResult{
-							Path: "steam://" + id,
-							Name: appState["name"].(string),
-						})
-					}
-				}
-
-				return results, nil
+				return append(results, appResults...), nil
 			},
 			Launch: func(cfg *config.UserConfig, path string) error {
 				id := strings.TrimPrefix(path, "steam://")

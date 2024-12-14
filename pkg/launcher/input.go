@@ -7,7 +7,7 @@ import (
 
 	"github.com/rs/zerolog/log"
 
-	"github.com/wizzomafizzo/tapto/pkg/platforms"
+	"github.com/ZaparooProject/zaparoo-core/pkg/platforms"
 )
 
 // DEPRECATED

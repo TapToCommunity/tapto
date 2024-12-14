@@ -4,12 +4,12 @@ package mister
 
 import (
 	"fmt"
+	"github.com/ZaparooProject/zaparoo-core/pkg/config"
+	"github.com/ZaparooProject/zaparoo-core/pkg/database/gamesdb"
+	"github.com/ZaparooProject/zaparoo-core/pkg/platforms"
 	"github.com/rs/zerolog/log"
 	"github.com/wizzomafizzo/mrext/pkg/games"
 	"github.com/wizzomafizzo/mrext/pkg/mister"
-	"github.com/wizzomafizzo/tapto/pkg/config"
-	"github.com/wizzomafizzo/tapto/pkg/database/gamesdb"
-	"github.com/wizzomafizzo/tapto/pkg/platforms"
 	"os"
 	"os/exec"
 	"path/filepath"
