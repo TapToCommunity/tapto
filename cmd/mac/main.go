@@ -28,7 +28,6 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 
 	"github.com/ZaparooProject/zaparoo-core/pkg/platforms/mac"
@@ -49,14 +48,7 @@ func main() {
 		os.Exit(0)
 	}
 
-	cfg, err := config.NewUserConfig(&config.UserConfig{
-		TapTo: config.TapToConfig{
-			ProbeDevice: true,
-		},
-		Api: config.ApiConfig{
-			Port: config.DefaultApiPort,
-		},
-	})
+	cfg, err := config.NewConfig(config.BaseDefaults)
 	if err != nil {
 		log.Error().Msgf("error loading user config: %s", err)
 		fmt.Println("Error loading config:", err)
@@ -70,13 +62,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	if cfg.GetDebug() {
-		zerolog.SetGlobalLevel(zerolog.DebugLevel)
-	} else {
-		zerolog.SetGlobalLevel(zerolog.InfoLevel)
-	}
-
-	fmt.Println("TapTo v" + config.Version)
+	fmt.Println("Zaparoo v" + config.Version)
 
 	stopSvc, err := service.Start(pl, cfg)
 	if err != nil {

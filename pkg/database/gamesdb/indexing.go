@@ -109,7 +109,7 @@ func (r *resultsStack) get() (*[]string, error) {
 // files. This function deep searches .zip files and handles symlinks at all
 // levels.
 func GetFiles(
-	cfg *config.UserConfig,
+	cfg *config.Instance,
 	platform platforms.Platform,
 	systemId string,
 	path string,

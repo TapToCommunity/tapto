@@ -11,7 +11,7 @@ import (
 
 type RequestEnv struct {
 	Platform   platforms.Platform
-	Config     *config.UserConfig
+	Config     *config.Instance
 	State      *state.State
 	Database   *database.Database
 	TokenQueue chan<- tokens.Token

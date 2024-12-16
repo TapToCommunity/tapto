@@ -5,6 +5,7 @@ package mistex
 import (
 	"fmt"
 	"github.com/ZaparooProject/zaparoo-core/pkg/api/models"
+	"github.com/ZaparooProject/zaparoo-core/pkg/config"
 	"github.com/ZaparooProject/zaparoo-core/pkg/service/tokens"
 	"os"
 	"os/exec"
@@ -12,7 +13,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/ZaparooProject/zaparoo-core/pkg/config"
 	"github.com/ZaparooProject/zaparoo-core/pkg/platforms"
 	"github.com/ZaparooProject/zaparoo-core/pkg/platforms/mister"
 	"github.com/ZaparooProject/zaparoo-core/pkg/readers"
@@ -37,7 +37,7 @@ func (p *Platform) Id() string {
 	return "mistex"
 }
 
-func (p *Platform) SupportedReaders(cfg *config.UserConfig) []readers.Reader {
+func (p *Platform) SupportedReaders(cfg *config.Instance) []readers.Reader {
 	return []readers.Reader{
 		libnfc.NewReader(cfg),
 		file.NewReader(cfg),
@@ -45,7 +45,7 @@ func (p *Platform) SupportedReaders(cfg *config.UserConfig) []readers.Reader {
 	}
 }
 
-func (p *Platform) Setup(cfg *config.UserConfig, ns chan<- models.Notification) error {
+func (p *Platform) Setup(cfg *config.Instance, ns chan<- models.Notification) error {
 	kbd, err := input.NewKeyboard()
 	if err != nil {
 		return err
@@ -115,7 +115,7 @@ func (p *Platform) ReadersUpdateHook(readers map[string]*readers.Reader) error {
 	return nil
 }
 
-func (p *Platform) RootFolders(cfg *config.UserConfig) []string {
+func (p *Platform) RootFolders(cfg *config.Instance) []string {
 	return games.GetGamesFolders(mister.UserConfigToMrext(cfg))
 }
 
@@ -131,7 +131,7 @@ func (p *Platform) LogFolder() string {
 	return mister.TempFolder
 }
 
-func (p *Platform) NormalizePath(cfg *config.UserConfig, path string) string {
+func (p *Platform) NormalizePath(cfg *config.Instance, path string) string {
 	return mister.NormalizePath(cfg, path)
 }
 
@@ -180,11 +180,11 @@ func (p *Platform) GetActiveLauncher() string {
 	return core
 }
 
-func (p *Platform) PlayFailSound(cfg *config.UserConfig) {
+func (p *Platform) PlayFailSound(cfg *config.Instance) {
 	mister.PlayFail(cfg)
 }
 
-func (p *Platform) PlaySuccessSound(cfg *config.UserConfig) {
+func (p *Platform) PlaySuccessSound(cfg *config.Instance) {
 	mister.PlaySuccess(cfg)
 }
 
@@ -204,7 +204,7 @@ func (p *Platform) ActiveGamePath() string {
 	return p.tr.ActiveGamePath
 }
 
-func (p *Platform) LaunchSystem(cfg *config.UserConfig, id string) error {
+func (p *Platform) LaunchSystem(cfg *config.Instance, id string) error {
 	system, err := games.LookupSystem(id)
 	if err != nil {
 		return err
@@ -213,7 +213,7 @@ func (p *Platform) LaunchSystem(cfg *config.UserConfig, id string) error {
 	return mm.LaunchCore(mister.UserConfigToMrext(cfg), *system)
 }
 
-func (p *Platform) LaunchFile(cfg *config.UserConfig, path string) error {
+func (p *Platform) LaunchFile(cfg *config.Instance, path string) error {
 	return mm.LaunchGenericFile(mister.UserConfigToMrext(cfg), path)
 }
 

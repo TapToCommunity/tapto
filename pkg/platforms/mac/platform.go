@@ -2,12 +2,12 @@ package mac
 
 import (
 	"github.com/ZaparooProject/zaparoo-core/pkg/api/models"
+	"github.com/ZaparooProject/zaparoo-core/pkg/config"
 	"github.com/ZaparooProject/zaparoo-core/pkg/service/tokens"
 	"os"
 	"os/exec"
 	"path/filepath"
 
-	"github.com/ZaparooProject/zaparoo-core/pkg/config"
 	"github.com/ZaparooProject/zaparoo-core/pkg/platforms"
 	"github.com/ZaparooProject/zaparoo-core/pkg/readers"
 	"github.com/ZaparooProject/zaparoo-core/pkg/readers/file"
@@ -23,7 +23,7 @@ func (p *Platform) Id() string {
 	return "mac"
 }
 
-func (p *Platform) SupportedReaders(cfg *config.UserConfig) []readers.Reader {
+func (p *Platform) SupportedReaders(cfg *config.Instance) []readers.Reader {
 	return []readers.Reader{
 		file.NewReader(cfg),
 		simple_serial.NewReader(cfg),
@@ -31,7 +31,7 @@ func (p *Platform) SupportedReaders(cfg *config.UserConfig) []readers.Reader {
 	}
 }
 
-func (p *Platform) Setup(_ *config.UserConfig, _ chan<- models.Notification) error {
+func (p *Platform) Setup(_ *config.Instance, _ chan<- models.Notification) error {
 	return nil
 }
 
@@ -47,7 +47,7 @@ func (p *Platform) ReadersUpdateHook(readers map[string]*readers.Reader) error {
 	return nil
 }
 
-func (p *Platform) RootFolders(cfg *config.UserConfig) []string {
+func (p *Platform) RootFolders(cfg *config.Instance) []string {
 	return []string{
 		"C:\\scratch",
 	}
@@ -74,7 +74,7 @@ func (p *Platform) LogFolder() string {
 	return filepath.Join(exeDir(), "logs")
 }
 
-func (p *Platform) NormalizePath(cfg *config.UserConfig, path string) string {
+func (p *Platform) NormalizePath(cfg *config.Instance, path string) string {
 	return path
 }
 
@@ -98,10 +98,10 @@ func (p *Platform) GetActiveLauncher() string {
 	return ""
 }
 
-func (p *Platform) PlayFailSound(cfg *config.UserConfig) {
+func (p *Platform) PlayFailSound(cfg *config.Instance) {
 }
 
-func (p *Platform) PlaySuccessSound(cfg *config.UserConfig) {
+func (p *Platform) PlaySuccessSound(cfg *config.Instance) {
 }
 
 func (p *Platform) ActiveSystem() string {
@@ -120,12 +120,12 @@ func (p *Platform) ActiveGamePath() string {
 	return ""
 }
 
-func (p *Platform) LaunchSystem(cfg *config.UserConfig, id string) error {
+func (p *Platform) LaunchSystem(cfg *config.Instance, id string) error {
 	log.Info().Msgf("launching system: %s", id)
 	return nil
 }
 
-func (p *Platform) LaunchFile(cfg *config.UserConfig, path string) error {
+func (p *Platform) LaunchFile(cfg *config.Instance, path string) error {
 	log.Info().Msgf("launching file: %s", path)
 
 	if filepath.Ext(path) == ".txt" {

@@ -87,14 +87,7 @@ func main() {
 		os.Exit(0)
 	}
 
-	cfg := cli.Setup(pl, &config.UserConfig{
-		TapTo: config.TapToConfig{
-			ProbeDevice: true,
-		},
-		Api: config.ApiConfig{
-			Port: config.DefaultApiPort,
-		},
-	})
+	cfg := cli.Setup(pl, config.BaseDefaults)
 
 	svc, err := utils.NewService(utils.ServiceArgs{
 		Entry: func() (func() error, error) {

@@ -28,7 +28,6 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 
 	"github.com/ZaparooProject/zaparoo-core/pkg/platforms/batocera"
@@ -50,30 +49,18 @@ func main() {
 	}
 
 	pl := &batocera.Platform{}
-	err := utils.InitLogging(pl)
-	if err != nil {
-		fmt.Println("Error initializing logging:", err)
-		os.Exit(1)
-	}
 
-	cfg, err := config.NewUserConfig(appName, &config.UserConfig{
-		TapTo: config.TapToConfig{
-			ProbeDevice: true,
-		},
-		Api: config.ApiConfig{
-			Port: config.DefaultApiPort,
-		},
-	})
+	cfg, err := config.NewConfig(config.BaseDefaults)
 	if err != nil {
 		log.Error().Msgf("error loading user config: %s", err)
 		fmt.Println("Error loading config:", err)
 		os.Exit(1)
 	}
 
-	if cfg.GetDebug() {
-		zerolog.SetGlobalLevel(zerolog.DebugLevel)
-	} else {
-		zerolog.SetGlobalLevel(zerolog.InfoLevel)
+	err = utils.InitLogging(cfg, pl)
+	if err != nil {
+		fmt.Println("Error initializing logging:", err)
+		os.Exit(1)
 	}
 
 	fmt.Println("TapTo v" + config.Version)

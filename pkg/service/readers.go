@@ -2,11 +2,11 @@ package service
 
 import (
 	"errors"
+	"github.com/ZaparooProject/zaparoo-core/pkg/config"
 	"github.com/ZaparooProject/zaparoo-core/pkg/service/tokens"
 	"strings"
 	"time"
 
-	"github.com/ZaparooProject/zaparoo-core/pkg/config"
 	"github.com/ZaparooProject/zaparoo-core/pkg/platforms"
 	"github.com/ZaparooProject/zaparoo-core/pkg/readers"
 	"github.com/ZaparooProject/zaparoo-core/pkg/service/state"
@@ -15,11 +15,11 @@ import (
 )
 
 func shouldExit(
-	cfg *config.UserConfig,
+	cfg *config.Instance,
 	pl platforms.Platform,
 	st *state.State,
 ) bool {
-	if !cfg.GetExitGame() {
+	if !cfg.ReadersScan().Enabled {
 		return false
 	}
 
@@ -41,7 +41,7 @@ func shouldExit(
 
 func connectReaders(
 	pl platforms.Platform,
-	cfg *config.UserConfig,
+	cfg *config.Instance,
 	st *state.State,
 	iq chan<- readers.Scan,
 ) error {
@@ -127,7 +127,7 @@ func connectReaders(
 
 func readerManager(
 	pl platforms.Platform,
-	cfg *config.UserConfig,
+	cfg *config.Instance,
 	st *state.State,
 	itq chan<- tokens.Token,
 	lsq chan *tokens.Token,

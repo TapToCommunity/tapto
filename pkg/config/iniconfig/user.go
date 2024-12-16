@@ -19,9 +19,10 @@ You should have received a copy of the GNU General Public License
 along with TapTo.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-package config
+package iniconfig
 
 import (
+	"github.com/ZaparooProject/zaparoo-core/pkg/config"
 	"github.com/rs/zerolog/log"
 	"os"
 	"path/filepath"
@@ -259,7 +260,7 @@ func NewUserConfig(defaultConfig *UserConfig) (*UserConfig, error) {
 	}
 
 	if iniPath == "" {
-		iniPath = filepath.Join(filepath.Dir(exePath), AppName+".ini")
+		iniPath = filepath.Join(filepath.Dir(exePath), config.AppName+".ini")
 	}
 
 	defaultConfig.AppPath = exePath

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/hex"
 	"errors"
+	"github.com/ZaparooProject/zaparoo-core/pkg/config"
 	"github.com/ZaparooProject/zaparoo-core/pkg/service/tokens"
 	"os"
 	"path/filepath"
@@ -12,7 +13,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ZaparooProject/zaparoo-core/pkg/config"
 	"github.com/ZaparooProject/zaparoo-core/pkg/readers"
 	"github.com/ZaparooProject/zaparoo-core/pkg/utils"
 	"github.com/rs/zerolog/log"
@@ -21,7 +21,7 @@ import (
 )
 
 type Pn532UartReader struct {
-	cfg       *config.UserConfig
+	cfg       *config.Instance
 	device    string
 	name      string
 	polling   bool
@@ -29,7 +29,7 @@ type Pn532UartReader struct {
 	lastToken *tokens.Token
 }
 
-func NewReader(cfg *config.UserConfig) *Pn532UartReader {
+func NewReader(cfg *config.Instance) *Pn532UartReader {
 	return &Pn532UartReader{
 		cfg: cfg,
 	}

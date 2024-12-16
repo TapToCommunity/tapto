@@ -18,7 +18,7 @@ const (
 )
 
 func dbFile(pl platforms.Platform) string {
-	return filepath.Join(pl.ConfigFolder(), config.TapToDbFilename)
+	return filepath.Join(pl.ConfigFolder(), config.TapToDbFile)
 }
 
 // Check if the db exists on disk.

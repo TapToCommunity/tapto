@@ -119,8 +119,8 @@ func copyLogToSd(pl platforms.Platform, stdscr *goncurses.Window) error {
 		}
 	}(win)
 
-	logPath := path.Join(pl.LogFolder(), config.LogFilename)
-	newPath := path.Join("/media/fat", config.LogFilename)
+	logPath := path.Join(pl.LogFolder(), config.LogFile)
+	newPath := path.Join("/media/fat", config.LogFile)
 	err = utils.CopyFile(logPath, newPath)
 
 	printCenter := func(y int, text string) {
@@ -160,7 +160,7 @@ func uploadLog(pl platforms.Platform, stdscr *goncurses.Window) error {
 		}
 	}(win)
 
-	logPath := path.Join(pl.LogFolder(), config.LogFilename)
+	logPath := path.Join(pl.LogFolder(), config.LogFile)
 
 	printCenter := func(y int, text string) {
 		win.MovePrint(y, (width-len(text))/2, text)
@@ -307,7 +307,7 @@ func exportLog(pl platforms.Platform, stdscr *goncurses.Window) error {
 	return nil
 }
 
-func displayServiceInfo(pl platforms.Platform, cfg *config.UserConfig, stdscr *goncurses.Window, service *utils.Service) error {
+func displayServiceInfo(pl platforms.Platform, cfg *config.Instance, stdscr *goncurses.Window, service *utils.Service) error {
 	width := 50
 	height := 8
 
@@ -366,9 +366,6 @@ func displayServiceInfo(pl platforms.Platform, cfg *config.UserConfig, stdscr *g
 			ipDisplay = "Unknown"
 		} else {
 			ipDisplay = ip.String()
-			if cfg.Api.Port != config.DefaultApiPort {
-				ipDisplay += ":" + cfg.Api.Port
-			}
 		}
 
 		clearLine(4)

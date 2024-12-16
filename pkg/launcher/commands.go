@@ -21,7 +21,9 @@ along with TapTo.  If not, see <http://www.gnu.org/licenses/>.
 package launcher
 
 import (
+	"errors"
 	"fmt"
+	"github.com/ZaparooProject/zaparoo-core/pkg/config"
 	"github.com/ZaparooProject/zaparoo-core/pkg/service/playlists"
 	"github.com/ZaparooProject/zaparoo-core/pkg/service/tokens"
 	"net/url"
@@ -33,7 +35,6 @@ import (
 
 	"github.com/rs/zerolog/log"
 
-	"github.com/ZaparooProject/zaparoo-core/pkg/config"
 	"github.com/ZaparooProject/zaparoo-core/pkg/platforms"
 )
 
@@ -92,7 +93,7 @@ func forwardCmd(pl platforms.Platform, env platforms.CmdEnv) error {
 }
 
 // Check all games folders for a relative path to a file
-func findFile(pl platforms.Platform, cfg *config.UserConfig, path string) (string, error) {
+func findFile(pl platforms.Platform, cfg *config.Instance, path string) (string, error) {
 	// TODO: can do basic file exists check here too
 	if filepath.IsAbs(path) {
 		return path, nil
@@ -131,7 +132,7 @@ func findFile(pl platforms.Platform, cfg *config.UserConfig, path string) (strin
  */
 func LaunchToken(
 	pl platforms.Platform,
-	cfg *config.UserConfig,
+	cfg *config.Instance,
 	plsc playlists.PlaylistController,
 	t tokens.Token,
 	manual bool,
@@ -188,12 +189,18 @@ func LaunchToken(
 
 		if f, ok := commandMappings[cmd]; ok {
 			log.Info().Msgf("launching command: %s", cmd)
+
+			if cmd == "shell" && !cfg.IsShellCmdAllowed(args) {
+				return errors.New("shell command not allowed"), false
+			}
+
 			softwareChange := slices.Contains(softwareChangeCommands, cmd)
 			if softwareChange {
 				// a launch triggered outside a playlist itself
 				log.Debug().Msg("clearing current playlist")
 				plsc.Queue <- nil
 			}
+
 			return f(pl, env), softwareChange
 		} else {
 			return fmt.Errorf("unknown command: %s", cmd), false

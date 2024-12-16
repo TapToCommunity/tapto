@@ -17,15 +17,15 @@ import (
 	"time"
 )
 
-func launch(cfg *config.UserConfig, path string) error {
+func launch(cfg *config.Instance, path string) error {
 	return mister.LaunchGenericFile(UserConfigToMrext(cfg), path)
 }
 
 func launchSinden(
 	systemId string,
 	rbfName string,
-) func(*config.UserConfig, string) error {
-	return func(cfg *config.UserConfig, path string) error {
+) func(*config.Instance, string) error {
+	return func(cfg *config.Instance, path string) error {
 		s, err := games.GetSystem(systemId)
 		if err != nil {
 			return err
@@ -42,8 +42,8 @@ func launchSinden(
 func launchAltCore(
 	systemId string,
 	rbfPath string,
-) func(*config.UserConfig, string) error {
-	return func(cfg *config.UserConfig, path string) error {
+) func(*config.Instance, string) error {
+	return func(cfg *config.Instance, path string) error {
 		s, err := games.GetSystem(systemId)
 		if err != nil {
 			return err
@@ -55,12 +55,12 @@ func launchAltCore(
 	}
 }
 
-func killCore(_ *config.UserConfig) error {
+func killCore(_ *config.Instance) error {
 	return mister.LaunchMenu()
 }
 
-func launchMPlayer(pl Platform) func(*config.UserConfig, string) error {
-	return func(_ *config.UserConfig, path string) error {
+func launchMPlayer(pl Platform) func(*config.Instance, string) error {
+	return func(_ *config.Instance, path string) error {
 		if len(path) == 0 {
 			return fmt.Errorf("no path specified")
 		}
@@ -136,7 +136,7 @@ func launchMPlayer(pl Platform) func(*config.UserConfig, string) error {
 	}
 }
 
-func killMPlayer(_ *config.UserConfig) error {
+func killMPlayer(_ *config.Instance) error {
 	psCmd := exec.Command("sh", "-c", "ps aux | grep mplayer | grep -v grep")
 	output, err := psCmd.Output()
 	if err != nil {

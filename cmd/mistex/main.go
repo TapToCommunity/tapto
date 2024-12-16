@@ -102,15 +102,7 @@ func main() {
 		os.Exit(0)
 	}
 
-	cfg := cli.Setup(pl, &config.UserConfig{
-		TapTo: config.TapToConfig{
-			ProbeDevice: true,
-		},
-		Api: config.ApiConfig{
-			Port: config.DefaultApiPort,
-		},
-	})
-
+	cfg := cli.Setup(pl, config.BaseDefaults)
 	svc, err := utils.NewService(utils.ServiceArgs{
 		Entry: func() (func() error, error) {
 			return service.Start(pl, cfg)
@@ -126,7 +118,7 @@ func main() {
 
 	flags.Post(cfg)
 
-	fmt.Println("TapTo v" + config.Version)
+	fmt.Println("Zaparoo v" + config.Version)
 
 	added, err := tryAddToStartup()
 	if err != nil {
