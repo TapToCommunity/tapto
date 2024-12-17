@@ -19,7 +19,7 @@ func shouldExit(
 	pl platforms.Platform,
 	st *state.State,
 ) bool {
-	if !cfg.ReadersScan().Enabled {
+	if !cfg.LiveModeEnabled() {
 		return false
 	}
 
@@ -51,16 +51,11 @@ func connectReaders(
 	// TODO: this needs to gather the final list of reader paths, resolve any
 	// symlinks, remove duplicates, and then connect to them
 
-	userDevice := cfg.GetConnectionString()
-	if userDevice != "" && !utils.Contains(rs, userDevice) {
-		log.Debug().Msgf("user device not connected, adding: %s", userDevice)
-		toConnect = append(toConnect, userDevice)
-	}
-
-	for _, device := range cfg.GetReader() {
-		if !utils.Contains(rs, device) && !utils.Contains(toConnect, device) {
+	for _, device := range cfg.Readers().Connect {
+		connStr := device.Driver + ":" + device.Path
+		if !utils.Contains(rs, connStr) && !utils.Contains(toConnect, connStr) {
 			log.Debug().Msgf("config device not connected, adding: %s", device)
-			toConnect = append(toConnect, device)
+			toConnect = append(toConnect, connStr)
 		}
 	}
 
@@ -157,7 +152,7 @@ func readerManager(
 			}
 		}
 
-		timerLen := time.Second * time.Duration(cfg.GetExitGameDelay())
+		timerLen := time.Second * time.Duration(cfg.ReadersScan().ExitDelay)
 		log.Debug().Msgf("exit timer set to: %s seconds", timerLen)
 		exitTimer = time.NewTimer(timerLen)
 
