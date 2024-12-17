@@ -74,6 +74,9 @@ var BaseDefaults = Values{
 	AudioFeedback: true,
 	Readers: Readers{
 		AutoDetect: true,
+		Scan: ReadersScan{
+			Mode: ScanModeTap,
+		},
 	},
 	Api: Api{
 		Port: 7497,
@@ -132,8 +135,6 @@ func (c *Instance) Load() error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	// TODO: print loaded vals to log
-
 	if c.cfgPath == "" {
 		return errors.New("config path not set")
 	}
@@ -153,6 +154,8 @@ func (c *Instance) Load() error {
 		return err
 	}
 
+	log.Info().Any("config", newVals).Msg("loaded new config")
+
 	c.vals = newVals
 
 	return nil
@@ -167,7 +170,9 @@ func (c *Instance) Save() error {
 	}
 
 	buf := new(bytes.Buffer)
-	err := toml.NewEncoder(buf).Encode(c.vals)
+	enc := toml.NewEncoder(buf)
+	enc.Indent = ""
+	err := enc.Encode(c.vals)
 	if err != nil {
 		return err
 	}
@@ -208,6 +213,24 @@ func (c *Instance) ReadersScan() ReadersScan {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	return c.vals.Readers.Scan
+}
+
+func (c *Instance) TapModeEnabled() bool {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	if c.vals.Readers.Scan.Mode == ScanModeTap {
+		return true
+	} else if c.vals.Readers.Scan.Mode == "" {
+		return true
+	} else {
+		return false
+	}
+}
+
+func (c *Instance) LiveModeEnabled() bool {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.vals.Readers.Scan.Mode == ScanModeLive
 }
 
 func (c *Instance) SetScanMode(mode string) {
