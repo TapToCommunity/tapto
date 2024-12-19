@@ -243,6 +243,13 @@ func Start(
 	lsq := make(chan *tokens.Token)
 	plq := make(chan *playlists.Playlist)
 
+	log.Debug().Msg("running platform setup")
+	err := pl.Setup(cfg, st.Notifications)
+	if err != nil {
+		log.Error().Msgf("error setting up platform: %s", err)
+		return nil, err
+	}
+
 	log.Debug().Msg("opening database")
 	db, err := database.Open(pl)
 	if err != nil {
@@ -252,13 +259,6 @@ func Start(
 
 	log.Debug().Msg("starting API service")
 	go api.Start(pl, cfg, st, itq, db, ns)
-
-	log.Debug().Msg("running pl setup")
-	err = pl.Setup(cfg, st.Notifications)
-	if err != nil {
-		log.Error().Msgf("error setting up platform: %s", err)
-		return nil, err
-	}
 
 	if !pl.LaunchingEnabled() {
 		st.DisableLauncher()
