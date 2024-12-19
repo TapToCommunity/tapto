@@ -227,7 +227,7 @@ func (c *Instance) TapModeEnabled() bool {
 	}
 }
 
-func (c *Instance) LiveModeEnabled() bool {
+func (c *Instance) CartModeEnabled() bool {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	return c.vals.Readers.Scan.Mode == ScanModeCart
@@ -285,6 +285,10 @@ func (c *Instance) IsLauncherFileAllowed(path string) bool {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	for _, allowed := range c.vals.Launchers.AllowFile {
+		if allowed == "*" {
+			return true
+		}
+
 		// TODO: case insensitive on mister? platform option?
 		if runtime.GOOS == "windows" {
 			// do a case-insensitive comparison on windows
@@ -310,6 +314,10 @@ func (c *Instance) IsShellCmdAllowed(cmd string) bool {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	for _, allowed := range c.vals.ZapScript.AllowShell {
+		if allowed == "*" {
+			return true
+		}
+
 		if allowed == cmd {
 			return true
 		}

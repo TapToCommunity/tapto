@@ -19,7 +19,7 @@ func shouldExit(
 	pl platforms.Platform,
 	st *state.State,
 ) bool {
-	if !cfg.LiveModeEnabled() {
+	if !cfg.CartModeEnabled() {
 		return false
 	}
 
