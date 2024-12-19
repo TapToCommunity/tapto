@@ -119,7 +119,7 @@ func copyLogToSd(pl platforms.Platform, stdscr *goncurses.Window) error {
 		}
 	}(win)
 
-	logPath := path.Join(pl.LogFolder(), config.LogFile)
+	logPath := path.Join(pl.LogDir(), config.LogFile)
 	newPath := path.Join("/media/fat", config.LogFile)
 	err = utils.CopyFile(logPath, newPath)
 
@@ -160,7 +160,7 @@ func uploadLog(pl platforms.Platform, stdscr *goncurses.Window) error {
 		}
 	}(win)
 
-	logPath := path.Join(pl.LogFolder(), config.LogFile)
+	logPath := path.Join(pl.LogDir(), config.LogFile)
 
 	printCenter := func(y int, text string) {
 		win.MovePrint(y, (width-len(text))/2, text)

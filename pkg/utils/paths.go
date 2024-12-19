@@ -39,7 +39,7 @@ func PathIsLauncher(
 	// check root folder if it's not a generic launcher
 	if len(l.Folders) > 0 {
 		inRoot := false
-		for _, folder := range pl.RootFolders(cfg) {
+		for _, folder := range pl.RootDirs(cfg) {
 			if strings.HasPrefix(lp, strings.ToLower(folder)) {
 				inRoot = true
 				break

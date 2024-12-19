@@ -188,7 +188,7 @@ func GetFiles(
 			return err
 		}
 
-		if utils.IsZip(path) && platform.ZipsAsFolders() {
+		if utils.IsZip(path) && platform.ZipsAsDirs() {
 			// zip files
 			zipFiles, err := utils.ListZip(path)
 			if err != nil {

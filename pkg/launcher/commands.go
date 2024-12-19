@@ -115,7 +115,7 @@ func findFile(pl platforms.Platform, cfg *config.Instance, path string) (string,
 		}
 	}
 
-	for _, gf := range pl.RootFolders(cfg) {
+	for _, gf := range pl.RootDirs(cfg) {
 		fullPath := filepath.Join(gf, statPath)
 		if _, err := os.Stat(fullPath); err == nil {
 			log.Debug().Msgf("found file: %s", fullPath)

@@ -50,13 +50,13 @@ func (p *Platform) ReadersUpdateHook(readers map[string]*readers.Reader) error {
 	return nil
 }
 
-func (p *Platform) RootFolders(cfg *config.Instance) []string {
+func (p *Platform) RootDirs(cfg *config.Instance) []string {
 	return []string{
 		"/userdata/roms",
 	}
 }
 
-func (p *Platform) ZipsAsFolders() bool {
+func (p *Platform) ZipsAsDirs() bool {
 	return false
 }
 
@@ -69,11 +69,11 @@ func exeDir() string {
 	return filepath.Dir(exe)
 }
 
-func (p *Platform) ConfigFolder() string {
+func (p *Platform) DataDir() string {
 	return filepath.Join(exeDir(), "data")
 }
 
-func (p *Platform) LogFolder() string {
+func (p *Platform) LogDir() string {
 	return filepath.Join(exeDir(), "logs")
 }
 
@@ -132,7 +132,7 @@ func (p *Platform) LaunchFile(cfg *config.Instance, path string) error {
 	log.Info().Msgf("launching file: %s", path)
 
 	relPath := path
-	for _, rf := range p.RootFolders(cfg) {
+	for _, rf := range p.RootDirs(cfg) {
 		if strings.HasPrefix(relPath, rf+"/") {
 			relPath = strings.TrimPrefix(relPath, rf+"/")
 			break

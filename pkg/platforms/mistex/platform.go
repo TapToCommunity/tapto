@@ -115,19 +115,19 @@ func (p *Platform) ReadersUpdateHook(readers map[string]*readers.Reader) error {
 	return nil
 }
 
-func (p *Platform) RootFolders(cfg *config.Instance) []string {
+func (p *Platform) RootDirs(cfg *config.Instance) []string {
 	return games.GetGamesFolders(mister.UserConfigToMrext(cfg))
 }
 
-func (p *Platform) ZipsAsFolders() bool {
+func (p *Platform) ZipsAsDirs() bool {
 	return true
 }
 
-func (p *Platform) ConfigFolder() string {
+func (p *Platform) DataDir() string {
 	return mister.ConfigFolder
 }
 
-func (p *Platform) LogFolder() string {
+func (p *Platform) LogDir() string {
 	return mister.TempFolder
 }
 

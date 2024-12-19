@@ -57,11 +57,11 @@ func (p *Platform) ReadersUpdateHook(readers map[string]*readers.Reader) error {
 	return nil
 }
 
-func (p *Platform) RootFolders(cfg *config.Instance) []string {
+func (p *Platform) RootDirs(cfg *config.Instance) []string {
 	return []string{}
 }
 
-func (p *Platform) ZipsAsFolders() bool {
+func (p *Platform) ZipsAsDirs() bool {
 	return false
 }
 
@@ -74,12 +74,12 @@ func exeDir() string {
 	return filepath.Dir(exe)
 }
 
-func (p *Platform) ConfigFolder() string {
+func (p *Platform) DataDir() string {
 	// this could be AppData instead
 	return filepath.Join(exeDir(), "data")
 }
 
-func (p *Platform) LogFolder() string {
+func (p *Platform) LogDir() string {
 	return filepath.Join(exeDir(), "logs")
 }
 

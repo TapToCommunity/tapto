@@ -63,13 +63,14 @@ type Platform interface {
 	// List of supported readers for this platform.
 	SupportedReaders(*config.Instance) []readers.Reader
 	// List of root folders to scan for media files.
-	RootFolders(*config.Instance) []string
+	RootDirs(*config.Instance) []string
 	// Whether to treat zip files as folders during media scanning.
-	ZipsAsFolders() bool
+	ZipsAsDirs() bool
 	// Path to the configuration/database data for TapTo.
-	ConfigFolder() string // TODO: rename to data folder (because that's what it is)
+	DataDir() string
 	// Path to the log folder for TapTo.
-	LogFolder() string
+	LogDir() string
+
 	// Convert a path to a normalized form for the platform, the shortest
 	// possible path that can interpreted and lanched by TapTo. For writing
 	// to tokens.

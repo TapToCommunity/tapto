@@ -211,19 +211,19 @@ func (p *Platform) ReadersUpdateHook(readers map[string]*readers.Reader) error {
 	return nil
 }
 
-func (p *Platform) RootFolders(cfg *config.Instance) []string {
+func (p *Platform) RootDirs(cfg *config.Instance) []string {
 	return games.GetGamesFolders(UserConfigToMrext(cfg))
 }
 
-func (p *Platform) ZipsAsFolders() bool {
+func (p *Platform) ZipsAsDirs() bool {
 	return true
 }
 
-func (p *Platform) ConfigFolder() string {
+func (p *Platform) DataDir() string {
 	return ConfigFolder
 }
 
-func (p *Platform) LogFolder() string {
+func (p *Platform) LogDir() string {
 	return TempFolder
 }
 
@@ -449,7 +449,7 @@ func (p *Platform) Launchers() []platforms.Launcher {
 				return results, err
 			}
 
-			sfs := gamesdb.GetSystemPaths(p, p.RootFolders(cfg), []gamesdb.System{*s})
+			sfs := gamesdb.GetSystemPaths(p, p.RootDirs(cfg), []gamesdb.System{*s})
 			for _, sf := range sfs {
 				for _, txt := range []string{aGamesPath, aDemosPath} {
 					tp, err := gamesdb.FindPath(filepath.Join(sf.Path, txt))
@@ -505,7 +505,7 @@ func (p *Platform) Launchers() []platforms.Launcher {
 				return results, err
 			}
 
-			sfs := gamesdb.GetSystemPaths(p, p.RootFolders(cfg), []gamesdb.System{*s})
+			sfs := gamesdb.GetSystemPaths(p, p.RootDirs(cfg), []gamesdb.System{*s})
 			for _, sf := range sfs {
 				rsf, err := gamesdb.FindPath(filepath.Join(sf.Path, romsetsFilename))
 				if err == nil {

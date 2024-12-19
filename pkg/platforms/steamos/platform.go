@@ -73,19 +73,19 @@ func (p *Platform) ReadersUpdateHook(_ map[string]*readers.Reader) error {
 	return nil
 }
 
-func (p *Platform) RootFolders(_ *config.Instance) []string {
+func (p *Platform) RootDirs(_ *config.Instance) []string {
 	return []string{}
 }
 
-func (p *Platform) ZipsAsFolders() bool {
+func (p *Platform) ZipsAsDirs() bool {
 	return false
 }
 
-func (p *Platform) ConfigFolder() string {
+func (p *Platform) DataDir() string {
 	return filepath.Join(xdg.DataHome, config.AppName)
 }
 
-func (p *Platform) LogFolder() string {
+func (p *Platform) LogDir() string {
 	return filepath.Join(xdg.DataHome, config.AppName)
 }
 

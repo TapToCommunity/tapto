@@ -13,7 +13,7 @@ import (
 )
 
 func InitLogging(cfg *config.Instance, pl platforms.Platform) error {
-	logFile := filepath.Join(pl.LogFolder(), config.LogFile)
+	logFile := filepath.Join(pl.LogDir(), config.LogFile)
 
 	err := os.MkdirAll(filepath.Dir(logFile), 0755)
 	if err != nil {
