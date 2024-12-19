@@ -8,38 +8,30 @@ import (
 )
 
 const (
-	TempFolder        = "/tmp/tapto"
-	LogFile           = TempFolder + "/tapto.log"
-	DisableLaunchFile = TempFolder + "/tapto.disabled"
-	SuccessSoundFile  = TempFolder + "/success.wav"
-	FailSoundFile     = TempFolder + "/fail.wav"
-	SocketFile        = TempFolder + "/tapto.sock"
-	PidFile           = TempFolder + "/tapto.pid"
-	MappingsFile      = "/media/fat/nfc.csv"
-	TokenReadFile     = "/tmp/TOKENREAD"
-	ConfigFolder      = mrextConfig.ScriptsConfigFolder + "/tapto"
-	DbFile            = ConfigFolder + "/tapto.db"
-	GamesDbFile       = ConfigFolder + "/games.db"
-	ArcadeDbUrl       = "https://api.github.com/repositories/521644036/contents/ArcadeDatabase_CSV"
-	ArcadeDbFile      = ConfigFolder + "/ArcadeDatabase.csv"
-	ScriptsFolder     = mrextConfig.ScriptsFolder
-	CmdInterface      = "/dev/MiSTer_cmd"
-	LinuxFolder       = "/media/fat/linux"
+	TempDir            = "/tmp/zaparoo"
+	DisableLaunchFile  = TempDir + "/zaparoo.disabled"
+	SuccessSoundFile   = DataDir + "/success.wav"
+	FailSoundFile      = DataDir + "/fail.wav"
+	SocketFile         = TempDir + "/core.sock"
+	LegacyMappingsPath = "/media/fat/nfc.csv"
+	TokenReadFile      = "/tmp/TOKENREAD" // TODO: remove this, use file driver
+	DataDir            = "/media/fat/zaparoo"
+	ArcadeDbUrl        = "https://api.github.com/repositories/521644036/contents/ArcadeDatabase_CSV"
+	ArcadeDbFile       = DataDir + "/ArcadeDatabase.csv"
+	ScriptsDir         = mrextConfig.ScriptsFolder
+	CmdInterface       = "/dev/MiSTer_cmd"
+	LinuxDir           = "/media/fat/linux"
 )
 
-func UserConfigToMrext(cfg *config.UserConfig) *mrextConfig.UserConfig {
+func UserConfigToMrext(cfg *config.Instance) *mrextConfig.UserConfig {
+	var setCore []string
+	for _, v := range cfg.SystemDefaults() {
+		setCore = append(setCore, v.System+":"+v.Launcher)
+	}
 	return &mrextConfig.UserConfig{
-		AppPath: cfg.AppPath,
-		IniPath: cfg.IniPath,
-		Nfc: mrextConfig.NfcConfig{
-			ConnectionString: cfg.GetConnectionString(),
-			AllowCommands:    cfg.GetAllowCommands(),
-			DisableSounds:    cfg.GetDisableSounds(),
-			ProbeDevice:      cfg.GetProbeDevice(),
-		},
 		Systems: mrextConfig.SystemsConfig{
-			GamesFolder: cfg.Systems.GamesFolder,
-			SetCore:     cfg.Systems.SetCore,
+			GamesFolder: cfg.IndexRoots(),
+			SetCore:     setCore,
 		},
 	}
 }

@@ -2,11 +2,11 @@ package service
 
 import (
 	"errors"
+	"github.com/ZaparooProject/zaparoo-core/pkg/config"
 	"github.com/ZaparooProject/zaparoo-core/pkg/service/tokens"
 	"strings"
 	"time"
 
-	"github.com/ZaparooProject/zaparoo-core/pkg/config"
 	"github.com/ZaparooProject/zaparoo-core/pkg/platforms"
 	"github.com/ZaparooProject/zaparoo-core/pkg/readers"
 	"github.com/ZaparooProject/zaparoo-core/pkg/service/state"
@@ -15,11 +15,11 @@ import (
 )
 
 func shouldExit(
-	cfg *config.UserConfig,
+	cfg *config.Instance,
 	pl platforms.Platform,
 	st *state.State,
 ) bool {
-	if !cfg.GetExitGame() {
+	if !cfg.CartModeEnabled() {
 		return false
 	}
 
@@ -41,7 +41,7 @@ func shouldExit(
 
 func connectReaders(
 	pl platforms.Platform,
-	cfg *config.UserConfig,
+	cfg *config.Instance,
 	st *state.State,
 	iq chan<- readers.Scan,
 ) error {
@@ -51,16 +51,11 @@ func connectReaders(
 	// TODO: this needs to gather the final list of reader paths, resolve any
 	// symlinks, remove duplicates, and then connect to them
 
-	userDevice := cfg.GetConnectionString()
-	if userDevice != "" && !utils.Contains(rs, userDevice) {
-		log.Debug().Msgf("user device not connected, adding: %s", userDevice)
-		toConnect = append(toConnect, userDevice)
-	}
-
-	for _, device := range cfg.GetReader() {
-		if !utils.Contains(rs, device) && !utils.Contains(toConnect, device) {
+	for _, device := range cfg.Readers().Connect {
+		connStr := device.Driver + ":" + device.Path
+		if !utils.Contains(rs, connStr) && !utils.Contains(toConnect, connStr) {
 			log.Debug().Msgf("config device not connected, adding: %s", device)
-			toConnect = append(toConnect, device)
+			toConnect = append(toConnect, connStr)
 		}
 	}
 
@@ -127,7 +122,7 @@ func connectReaders(
 
 func readerManager(
 	pl platforms.Platform,
-	cfg *config.UserConfig,
+	cfg *config.Instance,
 	st *state.State,
 	itq chan<- tokens.Token,
 	lsq chan *tokens.Token,
@@ -157,7 +152,7 @@ func readerManager(
 			}
 		}
 
-		timerLen := time.Second * time.Duration(cfg.GetExitGameDelay())
+		timerLen := time.Second * time.Duration(cfg.ReadersScan().ExitDelay)
 		log.Debug().Msgf("exit timer set to: %s seconds", timerLen)
 		exitTimer = time.NewTimer(timerLen)
 

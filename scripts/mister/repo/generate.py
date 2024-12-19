@@ -9,12 +9,12 @@ from pathlib import Path
 from typing import TypedDict, Union, Optional, List
 
 DB_ID = "mrext/tapto"
-DL_URL_PREFIX = "https://github.com/wizzomafizzo/tapto/releases/download/{}"
-ZIP_FILENAME = "tapto-mister_arm-{}.zip"
+DL_URL_PREFIX = "https://github.com/ZaparooProject/zaparoo-core/releases/download/{}"
+ZIP_FILENAME = "zaparoo-mister_arm-{}.zip"
 SCRATCH_FOLDER = "_scratch"
 REPO_FOLDER = "scripts/mister/repo"
 FILES = [
-    "tapto.sh",
+    "zaparoo.sh",
 ]
 
 
@@ -80,7 +80,7 @@ class RepoDb(TypedDict):
     zips: dict[str, RepoDbZipsItem]
 
 
-def create_tapto_db(tag: str) -> RepoDb:
+def create_zaparoo_db(tag: str) -> RepoDb:
     zip_filename = ZIP_FILENAME.format(tag[1:])
     
     folders: dict[str, RepoDbZipFilesItem] = {

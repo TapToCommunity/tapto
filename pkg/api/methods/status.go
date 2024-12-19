@@ -11,7 +11,7 @@ import (
 
 func newStatus(
 	pl platforms.Platform,
-	cfg *config.UserConfig,
+	cfg *config.Instance,
 	st *state.State,
 ) models.StatusResponse {
 	active := st.GetActiveCard()

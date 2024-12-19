@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"github.com/ZaparooProject/zaparoo-core/pkg/config"
 	"github.com/ZaparooProject/zaparoo-core/pkg/service/tokens"
 	"os"
 	"path/filepath"
@@ -13,7 +14,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ZaparooProject/zaparoo-core/pkg/config"
 	"github.com/ZaparooProject/zaparoo-core/pkg/readers"
 	"github.com/ZaparooProject/zaparoo-core/pkg/readers/libnfc/tags"
 	"github.com/ZaparooProject/zaparoo-core/pkg/utils"
@@ -41,7 +41,7 @@ type WriteRequest struct {
 }
 
 type Reader struct {
-	cfg       *config.UserConfig
+	cfg       *config.Instance
 	conn      string
 	pnd       *nfc.Device
 	polling   bool
@@ -49,7 +49,7 @@ type Reader struct {
 	write     chan WriteRequest
 }
 
-func NewReader(cfg *config.UserConfig) *Reader {
+func NewReader(cfg *config.Instance) *Reader {
 	return &Reader{
 		cfg:   cfg,
 		write: make(chan WriteRequest),
@@ -149,7 +149,7 @@ func (r *Reader) Ids() []string {
 }
 
 func (r *Reader) Detect(connected []string) string {
-	if !r.cfg.GetProbeDevice() {
+	if !r.cfg.Readers().AutoDetect {
 		return ""
 	}
 

@@ -1,23 +1,23 @@
 //go:build linux || darwin
 
 /*
-TapTo
+Zaparoo Core
 Copyright (C) 2023, 2024 Callan Barrett
 
-This file is part of TapTo.
+This file is part of Zaparoo Core.
 
-TapTo is free software: you can redistribute it and/or modify
+Zaparoo Core is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 the Free Software Foundation, either version 3 of the License, or
 (at your option) any later version.
 
-TapTo is distributed in the hope that it will be useful,
+Zaparoo Core is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
-along with TapTo.  If not, see <http://www.gnu.org/licenses/>.
+along with Zaparoo Core.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 package mister
@@ -45,12 +45,12 @@ func LoadCsvMappings() (map[string]string, map[string]string, error) {
 	uids := make(map[string]string)
 	texts := make(map[string]string)
 
-	if _, err := os.Stat(MappingsFile); errors.Is(err, os.ErrNotExist) {
+	if _, err := os.Stat(LegacyMappingsPath); errors.Is(err, os.ErrNotExist) {
 		log.Info().Msg("no database file found, skipping")
 		return nil, nil, nil
 	}
 
-	f, err := os.Open(MappingsFile)
+	f, err := os.Open(LegacyMappingsPath)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -136,9 +136,9 @@ func StartCsvMappingsWatcher(
 				} else if event.Has(fsnotify.Remove) {
 					// editors may also delete the file on write
 					time.Sleep(delay)
-					_, err := os.Stat(MappingsFile)
+					_, err := os.Stat(LegacyMappingsPath)
 					if err == nil {
-						err = dbWatcher.Add(MappingsFile)
+						err = dbWatcher.Add(LegacyMappingsPath)
 						if err != nil {
 							log.Error().Msgf("error watching database: %s", err)
 						}
@@ -160,7 +160,7 @@ func StartCsvMappingsWatcher(
 		}
 	}()
 
-	err = dbWatcher.Add(MappingsFile)
+	err = dbWatcher.Add(LegacyMappingsPath)
 	if err != nil {
 		log.Error().Msgf("error watching database: %s", err)
 	}

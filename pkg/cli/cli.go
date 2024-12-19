@@ -92,7 +92,7 @@ type ConnQr struct {
 
 // Post actions all remaining common flags that require the environment to be
 // set up. Logging is allowed.
-func (f *Flags) Post(cfg *config.UserConfig) {
+func (f *Flags) Post(cfg *config.Instance) {
 	if *f.Write != "" {
 		data, err := json.Marshal(&models.ReaderWriteParams{
 			Text: *f.Write,
@@ -283,8 +283,8 @@ func (f *Flags) Post(cfg *config.UserConfig) {
 }
 
 // Setup initializes the user config and logging. Returns a user config object.
-func Setup(pl platforms.Platform, defaultConfig *config.UserConfig) *config.UserConfig {
-	cfg, err := config.NewUserConfig(defaultConfig)
+func Setup(pl platforms.Platform, defaultConfig config.Values) *config.Instance {
+	cfg, err := config.NewConfig(pl.ConfigDir(), defaultConfig)
 	if err != nil {
 		_, _ = fmt.Fprintf(os.Stderr, "Error loading config: %v\n", err)
 		os.Exit(1)

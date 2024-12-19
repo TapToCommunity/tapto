@@ -7,4 +7,4 @@ export CGO_LDFLAGS="-lpcsclite -lnfc -lusb -lcurses"
 
 go build \
     --ldflags "-linkmode external -extldflags -static -s -w" \
-    -o _build/mister_arm/tapto.sh ./cmd/mister
+    -o _build/mister_arm/zaparoo.sh ./cmd/mister

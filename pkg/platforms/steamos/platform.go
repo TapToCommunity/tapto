@@ -27,6 +27,7 @@ import (
 	"github.com/ZaparooProject/zaparoo-core/pkg/service/tokens"
 	"github.com/ZaparooProject/zaparoo-core/pkg/utils"
 	"github.com/adrg/xdg"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
@@ -48,7 +49,7 @@ func (p *Platform) Id() string {
 	return "steamos"
 }
 
-func (p *Platform) SupportedReaders(cfg *config.UserConfig) []readers.Reader {
+func (p *Platform) SupportedReaders(cfg *config.Instance) []readers.Reader {
 	return []readers.Reader{
 		file.NewReader(cfg),
 		simple_serial.NewReader(cfg),
@@ -57,8 +58,8 @@ func (p *Platform) SupportedReaders(cfg *config.UserConfig) []readers.Reader {
 	}
 }
 
-func (p *Platform) Setup(_ *config.UserConfig, _ chan<- models.Notification) error {
-	return nil
+func (p *Platform) Setup(_ *config.Instance, _ chan<- models.Notification) error {
+	return os.MkdirAll(filepath.Join(xdg.DataHome, config.AppName), 0755)
 }
 
 func (p *Platform) Stop() error {
@@ -73,23 +74,31 @@ func (p *Platform) ReadersUpdateHook(_ map[string]*readers.Reader) error {
 	return nil
 }
 
-func (p *Platform) RootFolders(_ *config.UserConfig) []string {
+func (p *Platform) RootDirs(_ *config.Instance) []string {
 	return []string{}
 }
 
-func (p *Platform) ZipsAsFolders() bool {
+func (p *Platform) ZipsAsDirs() bool {
 	return false
 }
 
-func (p *Platform) ConfigFolder() string {
+func (p *Platform) DataDir() string {
 	return filepath.Join(xdg.DataHome, config.AppName)
 }
 
-func (p *Platform) LogFolder() string {
+func (p *Platform) LogDir() string {
 	return filepath.Join(xdg.DataHome, config.AppName)
 }
 
-func (p *Platform) NormalizePath(_ *config.UserConfig, path string) string {
+func (p *Platform) ConfigDir() string {
+	return utils.ExeDir()
+}
+
+func (p *Platform) TempDir() string {
+	return filepath.Join(os.TempDir(), config.AppName)
+}
+
+func (p *Platform) NormalizePath(_ *config.Instance, path string) string {
 	return path
 }
 
@@ -114,10 +123,10 @@ func (p *Platform) GetActiveLauncher() string {
 	return ""
 }
 
-func (p *Platform) PlayFailSound(_ *config.UserConfig) {
+func (p *Platform) PlayFailSound(_ *config.Instance) {
 }
 
-func (p *Platform) PlaySuccessSound(_ *config.UserConfig) {
+func (p *Platform) PlaySuccessSound(_ *config.Instance) {
 }
 
 func (p *Platform) ActiveSystem() string {
@@ -137,11 +146,11 @@ func (p *Platform) ActiveGamePath() string {
 	return ""
 }
 
-func (p *Platform) LaunchSystem(_ *config.UserConfig, _ string) error {
+func (p *Platform) LaunchSystem(_ *config.Instance, _ string) error {
 	return nil
 }
 
-func (p *Platform) LaunchFile(cfg *config.UserConfig, path string) error {
+func (p *Platform) LaunchFile(cfg *config.Instance, path string) error {
 	log.Info().Msgf("launching file: %s", path)
 	launchers := utils.PathToLaunchers(cfg, p, path)
 	if len(launchers) == 0 {
@@ -181,7 +190,7 @@ func (p *Platform) Launchers() []platforms.Launcher {
 			SystemId: gamesdb.SystemPC,
 			Schemes:  []string{"steam"},
 			Scanner: func(
-				cfg *config.UserConfig,
+				cfg *config.Instance,
 				systemId string,
 				results []platforms.ScanResult,
 			) ([]platforms.ScanResult, error) {
@@ -192,7 +201,7 @@ func (p *Platform) Launchers() []platforms.Launcher {
 				}
 				return append(results, appResults...), nil
 			},
-			Launch: func(cfg *config.UserConfig, path string) error {
+			Launch: func(cfg *config.Instance, path string) error {
 				id := strings.TrimPrefix(path, "steam://")
 				id = strings.TrimPrefix(id, "rungameid/")
 				return exec.Command(
@@ -205,7 +214,7 @@ func (p *Platform) Launchers() []platforms.Launcher {
 			Id:            "Generic",
 			Extensions:    []string{".sh"},
 			AllowListOnly: true,
-			Launch: func(cfg *config.UserConfig, path string) error {
+			Launch: func(cfg *config.Instance, path string) error {
 				return exec.Command("bash", "-c", path).Start()
 			},
 		},

@@ -1,27 +1,29 @@
 /*
-TapTo
+Zaparoo Core
 Copyright (C) 2023, 2024 Callan Barrett
 
-This file is part of TapTo.
+This file is part of Zaparoo Core.
 
-TapTo is free software: you can redistribute it and/or modify
+Zaparoo Core is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 the Free Software Foundation, either version 3 of the License, or
 (at your option) any later version.
 
-TapTo is distributed in the hope that it will be useful,
+Zaparoo Core is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
-along with TapTo.  If not, see <http://www.gnu.org/licenses/>.
+along with Zaparoo Core.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 package launcher
 
 import (
+	"errors"
 	"fmt"
+	"github.com/ZaparooProject/zaparoo-core/pkg/config"
 	"github.com/ZaparooProject/zaparoo-core/pkg/service/playlists"
 	"github.com/ZaparooProject/zaparoo-core/pkg/service/tokens"
 	"net/url"
@@ -33,7 +35,6 @@ import (
 
 	"github.com/rs/zerolog/log"
 
-	"github.com/ZaparooProject/zaparoo-core/pkg/config"
 	"github.com/ZaparooProject/zaparoo-core/pkg/platforms"
 )
 
@@ -92,7 +93,7 @@ func forwardCmd(pl platforms.Platform, env platforms.CmdEnv) error {
 }
 
 // Check all games folders for a relative path to a file
-func findFile(pl platforms.Platform, cfg *config.UserConfig, path string) (string, error) {
+func findFile(pl platforms.Platform, cfg *config.Instance, path string) (string, error) {
 	// TODO: can do basic file exists check here too
 	if filepath.IsAbs(path) {
 		return path, nil
@@ -104,7 +105,7 @@ func findFile(pl platforms.Platform, cfg *config.UserConfig, path string) (strin
 	// if the file is inside a zip or virtual list, we just check that file exists
 	// TODO: both of these things are very specific to mister, it would be good to
 	//       have a more generic way of handling this for other platforms, or
-	//       implement them from tapto(?)
+	//       implement them from zaparoo(?)
 	for i, p := range ps {
 		ext := filepath.Ext(strings.ToLower(p))
 		if ext == ".zip" || ext == ".txt" {
@@ -114,7 +115,7 @@ func findFile(pl platforms.Platform, cfg *config.UserConfig, path string) (strin
 		}
 	}
 
-	for _, gf := range pl.RootFolders(cfg) {
+	for _, gf := range pl.RootDirs(cfg) {
 		fullPath := filepath.Join(gf, statPath)
 		if _, err := os.Stat(fullPath); err == nil {
 			log.Debug().Msgf("found file: %s", fullPath)
@@ -131,7 +132,7 @@ func findFile(pl platforms.Platform, cfg *config.UserConfig, path string) (strin
  */
 func LaunchToken(
 	pl platforms.Platform,
-	cfg *config.UserConfig,
+	cfg *config.Instance,
 	plsc playlists.PlaylistController,
 	t tokens.Token,
 	manual bool,
@@ -188,12 +189,18 @@ func LaunchToken(
 
 		if f, ok := commandMappings[cmd]; ok {
 			log.Info().Msgf("launching command: %s", cmd)
+
+			if cmd == "shell" && !cfg.IsShellCmdAllowed(args) {
+				return errors.New("shell command not allowed"), false
+			}
+
 			softwareChange := slices.Contains(softwareChangeCommands, cmd)
 			if softwareChange {
 				// a launch triggered outside a playlist itself
 				log.Debug().Msg("clearing current playlist")
 				plsc.Queue <- nil
 			}
+
 			return f(pl, env), softwareChange
 		} else {
 			return fmt.Errorf("unknown command: %s", cmd), false

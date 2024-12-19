@@ -3,13 +3,14 @@ package batocera
 import (
 	"errors"
 	"github.com/ZaparooProject/zaparoo-core/pkg/api/models"
+	"github.com/ZaparooProject/zaparoo-core/pkg/config"
 	"github.com/ZaparooProject/zaparoo-core/pkg/service/tokens"
+	"github.com/ZaparooProject/zaparoo-core/pkg/utils"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 
-	"github.com/ZaparooProject/zaparoo-core/pkg/config"
 	"github.com/ZaparooProject/zaparoo-core/pkg/database/gamesdb"
 	"github.com/ZaparooProject/zaparoo-core/pkg/platforms"
 	"github.com/ZaparooProject/zaparoo-core/pkg/readers"
@@ -26,7 +27,7 @@ func (p *Platform) Id() string {
 	return "batocera"
 }
 
-func (p *Platform) SupportedReaders(cfg *config.UserConfig) []readers.Reader {
+func (p *Platform) SupportedReaders(cfg *config.Instance) []readers.Reader {
 	return []readers.Reader{
 		libnfc.NewReader(cfg),
 		file.NewReader(cfg),
@@ -34,7 +35,7 @@ func (p *Platform) SupportedReaders(cfg *config.UserConfig) []readers.Reader {
 	}
 }
 
-func (p *Platform) Setup(_ *config.UserConfig, _ chan<- models.Notification) error {
+func (p *Platform) Setup(_ *config.Instance, _ chan<- models.Notification) error {
 	return nil
 }
 
@@ -50,34 +51,33 @@ func (p *Platform) ReadersUpdateHook(readers map[string]*readers.Reader) error {
 	return nil
 }
 
-func (p *Platform) RootFolders(cfg *config.UserConfig) []string {
+func (p *Platform) RootDirs(cfg *config.Instance) []string {
 	return []string{
 		"/userdata/roms",
 	}
 }
 
-func (p *Platform) ZipsAsFolders() bool {
+func (p *Platform) ZipsAsDirs() bool {
 	return false
 }
 
-func exeDir() string {
-	exe, err := os.Executable()
-	if err != nil {
-		return ""
-	}
-
-	return filepath.Dir(exe)
+func (p *Platform) DataDir() string {
+	return utils.ExeDir()
 }
 
-func (p *Platform) ConfigFolder() string {
-	return filepath.Join(exeDir(), "data")
+func (p *Platform) LogDir() string {
+	return utils.ExeDir()
 }
 
-func (p *Platform) LogFolder() string {
-	return filepath.Join(exeDir(), "logs")
+func (p *Platform) ConfigDir() string {
+	return utils.ExeDir()
 }
 
-func (p *Platform) NormalizePath(cfg *config.UserConfig, path string) string {
+func (p *Platform) TempDir() string {
+	return filepath.Join(os.TempDir(), config.AppName)
+}
+
+func (p *Platform) NormalizePath(cfg *config.Instance, path string) string {
 	return path
 }
 
@@ -101,10 +101,10 @@ func (p *Platform) GetActiveLauncher() string {
 	return ""
 }
 
-func (p *Platform) PlayFailSound(cfg *config.UserConfig) {
+func (p *Platform) PlayFailSound(cfg *config.Instance) {
 }
 
-func (p *Platform) PlaySuccessSound(cfg *config.UserConfig) {
+func (p *Platform) PlaySuccessSound(cfg *config.Instance) {
 }
 
 func (p *Platform) ActiveSystem() string {
@@ -123,16 +123,16 @@ func (p *Platform) ActiveGamePath() string {
 	return ""
 }
 
-func (p *Platform) LaunchSystem(cfg *config.UserConfig, id string) error {
+func (p *Platform) LaunchSystem(cfg *config.Instance, id string) error {
 	log.Info().Msgf("launching system: %s", id)
 	return nil
 }
 
-func (p *Platform) LaunchFile(cfg *config.UserConfig, path string) error {
+func (p *Platform) LaunchFile(cfg *config.Instance, path string) error {
 	log.Info().Msgf("launching file: %s", path)
 
 	relPath := path
-	for _, rf := range p.RootFolders(cfg) {
+	for _, rf := range p.RootDirs(cfg) {
 		if strings.HasPrefix(relPath, rf+"/") {
 			relPath = strings.TrimPrefix(relPath, rf+"/")
 			break
@@ -196,7 +196,7 @@ func (p *Platform) Launchers() []platforms.Launcher {
 			SystemId:   gamesdb.SystemGenesis,
 			Folders:    []string{"megadrive"},
 			Extensions: []string{".bin", ".gen", ".md", ".sg", ".smd", ".zip", ".7z"},
-			Launch: func(cfg *config.UserConfig, path string) error {
+			Launch: func(cfg *config.Instance, path string) error {
 				cmd := exec.Command("emulatorlauncher", "-system", "megadrive", "-rom", path)
 				cmd.Env = os.Environ()
 				cmd.Env = append(cmd.Env, "DISPLAY=:0.0")

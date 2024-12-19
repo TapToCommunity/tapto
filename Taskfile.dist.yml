@@ -11,32 +11,32 @@ dotenv: [".env"]
 tasks:
   build:
     cmds:
-      - go build --ldflags "-linkmode external -extldflags -static -s -w" -o _build/${PLATFORM}_{{ARCH}}/${TAPTO_BIN} ./cmd/$PLATFORM
+      - go build --ldflags "-linkmode external -extldflags -static -s -w" -o _build/${PLATFORM}_{{ARCH}}/${APP_BIN} ./cmd/$PLATFORM
 
   build-image-mister:
     vars:
-      IMAGE_NAME: tapto/mister-build
+      IMAGE_NAME: zaparoo/mister-build
       DOCKERFILE: "./scripts/mister/build"
     cmds:
       - docker build --platform linux/arm/v7 -t {{.IMAGE_NAME}} {{.DOCKERFILE}}
 
   build-image-mistex:
     vars:
-      IMAGE_NAME: tapto/mistex-build
+      IMAGE_NAME: zaparoo/mistex-build
       DOCKERFILE: "./scripts/linux_arm64/build"
     cmds:
       - docker build --platform linux/arm/v8 -t {{.IMAGE_NAME}} {{.DOCKERFILE}}
 
   build-image-batocera-arm64:
     vars:
-      IMAGE_NAME: tapto/batocera-arm64-build
+      IMAGE_NAME: zaparoo/batocera-arm64-build
       DOCKERFILE: "./scripts/linux_arm64/build"
     cmds:
       - docker build --platform linux/arm/v8 -t {{.IMAGE_NAME}} {{.DOCKERFILE}}
 
   build-image-batocera-amd64:
     vars:
-      IMAGE_NAME: tapto/batocera-amd64-build
+      IMAGE_NAME: zaparoo/batocera-amd64-build
       DOCKERFILE: "./scripts/linux_amd64/build"
     cmds:
       - docker build --platform linux/amd64 -t {{.IMAGE_NAME}} {{.DOCKERFILE}}
@@ -53,20 +53,20 @@ tasks:
       BUILD_DIR: "./_build/mister_arm"
       BUILDCACHE: "{{.BUILD_DIR}}/.go-buildcache"
       MODCACHE: "{{.BUILD_DIR}}/.go-modcache"
-      IMAGE_NAME: tapto/mister-build
+      IMAGE_NAME: zaparoo/mister-build
       IMG_BUILDCACHE: /home/build/.cache/go-build
       IMG_MODCACHE: /home/build/go/pkg/mod
     cmds:
       - docker run --rm --platform linux/arm/v7 -v {{.BUILDCACHE}}:{{.IMG_BUILDCACHE}} -v {{.MODCACHE}}:{{.IMG_MODCACHE}} -v ${PWD}:/build --user 1000:1000 {{.IMAGE_NAME}} build.sh
-      - rm -f {{.BUILD_DIR}}/tapto-mister_arm.zip
-      - zip -j {{.BUILD_DIR}}/tapto-mister_arm.zip {{.BUILD_DIR}}/tapto.sh
+      - rm -f {{.BUILD_DIR}}/zaparoo-mister_arm.zip
+      - zip -j {{.BUILD_DIR}}/zaparoo-mister_arm.zip {{.BUILD_DIR}}/zaparoo.sh
 
   build-mister-shell:
     vars:
       BUILD_DIR: "./_build/mister_arm"
       BUILDCACHE: "{{.BUILD_DIR}}/.go-buildcache"
       MODCACHE: "{{.BUILD_DIR}}/.go-modcache"
-      IMAGE_NAME: tapto/mister-build
+      IMAGE_NAME: zaparoo/mister-build
       IMG_BUILDCACHE: /home/build/.cache/go-build
       IMG_MODCACHE: /home/build/go/pkg/mod
     cmds:
@@ -77,39 +77,39 @@ tasks:
       BUILD_DIR: "./_build/mistex_arm64"
       BUILDCACHE: "{{.BUILD_DIR}}/.go-buildcache"
       MODCACHE: "{{.BUILD_DIR}}/.go-modcache"
-      IMAGE_NAME: tapto/mistex-build
+      IMAGE_NAME: zaparoo/mistex-build
       IMG_BUILDCACHE: /home/build/.cache/go-build
       IMG_MODCACHE: /home/build/go/pkg/mod
     cmds:
-      - docker run --rm --platform linux/arm/v8 -v {{.BUILDCACHE}}:{{.IMG_BUILDCACHE}} -v {{.MODCACHE}}:{{.IMG_MODCACHE}} -v ${PWD}:/build --user 1000:1000 {{.IMAGE_NAME}} bash -c "PLATFORM=mistex TAPTO_BIN=tapto.sh task build"
-      - rm -f {{.BUILD_DIR}}/tapto-mistex_arm64.zip
-      - zip -j {{.BUILD_DIR}}/tapto-mistex_arm64.zip {{.BUILD_DIR}}/tapto.sh
+      - docker run --rm --platform linux/arm/v8 -v {{.BUILDCACHE}}:{{.IMG_BUILDCACHE}} -v {{.MODCACHE}}:{{.IMG_MODCACHE}} -v ${PWD}:/build --user 1000:1000 {{.IMAGE_NAME}} bash -c "PLATFORM=mistex APP_BIN=zaparoo.sh task build"
+      - rm -f {{.BUILD_DIR}}/zaparoo-mistex_arm64.zip
+      - zip -j {{.BUILD_DIR}}/zaparoo-mistex_arm64.zip {{.BUILD_DIR}}/zaparoo.sh
 
   build-batocera-arm64:
     vars:
       BUILD_DIR: "./_build/batocera_arm64"
       BUILDCACHE: "{{.BUILD_DIR}}/.go-buildcache"
       MODCACHE: "{{.BUILD_DIR}}/.go-modcache"
-      IMAGE_NAME: tapto/batocera-arm64-build
+      IMAGE_NAME: zaparoo/batocera-arm64-build
       IMG_BUILDCACHE: /home/build/.cache/go-build
       IMG_MODCACHE: /home/build/go/pkg/mod
     cmds:
-      - docker run --rm --platform linux/arm/v8 -v {{.BUILDCACHE}}:{{.IMG_BUILDCACHE}} -v {{.MODCACHE}}:{{.IMG_MODCACHE}} -v ${PWD}:/build --user 1000:1000 {{.IMAGE_NAME}} bash -c "PLATFORM=batocera TAPTO_BIN=tapto task build"
-      - rm -f {{.BUILD_DIR}}/tapto-batocera_arm64.zip
-      - zip -j {{.BUILD_DIR}}/tapto-batocera_arm64.zip {{.BUILD_DIR}}/tapto
+      - docker run --rm --platform linux/arm/v8 -v {{.BUILDCACHE}}:{{.IMG_BUILDCACHE}} -v {{.MODCACHE}}:{{.IMG_MODCACHE}} -v ${PWD}:/build --user 1000:1000 {{.IMAGE_NAME}} bash -c "PLATFORM=batocera APP_BIN=zaparoo task build"
+      - rm -f {{.BUILD_DIR}}/zaparoo-batocera_arm64.zip
+      - zip -j {{.BUILD_DIR}}/zaparoo-batocera_arm64.zip {{.BUILD_DIR}}/zaparoo
 
   build-batocera-amd64:
     vars:
       BUILD_DIR: "./_build/batocera_amd64"
       BUILDCACHE: "{{.BUILD_DIR}}/.go-buildcache"
       MODCACHE: "{{.BUILD_DIR}}/.go-modcache"
-      IMAGE_NAME: tapto/batocera-amd64-build
+      IMAGE_NAME: zaparoo/batocera-amd64-build
       IMG_BUILDCACHE: /home/build/.cache/go-build
       IMG_MODCACHE: /home/build/go/pkg/mod
     cmds:
-      - docker run --rm --platform linux/amd64 -v {{.BUILDCACHE}}:{{.IMG_BUILDCACHE}} -v {{.MODCACHE}}:{{.IMG_MODCACHE}} -v ${PWD}:/build --user 1000:1000 {{.IMAGE_NAME}} bash -c "PLATFORM=batocera TAPTO_BIN=tapto task build"
-      - rm -f {{.BUILD_DIR}}/tapto-batocera_amd64.zip
-      - zip -j {{.BUILD_DIR}}/tapto-batocera_amd64.zip {{.BUILD_DIR}}/tapto
+      - docker run --rm --platform linux/amd64 -v {{.BUILDCACHE}}:{{.IMG_BUILDCACHE}} -v {{.MODCACHE}}:{{.IMG_MODCACHE}} -v ${PWD}:/build --user 1000:1000 {{.IMAGE_NAME}} bash -c "PLATFORM=batocera APP_BIN=zaparoo task build"
+      - rm -f {{.BUILD_DIR}}/zaparoo-batocera_amd64.zip
+      - zip -j {{.BUILD_DIR}}/zaparoo-batocera_amd64.zip {{.BUILD_DIR}}/zaparoo
 
   build-steamos-amd64:
     vars:
@@ -120,9 +120,9 @@ tasks:
       IMG_BUILDCACHE: /home/build/.cache/go-build
       IMG_MODCACHE: /home/build/go/pkg/mod
     cmds:
-      - docker run --rm --platform linux/amd64 -v {{.BUILDCACHE}}:{{.IMG_BUILDCACHE}} -v {{.MODCACHE}}:{{.IMG_MODCACHE}} -v ${PWD}:/build --user 1000:1000 {{.IMAGE_NAME}} bash -c "PLATFORM=steamos TAPTO_BIN=tapto task build"
+      - docker run --rm --platform linux/amd64 -v {{.BUILDCACHE}}:{{.IMG_BUILDCACHE}} -v {{.MODCACHE}}:{{.IMG_MODCACHE}} -v ${PWD}:/build --user 1000:1000 {{.IMAGE_NAME}} bash -c "PLATFORM=steamos APP_BIN=zaparoo task build"
       - rm -f {{.BUILD_DIR}}/zaparoo-steamos_amd64.zip
-      - zip -j {{.BUILD_DIR}}/zaparoo-steamos_amd64.zip {{.BUILD_DIR}}/tapto
+      - zip -j {{.BUILD_DIR}}/zaparoo-steamos_amd64.zip {{.BUILD_DIR}}/zaparoo
 
   build-windows:
     vars:
@@ -130,10 +130,10 @@ tasks:
     env:
       GOOS: windows
       PLATFORM: windows
-      TAPTO_BIN: TapTo.exe
+      APP_BIN: Zaparoo.exe
       CGO_ENABLED: 0
     cmds:
-      - go build -o _build/${PLATFORM}_{{ARCH}}/${TAPTO_BIN} ./cmd/$PLATFORM
+      - go build -o _build/${PLATFORM}_{{ARCH}}/${APP_BIN} ./cmd/$PLATFORM
 
   build-mac:
     vars:
@@ -141,27 +141,27 @@ tasks:
     env:
       GOOS: darwin
       PLATFORM: mac
-      TAPTO_BIN: tapto
+      APP_BIN: zaparoo
       CGO_ENABLED: 0
     cmds:
-      - go build -o _build/${PLATFORM}_{{ARCH}}/${TAPTO_BIN} ./cmd/$PLATFORM
+      - go build -o _build/${PLATFORM}_{{ARCH}}/${APP_BIN} ./cmd/$PLATFORM
 
   deploy-mister:
     cmds:
       - task: build-mister
-      - scp _build/mister_arm/tapto.sh root@${MISTER_IP}:/media/fat/Scripts/tapto.sh
-      - ssh root@${MISTER_IP} /media/fat/Scripts/tapto.sh -service restart
+      - scp _build/mister_arm/zaparoo.sh root@${MISTER_IP}:/media/fat/Scripts/zaparoo.sh
+      - ssh root@${MISTER_IP} /media/fat/Scripts/zaparoo.sh -service restart
 
   deploy-mistex:
     cmds:
       - task: build-mistex
-      - scp _build/mistex_arm64/tapto.sh root@${MISTEX_IP}:/media/fat/Scripts/tapto.sh
-      - ssh root@${MISTEX_IP} /media/fat/Scripts/tapto.sh -service restart
+      - scp _build/mistex_arm64/zaparoo.sh root@${MISTEX_IP}:/media/fat/Scripts/zaparoo.sh
+      - ssh root@${MISTEX_IP} /media/fat/Scripts/zaparoo.sh -service restart
 
   deploy-steamos:
     cmds:
       - task: build-steamos-amd64
-      - scp _build/steamos_amd64/tapto deck@${STEAMOS_IP}:/home/deck/zaparoo/tapto
+      - scp _build/steamos_amd64/zaparoo deck@${STEAMOS_IP}:/home/deck/zaparoo/zaparoo
 
   clean: rm -rf _build
 
