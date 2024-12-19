@@ -18,7 +18,7 @@ jobs:
           repo: ZaparooProject/zaparoo-core
       - name: Create repo database
         run: |
-          python3 scripts/mister/repo/generate.py ${{ steps.taptoreleaseinfo.outputs.tag_name }}
+          python3 scripts/mister/repo/generate.py ${{ steps.zaparooreleaseinfo.outputs.tag_name }}
       - name: Commit repo database
         uses: EndBug/add-and-commit@v9
         with:
