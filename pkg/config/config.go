@@ -17,7 +17,7 @@ const (
 	CfgEnv       = "ZAPAROO_CFG"
 	AppEnv       = "ZAPAROO_APP"
 	ScanModeTap  = "tap"
-	ScanModeLive = "live"
+	ScanModeCart = "cart"
 )
 
 type Values struct {
@@ -230,7 +230,7 @@ func (c *Instance) TapModeEnabled() bool {
 func (c *Instance) LiveModeEnabled() bool {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
-	return c.vals.Readers.Scan.Mode == ScanModeLive
+	return c.vals.Readers.Scan.Mode == ScanModeCart
 }
 
 func (c *Instance) SetScanMode(mode string) {

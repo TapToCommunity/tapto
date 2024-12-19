@@ -1,21 +1,21 @@
 /*
-TapTo
+Zaparoo Core
 Copyright (C) 2023, 2024 Callan Barrett
 
-This file is part of TapTo.
+This file is part of Zaparoo Core.
 
-TapTo is free software: you can redistribute it and/or modify
+Zaparoo Core is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 the Free Software Foundation, either version 3 of the License, or
 (at your option) any later version.
 
-TapTo is distributed in the hope that it will be useful,
+Zaparoo Core is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
-along with TapTo.  If not, see <http://www.gnu.org/licenses/>.
+along with Zaparoo Core.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 package main
@@ -58,7 +58,7 @@ func tryAddStartup(stdscr *goncurses.Window) error {
 		selected := 0
 
 		for {
-			win.MovePrint(1, 3, "Add TapTo service to MiSTer startup?")
+			win.MovePrint(1, 3, "Add Zaparoo service to MiSTer startup?")
 			win.MovePrint(2, 2, "This won't impact MiSTer's performance.")
 			curses.DrawActionButtons(win, []string{"Yes", "No"}, selected, 10)
 
@@ -131,7 +131,7 @@ func copyLogToSd(pl platforms.Platform, stdscr *goncurses.Window) error {
 		printCenter(1, "Unable to copy log file to SD card.")
 		log.Error().Err(err).Msgf("error copying log file")
 	} else {
-		printCenter(1, "Copied tapto.log to root of SD card.")
+		printCenter(1, "Copied "+config.LogFile+" to SD card.")
 	}
 	win.NoutRefresh()
 
@@ -348,10 +348,10 @@ func displayServiceInfo(pl platforms.Platform, cfg *config.Instance, stdscr *gon
 			statusText = "Service:        NOT RUNNING"
 		}
 
-		printCenter(0, "TapTo v"+config.Version+" ("+pl.Id()+")")
+		printCenter(0, "Zaparoo Core v"+config.Version+" ("+pl.Id()+")")
 
 		clearLine(1)
-		printCenter(1, "Visit tapto.wiki for guides and help!")
+		printCenter(1, "Visit zaparoo.org for guides and help!")
 
 		win.HLine(2, 1, goncurses.ACS_HLINE, width-2)
 		win.MoveAddChar(2, 0, goncurses.ACS_LTEE)

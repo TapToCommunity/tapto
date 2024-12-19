@@ -10,12 +10,12 @@ jobs:
       GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
     steps:
       - uses: actions/checkout@v2
-      - name: Get latest TapTo release
-        id: taptoreleaseinfo
+      - name: Get latest Zaparoo release
+        id: zaparooreleaseinfo
         uses: cardinalby/git-get-release-action@v1
         with:
           latest: true
-          repo: wizzomafizzo/tapto
+          repo: ZaparooProject/zaparoo-core
       - name: Create repo database
         run: |
           python3 scripts/mister/repo/generate.py ${{ steps.taptoreleaseinfo.outputs.tag_name }}

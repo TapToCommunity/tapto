@@ -1,24 +1,24 @@
 ///go:build linux && cgo
 
 /*
-TapTo
+Zaparoo Core
 Copyright (C) 2023 Gareth Jones
 Copyright (C) 2023, 2024 Callan Barrett
 
-This file is part of TapTo.
+This file is part of Zaparoo Core.
 
-TapTo is free software: you can redistribute it and/or modify
+Zaparoo Core is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 the Free Software Foundation, either version 3 of the License, or
 (at your option) any later version.
 
-TapTo is distributed in the hope that it will be useful,
+Zaparoo Core is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
-along with TapTo.  If not, see <http://www.gnu.org/licenses/>.
+along with Zaparoo Core.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 package main
@@ -39,14 +39,14 @@ import (
 )
 
 func tryAddToStartup() (bool, error) {
-	unitPath := "/etc/systemd/system/tapto.service"
+	unitPath := "/etc/systemd/system/zaparoo.service"
 	unitFile := `[Unit]
-Description=TapTo service
+Description=Zaparoo Core service
 
 [Service]
 Type=forking
 Restart=no
-ExecStart=/media/fat/Scripts/tapto.sh -service start
+ExecStart=/media/fat/Scripts/zaparoo.sh -service start
 
 [Install]
 WantedBy=multi-user.target
@@ -68,7 +68,7 @@ WantedBy=multi-user.target
 		return false, err
 	}
 
-	cmd = exec.Command("systemctl", "enable", "tapto.service")
+	cmd = exec.Command("systemctl", "enable", "zaparoo.service")
 	err = cmd.Run()
 	if err != nil {
 		return false, err
@@ -82,12 +82,12 @@ func main() {
 	serviceFlag := flag.String(
 		"service",
 		"",
-		"manage TapTo service (start|stop|restart|status)",
+		"manage Zaparoo service (start|stop|restart|status)",
 	)
 	addStartupFlag := flag.Bool(
 		"add-startup",
 		false,
-		"add TapTo service to MiSTer startup if not already added",
+		"add Zaparoo service to MiSTer startup if not already added",
 	)
 
 	pl := &mistex.Platform{}
@@ -127,21 +127,21 @@ func main() {
 		os.Exit(1)
 	} else if added {
 		log.Info().Msg("added to startup")
-		fmt.Println("Added TapTo to MiSTeX startup.")
+		fmt.Println("Added Zaparoo to MiSTeX startup.")
 	}
 
 	if !svc.Running() {
 		err := svc.Start()
-		fmt.Println("TapTo service not running, starting...")
+		fmt.Println("Zaparoo service not running, starting...")
 		if err != nil {
 			log.Error().Msgf("error starting service: %s", err)
-			fmt.Println("Error starting TapTo service:", err)
+			fmt.Println("Error starting Zaparoo service:", err)
 		} else {
 			log.Info().Msg("service started manually")
-			fmt.Println("TapTo service started.")
+			fmt.Println("Zaparoo service started.")
 		}
 	} else {
-		fmt.Println("TapTo service is running.")
+		fmt.Println("Zaparoo service is running.")
 	}
 
 	ip, err := utils.GetLocalIp()

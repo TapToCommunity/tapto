@@ -94,7 +94,7 @@ func (p *Platform) Setup(cfg *config.Instance, ns chan<- models.Notification) er
 
 	gpd, err := uinput.CreateGamepad(
 		"/dev/uinput",
-		[]byte("tapto"),
+		[]byte("zaparoo"),
 		0x1234,
 		0x5678,
 	)

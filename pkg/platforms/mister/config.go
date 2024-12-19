@@ -8,14 +8,14 @@ import (
 )
 
 const (
-	TempFolder        = "/tmp/tapto"
-	DisableLaunchFile = TempFolder + "/tapto.disabled"
+	TempFolder        = "/tmp/zaparoo"
+	DisableLaunchFile = TempFolder + "/zaparoo.disabled"
 	SuccessSoundFile  = TempFolder + "/success.wav"
 	FailSoundFile     = TempFolder + "/fail.wav"
-	SocketFile        = TempFolder + "/tapto.sock"
+	SocketFile        = TempFolder + "/zaparoo.sock"
 	MappingsFile      = "/media/fat/nfc.csv"
 	TokenReadFile     = "/tmp/TOKENREAD"
-	ConfigFolder      = mrextConfig.ScriptsConfigFolder + "/tapto"
+	ConfigFolder      = mrextConfig.ScriptsConfigFolder + "/zaparoo"
 	ArcadeDbUrl       = "https://api.github.com/repositories/521644036/contents/ArcadeDatabase_CSV"
 	ArcadeDbFile      = ConfigFolder + "/ArcadeDatabase.csv"
 	ScriptsFolder     = mrextConfig.ScriptsFolder

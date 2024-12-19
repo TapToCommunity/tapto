@@ -66,13 +66,13 @@ type Platform interface {
 	RootDirs(*config.Instance) []string
 	// Whether to treat zip files as folders during media scanning.
 	ZipsAsDirs() bool
-	// Path to the configuration/database data for TapTo.
+	// Path to the configuration/database data for Zaparoo Core.
 	DataDir() string
-	// Path to the log folder for TapTo.
+	// Path to the log folder for Zaparoo Core.
 	LogDir() string
 
 	// Convert a path to a normalized form for the platform, the shortest
-	// possible path that can interpreted and lanched by TapTo. For writing
+	// possible path that can interpreted and lanched by Zaparoo Core. For writing
 	// to tokens.
 	NormalizePath(*config.Instance, string) string
 	// Kill the currently running launcher process if possible.
