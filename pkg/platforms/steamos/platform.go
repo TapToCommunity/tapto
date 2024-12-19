@@ -27,6 +27,7 @@ import (
 	"github.com/ZaparooProject/zaparoo-core/pkg/service/tokens"
 	"github.com/ZaparooProject/zaparoo-core/pkg/utils"
 	"github.com/adrg/xdg"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
@@ -58,7 +59,7 @@ func (p *Platform) SupportedReaders(cfg *config.Instance) []readers.Reader {
 }
 
 func (p *Platform) Setup(_ *config.Instance, _ chan<- models.Notification) error {
-	return nil
+	return os.MkdirAll(filepath.Join(xdg.DataHome, config.AppName), 0755)
 }
 
 func (p *Platform) Stop() error {
@@ -87,6 +88,14 @@ func (p *Platform) DataDir() string {
 
 func (p *Platform) LogDir() string {
 	return filepath.Join(xdg.DataHome, config.AppName)
+}
+
+func (p *Platform) ConfigDir() string {
+	return utils.ExeDir()
+}
+
+func (p *Platform) TempDir() string {
+	return filepath.Join(os.TempDir(), config.AppName)
 }
 
 func (p *Platform) NormalizePath(_ *config.Instance, path string) string {

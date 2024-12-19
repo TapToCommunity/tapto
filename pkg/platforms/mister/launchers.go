@@ -97,12 +97,12 @@ func launchMPlayer(pl Platform) func(*config.Instance, string) error {
 			"nice",
 			"-n",
 			"-20",
-			filepath.Join(LinuxFolder, "mplayer"),
+			filepath.Join(LinuxDir, "mplayer"),
 			"-cache",
 			"8192",
 			path,
 		)
-		cmd.Env = append(os.Environ(), "LD_LIBRARY_PATH="+LinuxFolder)
+		cmd.Env = append(os.Environ(), "LD_LIBRARY_PATH="+LinuxDir)
 		cmd.Stdin = os.Stdin
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr

@@ -65,22 +65,21 @@ func (p *Platform) ZipsAsDirs() bool {
 	return false
 }
 
-func exeDir() string {
-	exe, err := os.Executable()
-	if err != nil {
-		return ""
-	}
-
-	return filepath.Dir(exe)
-}
-
 func (p *Platform) DataDir() string {
-	// this could be AppData instead
-	return filepath.Join(exeDir(), "data")
+	// TODO: this could be AppData instead
+	return utils.ExeDir()
 }
 
 func (p *Platform) LogDir() string {
-	return filepath.Join(exeDir(), "logs")
+	return utils.ExeDir()
+}
+
+func (p *Platform) ConfigDir() string {
+	return utils.ExeDir()
+}
+
+func (p *Platform) TempDir() string {
+	return filepath.Join(os.TempDir(), config.AppName)
 }
 
 func (p *Platform) NormalizePath(cfg *config.Instance, path string) string {

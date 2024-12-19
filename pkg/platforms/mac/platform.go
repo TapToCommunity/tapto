@@ -4,6 +4,7 @@ import (
 	"github.com/ZaparooProject/zaparoo-core/pkg/api/models"
 	"github.com/ZaparooProject/zaparoo-core/pkg/config"
 	"github.com/ZaparooProject/zaparoo-core/pkg/service/tokens"
+	"github.com/ZaparooProject/zaparoo-core/pkg/utils"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -48,9 +49,7 @@ func (p *Platform) ReadersUpdateHook(readers map[string]*readers.Reader) error {
 }
 
 func (p *Platform) RootDirs(cfg *config.Instance) []string {
-	return []string{
-		"C:\\scratch",
-	}
+	return []string{}
 }
 
 func (p *Platform) ZipsAsDirs() bool {
@@ -67,11 +66,19 @@ func exeDir() string {
 }
 
 func (p *Platform) DataDir() string {
-	return filepath.Join(exeDir(), "data")
+	return utils.ExeDir()
 }
 
 func (p *Platform) LogDir() string {
-	return filepath.Join(exeDir(), "logs")
+	return utils.ExeDir()
+}
+
+func (p *Platform) ConfigDir() string {
+	return utils.ExeDir()
+}
+
+func (p *Platform) TempDir() string {
+	return filepath.Join(os.TempDir(), config.AppName)
 }
 
 func (p *Platform) NormalizePath(cfg *config.Instance, path string) string {

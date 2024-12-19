@@ -26,6 +26,7 @@ import (
 	"github.com/ZaparooProject/zaparoo-core/pkg/api"
 	"github.com/ZaparooProject/zaparoo-core/pkg/service/playlists"
 	"github.com/ZaparooProject/zaparoo-core/pkg/service/tokens"
+	"os"
 	"strings"
 	"time"
 
@@ -219,47 +220,60 @@ func processTokenQueue(
 }
 
 func Start(
-	platform platforms.Platform,
+	pl platforms.Platform,
 	cfg *config.Instance,
 ) (func() error, error) {
+	dirs := []string{
+		pl.DataDir(),
+		pl.LogDir(),
+		pl.ConfigDir(),
+		pl.TempDir(),
+	}
+	for _, dir := range dirs {
+		err := os.MkdirAll(dir, 0755)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	// TODO: define the notifications chan here instead of in state
-	st, ns := state.NewState(platform)
+	st, ns := state.NewState(pl)
 	// TODO: convert this to a *token channel
 	itq := make(chan tokens.Token)
 	lsq := make(chan *tokens.Token)
 	plq := make(chan *playlists.Playlist)
 
 	log.Debug().Msg("opening database")
-	db, err := database.Open(platform)
+	db, err := database.Open(pl)
 	if err != nil {
 		log.Error().Err(err).Msgf("error opening database")
 		return nil, err
 	}
 
 	log.Debug().Msg("starting API service")
-	go api.Start(platform, cfg, st, itq, db, ns)
+	go api.Start(pl, cfg, st, itq, db, ns)
 
-	log.Debug().Msg("running platform setup")
-	err = platform.Setup(cfg, st.Notifications)
+	log.Debug().Msg("running pl setup")
+	err = pl.Setup(cfg, st.Notifications)
 	if err != nil {
 		log.Error().Msgf("error setting up platform: %s", err)
 		return nil, err
 	}
 
-	if !platform.LaunchingEnabled() {
+	if !pl.LaunchingEnabled() {
 		st.DisableLauncher()
 	}
 
 	log.Debug().Msg("starting reader manager")
-	go readerManager(platform, cfg, st, itq, lsq)
+	go readerManager(pl, cfg, st, itq, lsq)
 
 	log.Debug().Msg("starting token queue manager")
-	go processTokenQueue(platform, cfg, st, itq, db, lsq, plq)
+	go processTokenQueue(pl, cfg, st, itq, db, lsq, plq)
 
 	return func() error {
-		err = platform.Stop()
+		err = pl.Stop()
 		if err != nil {
-			log.Warn().Msgf("error stopping platform: %s", err)
+			log.Warn().Msgf("error stopping pl: %s", err)
 		}
 		st.StopService()
 		close(plq)

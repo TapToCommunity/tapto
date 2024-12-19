@@ -45,12 +45,12 @@ func LoadCsvMappings() (map[string]string, map[string]string, error) {
 	uids := make(map[string]string)
 	texts := make(map[string]string)
 
-	if _, err := os.Stat(MappingsFile); errors.Is(err, os.ErrNotExist) {
+	if _, err := os.Stat(LegacyMappingsPath); errors.Is(err, os.ErrNotExist) {
 		log.Info().Msg("no database file found, skipping")
 		return nil, nil, nil
 	}
 
-	f, err := os.Open(MappingsFile)
+	f, err := os.Open(LegacyMappingsPath)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -136,9 +136,9 @@ func StartCsvMappingsWatcher(
 				} else if event.Has(fsnotify.Remove) {
 					// editors may also delete the file on write
 					time.Sleep(delay)
-					_, err := os.Stat(MappingsFile)
+					_, err := os.Stat(LegacyMappingsPath)
 					if err == nil {
-						err = dbWatcher.Add(MappingsFile)
+						err = dbWatcher.Add(LegacyMappingsPath)
 						if err != nil {
 							log.Error().Msgf("error watching database: %s", err)
 						}
@@ -160,7 +160,7 @@ func StartCsvMappingsWatcher(
 		}
 	}()
 
-	err = dbWatcher.Add(MappingsFile)
+	err = dbWatcher.Add(LegacyMappingsPath)
 	if err != nil {
 		log.Error().Msgf("error watching database: %s", err)
 	}

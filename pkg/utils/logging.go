@@ -13,15 +13,13 @@ import (
 )
 
 func InitLogging(cfg *config.Instance, pl platforms.Platform) error {
-	logFile := filepath.Join(pl.LogDir(), config.LogFile)
-
-	err := os.MkdirAll(filepath.Dir(logFile), 0755)
+	err := os.MkdirAll(pl.LogDir(), 0755)
 	if err != nil {
 		return err
 	}
 
 	var BaseLogWriters = []io.Writer{&lumberjack.Logger{
-		Filename:   logFile,
+		Filename:   filepath.Join(pl.LogDir(), config.LogFile),
 		MaxSize:    1,
 		MaxBackups: 2,
 	}}

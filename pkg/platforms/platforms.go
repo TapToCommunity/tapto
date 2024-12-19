@@ -54,7 +54,7 @@ type Platform interface {
 	Id() string
 	// Any initial setup required before daemon is fully started.
 	Setup(*config.Instance, chan<- models.Notification) error
-	// TOOD: what is this?
+	// TODO: what is this?
 	Stop() error
 	// Run immediately after a successful scan, before it is processed for launching.
 	AfterScanHook(tokens.Token) error
@@ -70,6 +70,11 @@ type Platform interface {
 	DataDir() string
 	// Path to the log folder for Zaparoo Core.
 	LogDir() string
+	// ConfigDir returns the path of the parent directory of the config file.
+	ConfigDir() string
+	// TempDir return the path for storing temporary files. It may be called
+	// multiple times and must return the same path for the service lifetime.
+	TempDir() string
 
 	// Convert a path to a normalized form for the platform, the shortest
 	// possible path that can interpreted and lanched by Zaparoo Core. For writing

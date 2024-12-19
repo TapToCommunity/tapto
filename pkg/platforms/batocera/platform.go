@@ -5,6 +5,7 @@ import (
 	"github.com/ZaparooProject/zaparoo-core/pkg/api/models"
 	"github.com/ZaparooProject/zaparoo-core/pkg/config"
 	"github.com/ZaparooProject/zaparoo-core/pkg/service/tokens"
+	"github.com/ZaparooProject/zaparoo-core/pkg/utils"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -60,21 +61,20 @@ func (p *Platform) ZipsAsDirs() bool {
 	return false
 }
 
-func exeDir() string {
-	exe, err := os.Executable()
-	if err != nil {
-		return ""
-	}
-
-	return filepath.Dir(exe)
-}
-
 func (p *Platform) DataDir() string {
-	return filepath.Join(exeDir(), "data")
+	return utils.ExeDir()
 }
 
 func (p *Platform) LogDir() string {
-	return filepath.Join(exeDir(), "logs")
+	return utils.ExeDir()
+}
+
+func (p *Platform) ConfigDir() string {
+	return utils.ExeDir()
+}
+
+func (p *Platform) TempDir() string {
+	return filepath.Join(os.TempDir(), config.AppName)
 }
 
 func (p *Platform) NormalizePath(cfg *config.Instance, path string) string {

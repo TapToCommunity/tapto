@@ -46,6 +46,16 @@ func (p *Platform) SupportedReaders(cfg *config.Instance) []readers.Reader {
 }
 
 func (p *Platform) Setup(cfg *config.Instance, ns chan<- models.Notification) error {
+	err := os.MkdirAll(mister.TempDir, 0755)
+	if err != nil {
+		return err
+	}
+
+	err = os.MkdirAll(mister.DataDir, 0755)
+	if err != nil {
+		return err
+	}
+
 	kbd, err := input.NewKeyboard()
 	if err != nil {
 		return err
@@ -124,11 +134,19 @@ func (p *Platform) ZipsAsDirs() bool {
 }
 
 func (p *Platform) DataDir() string {
-	return mister.ConfigFolder
+	return mister.DataDir
 }
 
 func (p *Platform) LogDir() string {
-	return mister.TempFolder
+	return mister.TempDir
+}
+
+func (p *Platform) ConfigDir() string {
+	return mister.DataDir
+}
+
+func (p *Platform) TempDir() string {
+	return mister.TempDir
 }
 
 func (p *Platform) NormalizePath(cfg *config.Instance, path string) string {
