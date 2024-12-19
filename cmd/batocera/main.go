@@ -1,5 +1,3 @@
-//go:build linux
-
 /*
 Zaparoo Core
 Copyright (C) 2023 Gareth Jones
@@ -50,7 +48,7 @@ func main() {
 
 	pl := &batocera.Platform{}
 
-	cfg, err := config.NewConfig(config.BaseDefaults)
+	cfg, err := config.NewConfig(pl.ConfigDir(), config.BaseDefaults)
 	if err != nil {
 		log.Error().Msgf("error loading user config: %s", err)
 		fmt.Println("Error loading config:", err)

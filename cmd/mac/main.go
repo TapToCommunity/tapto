@@ -1,5 +1,3 @@
-//go:build darwin
-
 /*
 Zaparoo Core
 Copyright (C) 2023 Gareth Jones
@@ -46,14 +44,15 @@ func main() {
 		os.Exit(0)
 	}
 
-	cfg, err := config.NewConfig(config.BaseDefaults)
+	pl := &mac.Platform{}
+
+	cfg, err := config.NewConfig(pl.ConfigDir(), config.BaseDefaults)
 	if err != nil {
 		log.Error().Msgf("error loading user config: %s", err)
 		fmt.Println("Error loading config:", err)
 		os.Exit(1)
 	}
 
-	pl := &mac.Platform{}
 	err = utils.InitLogging(cfg, pl)
 	if err != nil {
 		fmt.Println("Error initializing logging:", err)

@@ -21,6 +21,7 @@ along with Zaparoo Core.  If not, see <http://www.gnu.org/licenses/>.
 package main
 
 import (
+	"github.com/ZaparooProject/zaparoo-core/pkg/platforms/mister"
 	"os/exec"
 	"path"
 	"strings"
@@ -120,7 +121,7 @@ func copyLogToSd(pl platforms.Platform, stdscr *goncurses.Window) error {
 	}(win)
 
 	logPath := path.Join(pl.LogDir(), config.LogFile)
-	newPath := path.Join("/media/fat", config.LogFile)
+	newPath := path.Join(mister.DataDir, config.LogFile)
 	err = utils.CopyFile(logPath, newPath)
 
 	printCenter := func(y int, text string) {

@@ -284,7 +284,7 @@ func (f *Flags) Post(cfg *config.Instance) {
 
 // Setup initializes the user config and logging. Returns a user config object.
 func Setup(pl platforms.Platform, defaultConfig config.Values) *config.Instance {
-	cfg, err := config.NewConfig(defaultConfig)
+	cfg, err := config.NewConfig(pl.ConfigDir(), defaultConfig)
 	if err != nil {
 		_, _ = fmt.Fprintf(os.Stderr, "Error loading config: %v\n", err)
 		os.Exit(1)

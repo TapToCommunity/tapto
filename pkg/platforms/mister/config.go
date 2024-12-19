@@ -10,8 +10,8 @@ import (
 const (
 	TempDir            = "/tmp/zaparoo"
 	DisableLaunchFile  = TempDir + "/zaparoo.disabled"
-	SuccessSoundFile   = TempDir + "/success.wav"
-	FailSoundFile      = TempDir + "/fail.wav"
+	SuccessSoundFile   = DataDir + "/success.wav"
+	FailSoundFile      = DataDir + "/fail.wav"
 	SocketFile         = TempDir + "/zaparoo.sock"
 	LegacyMappingsPath = "/media/fat/nfc.csv"
 	TokenReadFile      = "/tmp/TOKENREAD" // TODO: remove this, use file driver

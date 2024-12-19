@@ -21,27 +21,31 @@ import (
 //       and are annoying to compile statically
 
 func Setup(tr *Tracker) error {
-	// copy success sound to temp
-	sf, err := os.Create(SuccessSoundFile)
-	if err != nil {
-		log.Error().Msgf("error creating success sound file: %s", err)
+	if _, err := os.Stat(SuccessSoundFile); err != nil {
+		// copy success sound to temp
+		sf, err := os.Create(SuccessSoundFile)
+		if err != nil {
+			log.Error().Msgf("error creating success sound file: %s", err)
+		}
+		_, err = sf.Write(assets.SuccessSound)
+		if err != nil {
+			log.Error().Msgf("error writing success sound file: %s", err)
+		}
+		_ = sf.Close()
 	}
-	_, err = sf.Write(assets.SuccessSound)
-	if err != nil {
-		log.Error().Msgf("error writing success sound file: %s", err)
-	}
-	_ = sf.Close()
 
-	// copy fail sound to temp
-	ff, err := os.Create(FailSoundFile)
-	if err != nil {
-		log.Error().Msgf("error creating fail sound file: %s", err)
+	if _, err := os.Stat(FailSoundFile); err != nil {
+		// copy fail sound to temp
+		ff, err := os.Create(FailSoundFile)
+		if err != nil {
+			log.Error().Msgf("error creating fail sound file: %s", err)
+		}
+		_, err = ff.Write(assets.FailSound)
+		if err != nil {
+			log.Error().Msgf("error writing fail sound file: %s", err)
+		}
+		_ = ff.Close()
 	}
-	_, err = ff.Write(assets.FailSound)
-	if err != nil {
-		log.Error().Msgf("error writing fail sound file: %s", err)
-	}
-	_ = ff.Close()
 
 	// attempt arcadedb update
 	go func() {

@@ -1,5 +1,3 @@
-//go:build windows
-
 /*
 Zaparoo Core
 Copyright (C) 2023 Gareth Jones
@@ -46,14 +44,15 @@ func main() {
 		os.Exit(0)
 	}
 
-	cfg, err := config.NewConfig(config.BaseDefaults)
+	pl := &windows.Platform{}
+
+	cfg, err := config.NewConfig(pl.ConfigDir(), config.BaseDefaults)
 	// TODO: enable console logging
 	if err != nil {
 		fmt.Println("Error loading config:", err)
 		os.Exit(1)
 	}
 
-	pl := &windows.Platform{}
 	err = utils.InitLogging(cfg, pl)
 	if err != nil {
 		fmt.Println("Error initializing logging:", err)

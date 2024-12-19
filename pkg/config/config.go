@@ -90,27 +90,15 @@ type Instance struct {
 	vals    Values
 }
 
-func NewConfig(defaults Values) (*Instance, error) {
+func NewConfig(logDir string, defaults Values) (*Instance, error) {
 	cfgPath := os.Getenv(CfgEnv)
-
-	exePath, err := os.Executable()
-	if err != nil {
-		return nil, err
-	}
-
-	appPath := os.Getenv(AppEnv)
-	if appPath != "" {
-		exePath = appPath
-	}
-
 	if cfgPath == "" {
-		exeDir := filepath.Dir(exePath)
-		cfgPath = filepath.Join(exeDir, CfgFile)
+		cfgPath = filepath.Join(logDir, CfgFile)
 	}
 
 	cfg := Instance{
 		mu:      sync.RWMutex{},
-		appPath: appPath,
+		appPath: os.Getenv(AppEnv),
 		cfgPath: cfgPath,
 		vals:    defaults,
 	}
@@ -123,7 +111,7 @@ func NewConfig(defaults Values) (*Instance, error) {
 		}
 	}
 
-	err = cfg.Load()
+	err := cfg.Load()
 	if err != nil {
 		return nil, err
 	}
@@ -154,7 +142,7 @@ func (c *Instance) Load() error {
 		return err
 	}
 
-	log.Info().Any("config", newVals).Msg("loaded new config")
+	// log.Info().Any("config", newVals).Msg("loaded new config")
 
 	c.vals = newVals
 
