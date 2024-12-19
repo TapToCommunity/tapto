@@ -122,7 +122,7 @@ tasks:
     cmds:
       - docker run --rm --platform linux/amd64 -v {{.BUILDCACHE}}:{{.IMG_BUILDCACHE}} -v {{.MODCACHE}}:{{.IMG_MODCACHE}} -v ${PWD}:/build --user 1000:1000 {{.IMAGE_NAME}} bash -c "PLATFORM=steamos APP_BIN=zaparoo task build"
       - rm -f {{.BUILD_DIR}}/zaparoo-steamos_amd64.zip
-      - zip -j {{.BUILD_DIR}}/zaparoo-steamos_amd64.zip {{.BUILD_DIR}}/tapto
+      - zip -j {{.BUILD_DIR}}/zaparoo-steamos_amd64.zip {{.BUILD_DIR}}/zaparoo
 
   build-windows:
     vars:
@@ -130,7 +130,7 @@ tasks:
     env:
       GOOS: windows
       PLATFORM: windows
-      APP_BIN: TapTo.exe
+      APP_BIN: Zaparoo.exe
       CGO_ENABLED: 0
     cmds:
       - go build -o _build/${PLATFORM}_{{ARCH}}/${APP_BIN} ./cmd/$PLATFORM
@@ -141,7 +141,7 @@ tasks:
     env:
       GOOS: darwin
       PLATFORM: mac
-      APP_BIN: tapto
+      APP_BIN: zaparoo
       CGO_ENABLED: 0
     cmds:
       - go build -o _build/${PLATFORM}_{{ARCH}}/${APP_BIN} ./cmd/$PLATFORM
@@ -149,19 +149,19 @@ tasks:
   deploy-mister:
     cmds:
       - task: build-mister
-      - scp _build/mister_arm/tapto.sh root@${MISTER_IP}:/media/fat/Scripts/tapto.sh
-      - ssh root@${MISTER_IP} /media/fat/Scripts/tapto.sh -service restart
+      - scp _build/mister_arm/zaparoo.sh root@${MISTER_IP}:/media/fat/Scripts/zaparoo.sh
+      - ssh root@${MISTER_IP} /media/fat/Scripts/zaparoo.sh -service restart
 
   deploy-mistex:
     cmds:
       - task: build-mistex
-      - scp _build/mistex_arm64/tapto.sh root@${MISTEX_IP}:/media/fat/Scripts/tapto.sh
-      - ssh root@${MISTEX_IP} /media/fat/Scripts/tapto.sh -service restart
+      - scp _build/mistex_arm64/zaparoo.sh root@${MISTEX_IP}:/media/fat/Scripts/zaparoo.sh
+      - ssh root@${MISTEX_IP} /media/fat/Scripts/zaparoo.sh -service restart
 
   deploy-steamos:
     cmds:
       - task: build-steamos-amd64
-      - scp _build/steamos_amd64/tapto deck@${STEAMOS_IP}:/home/deck/zaparoo/tapto
+      - scp _build/steamos_amd64/zaparoo deck@${STEAMOS_IP}:/home/deck/zaparoo/zaparoo
 
   clean: rm -rf _build
 
