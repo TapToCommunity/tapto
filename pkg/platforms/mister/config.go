@@ -12,7 +12,7 @@ const (
 	DisableLaunchFile  = TempDir + "/zaparoo.disabled"
 	SuccessSoundFile   = DataDir + "/success.wav"
 	FailSoundFile      = DataDir + "/fail.wav"
-	SocketFile         = TempDir + "/zaparoo.sock"
+	SocketFile         = TempDir + "/core.sock"
 	LegacyMappingsPath = "/media/fat/nfc.csv"
 	TokenReadFile      = "/tmp/TOKENREAD" // TODO: remove this, use file driver
 	DataDir            = "/media/fat/zaparoo"
