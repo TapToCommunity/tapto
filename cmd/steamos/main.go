@@ -89,15 +89,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	cfg := cli.Setup(pl, &config.UserConfig{
-		TapTo: config.TapToConfig{
-			ProbeDevice:    true,
-			ConsoleLogging: true,
-		},
-		Api: config.ApiConfig{
-			Port: config.DefaultApiPort,
-		},
-	})
+	cfg := cli.Setup(pl, config.BaseDefaults)
 
 	flags.Post(cfg)
 

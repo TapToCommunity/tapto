@@ -25,15 +25,19 @@ type IndexStatusResponse struct {
 }
 
 type SettingsResponse struct {
-	ConnectionString  string   `json:"connectionString"`
-	AllowCommands     bool     `json:"allowCommands"`
-	DisableSounds     bool     `json:"disableSounds"`
-	ProbeDevice       bool     `json:"probeDevice"`
-	ExitGame          bool     `json:"exitGame"`
-	ExitGameDelay     int      `json:"exitGameDelay"`
-	ExitGameBlocklist []string `json:"exitGameBlocklist"`
-	Debug             bool     `json:"debug"`
-	Launching         bool     `json:"launching"`
+	AudioFeedback   bool `json:"audioFeedback"`
+	DebugLogging    bool `json:"debugLogging"`
+	LaunchingActive bool `json:"launchingActive"`
+}
+
+type SettingsReaders struct {
+	AutoDetect bool `json:"autoDetect"`
+}
+
+type SettingsReadersScan struct {
+	Mode         string   `json:"mode"`
+	ExitDelay    float32  `json:"exitDelay"`
+	IgnoreSystem []string `json:"ignoreSystem"`
 }
 
 type System struct {

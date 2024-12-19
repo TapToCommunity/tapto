@@ -3,13 +3,13 @@ package file
 import (
 	"encoding/hex"
 	"errors"
+	"github.com/ZaparooProject/zaparoo-core/pkg/config"
 	"github.com/ZaparooProject/zaparoo-core/pkg/service/tokens"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
 
-	"github.com/ZaparooProject/zaparoo-core/pkg/config"
 	"github.com/ZaparooProject/zaparoo-core/pkg/readers"
 	"github.com/ZaparooProject/zaparoo-core/pkg/utils"
 	"github.com/rs/zerolog/log"
@@ -18,13 +18,13 @@ import (
 const TokenType = "file"
 
 type Reader struct {
-	cfg     *config.UserConfig
+	cfg     *config.Instance
 	device  string
 	path    string
 	polling bool
 }
 
-func NewReader(cfg *config.UserConfig) *Reader {
+func NewReader(cfg *config.Instance) *Reader {
 	return &Reader{
 		cfg: cfg,
 	}

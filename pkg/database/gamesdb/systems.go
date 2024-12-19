@@ -8,8 +8,8 @@ import (
 )
 
 // The Systems list contains all the supported systems such as consoles,
-// computers and media types that are indexable by TapTo. This is the reference
-// list of hardcoded system IDs used throughout TapTo. A platform can choose
+// computers and media types that are indexable by Zaparoo. This is the reference
+// list of hardcoded system IDs used throughout Zaparoo. A platform can choose
 // not to support any of them.
 //
 // This list also contains some basic heuristics which, given a file path, can
