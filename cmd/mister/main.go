@@ -47,6 +47,19 @@ func addToStartup() error {
 		return err
 	}
 
+	// migration from tapto name
+	if startup.Exists("mrext/tapto") {
+		err = startup.Remove("mrext/tapto")
+		if err != nil {
+			return err
+		}
+
+		err = startup.Save()
+		if err != nil {
+			return err
+		}
+	}
+
 	if !startup.Exists("mrext/" + config.AppName) {
 		err = startup.AddService("mrext/" + config.AppName)
 		if err != nil {
