@@ -105,7 +105,13 @@ func NewConfig(logDir string, defaults Values) (*Instance, error) {
 
 	if _, err := os.Stat(cfgPath); os.IsNotExist(err) {
 		log.Info().Msg("saving new default config to disk")
-		err := cfg.Save()
+
+		err := os.MkdirAll(filepath.Dir(cfgPath), 0755)
+		if err != nil {
+			return nil, err
+		}
+
+		err = cfg.Save()
 		if err != nil {
 			return nil, err
 		}
