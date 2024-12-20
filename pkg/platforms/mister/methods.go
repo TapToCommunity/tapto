@@ -3,12 +3,12 @@
 package mister
 
 import (
+	"github.com/ZaparooProject/zaparoo-core/pkg/config"
 	"os"
 	"os/exec"
 	"strings"
 
 	"github.com/ZaparooProject/zaparoo-core/pkg/assets"
-	"github.com/ZaparooProject/zaparoo-core/pkg/config"
 	"github.com/rs/zerolog/log"
 	mrextConfig "github.com/wizzomafizzo/mrext/pkg/config"
 	"github.com/wizzomafizzo/mrext/pkg/games"
@@ -21,27 +21,31 @@ import (
 //       and are annoying to compile statically
 
 func Setup(tr *Tracker) error {
-	// copy success sound to temp
-	sf, err := os.Create(SuccessSoundFile)
-	if err != nil {
-		log.Error().Msgf("error creating success sound file: %s", err)
+	if _, err := os.Stat(SuccessSoundFile); err != nil {
+		// copy success sound to temp
+		sf, err := os.Create(SuccessSoundFile)
+		if err != nil {
+			log.Error().Msgf("error creating success sound file: %s", err)
+		}
+		_, err = sf.Write(assets.SuccessSound)
+		if err != nil {
+			log.Error().Msgf("error writing success sound file: %s", err)
+		}
+		_ = sf.Close()
 	}
-	_, err = sf.Write(assets.SuccessSound)
-	if err != nil {
-		log.Error().Msgf("error writing success sound file: %s", err)
-	}
-	_ = sf.Close()
 
-	// copy fail sound to temp
-	ff, err := os.Create(FailSoundFile)
-	if err != nil {
-		log.Error().Msgf("error creating fail sound file: %s", err)
+	if _, err := os.Stat(FailSoundFile); err != nil {
+		// copy fail sound to temp
+		ff, err := os.Create(FailSoundFile)
+		if err != nil {
+			log.Error().Msgf("error creating fail sound file: %s", err)
+		}
+		_, err = ff.Write(assets.FailSound)
+		if err != nil {
+			log.Error().Msgf("error writing fail sound file: %s", err)
+		}
+		_ = ff.Close()
 	}
-	_, err = ff.Write(assets.FailSound)
-	if err != nil {
-		log.Error().Msgf("error writing fail sound file: %s", err)
-	}
-	_ = ff.Close()
 
 	// attempt arcadedb update
 	go func() {
@@ -74,8 +78,8 @@ func Setup(tr *Tracker) error {
 	return nil
 }
 
-func PlaySuccess(cfg *config.UserConfig) {
-	if cfg.GetDisableSounds() {
+func PlaySuccess(cfg *config.Instance) {
+	if !cfg.AudioFeedback() {
 		return
 	}
 
@@ -85,8 +89,8 @@ func PlaySuccess(cfg *config.UserConfig) {
 	}
 }
 
-func PlayFail(cfg *config.UserConfig) {
-	if cfg.GetDisableSounds() {
+func PlayFail(cfg *config.Instance) {
+	if !cfg.AudioFeedback() {
 		return
 	}
 
@@ -108,7 +112,7 @@ func GetActiveCoreName() string {
 	return coreName
 }
 
-func NormalizePath(cfg *config.UserConfig, path string) string {
+func NormalizePath(cfg *config.Instance, path string) string {
 	sys, err := games.BestSystemMatch(UserConfigToMrext(cfg), path)
 	if err != nil {
 		return path

@@ -17,13 +17,13 @@ import (
 const TokenType = "disc"
 
 type FileReader struct {
-	cfg     *config.UserConfig
+	cfg     *config.Instance
 	device  string
 	path    string
 	polling bool
 }
 
-func NewReader(cfg *config.UserConfig) *FileReader {
+func NewReader(cfg *config.Instance) *FileReader {
 	return &FileReader{
 		cfg: cfg,
 	}

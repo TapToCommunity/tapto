@@ -12,7 +12,7 @@ type CmdEnv struct {
 	Cmd           string
 	Args          string
 	NamedArgs     map[string]string
-	Cfg           *config.UserConfig
+	Cfg           *config.Instance
 	Playlist      playlists.PlaylistController
 	Manual        bool
 	Text          string
@@ -38,12 +38,12 @@ type Launcher struct {
 	// Accepted schemes for URI-style launches.
 	Schemes []string
 	// Launch function, takes a direct as possible path/ID media file.
-	Launch func(*config.UserConfig, string) error
+	Launch func(*config.Instance, string) error
 	// Kill function kills the current active launcher, if possible.
-	Kill func(*config.UserConfig) error
+	Kill func(*config.Instance) error
 	// Optional function to perform custom media scanning. Takes the list of
 	// results from the standard scan, if any, and returns the final list.
-	Scanner func(*config.UserConfig, string, []ScanResult) ([]ScanResult, error)
+	Scanner func(*config.Instance, string, []ScanResult) ([]ScanResult, error)
 	// If true, all resolved paths must be in the allow list before they
 	// can be launched.
 	AllowListOnly bool
@@ -53,27 +53,33 @@ type Platform interface {
 	// Unique ID of the platform.
 	Id() string
 	// Any initial setup required before daemon is fully started.
-	Setup(*config.UserConfig, chan<- models.Notification) error
-	// TOOD: what is this?
+	Setup(*config.Instance, chan<- models.Notification) error
+	// TODO: what is this?
 	Stop() error
 	// Run immediately after a successful scan, before it is processed for launching.
 	AfterScanHook(tokens.Token) error
 	// Run after the active readers have been updated.
 	ReadersUpdateHook(map[string]*readers.Reader) error
 	// List of supported readers for this platform.
-	SupportedReaders(*config.UserConfig) []readers.Reader
+	SupportedReaders(*config.Instance) []readers.Reader
 	// List of root folders to scan for media files.
-	RootFolders(*config.UserConfig) []string
+	RootDirs(*config.Instance) []string
 	// Whether to treat zip files as folders during media scanning.
-	ZipsAsFolders() bool
-	// Path to the configuration/database data for TapTo.
-	ConfigFolder() string // TODO: rename to data folder (because that's what it is)
-	// Path to the log folder for TapTo.
-	LogFolder() string
+	ZipsAsDirs() bool
+	// Path to the configuration/database data for Zaparoo Core.
+	DataDir() string
+	// Path to the log folder for Zaparoo Core.
+	LogDir() string
+	// ConfigDir returns the path of the parent directory of the config file.
+	ConfigDir() string
+	// TempDir return the path for storing temporary files. It may be called
+	// multiple times and must return the same path for the service lifetime.
+	TempDir() string
+
 	// Convert a path to a normalized form for the platform, the shortest
-	// possible path that can interpreted and lanched by TapTo. For writing
+	// possible path that can interpreted and lanched by Zaparoo Core. For writing
 	// to tokens.
-	NormalizePath(*config.UserConfig, string) string
+	NormalizePath(*config.Instance, string) string
 	// Kill the currently running launcher process if possible.
 	KillLauncher() error
 	LaunchingEnabled() bool  // TODO: remove? should be mister only?
@@ -81,9 +87,9 @@ type Platform interface {
 	// Return the ID of the currently active launcher. Empty string if none.
 	GetActiveLauncher() string
 	// Play a sound effect for error feedback.
-	PlayFailSound(*config.UserConfig) // TODO: change to like PlaySound?
+	PlayFailSound(*config.Instance) // TODO: change to like PlaySound?
 	// Play a sound effect for success feedback.
-	PlaySuccessSound(*config.UserConfig)
+	PlaySuccessSound(*config.Instance)
 	// Returns the currently active system ID.
 	ActiveSystem() string
 	// Returns the currently active game ID.
@@ -93,9 +99,9 @@ type Platform interface {
 	// Returns the currently active game path.
 	ActiveGamePath() string
 	// Launch a system by ID.
-	LaunchSystem(*config.UserConfig, string) error
+	LaunchSystem(*config.Instance, string) error
 	// Launch a file by path.
-	LaunchFile(*config.UserConfig, string) error
+	LaunchFile(*config.Instance, string) error
 	// Launch a shell command.
 	Shell(string) error
 	KeyboardInput(string) error // DEPRECATED

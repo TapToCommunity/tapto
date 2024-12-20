@@ -13,7 +13,7 @@ import (
 // PathIsLauncher returns true if a given path matches against any of the
 // criteria defined in a launcher.
 func PathIsLauncher(
-	cfg *config.UserConfig,
+	cfg *config.Instance,
 	pl platforms.Platform,
 	l platforms.Launcher,
 	path string,
@@ -39,7 +39,7 @@ func PathIsLauncher(
 	// check root folder if it's not a generic launcher
 	if len(l.Folders) > 0 {
 		inRoot := false
-		for _, folder := range pl.RootFolders(cfg) {
+		for _, folder := range pl.RootDirs(cfg) {
 			if strings.HasPrefix(lp, strings.ToLower(folder)) {
 				inRoot = true
 				break
@@ -66,7 +66,7 @@ func PathIsLauncher(
 
 // MatchSystemFile returns true if a given path is for a given system.
 func MatchSystemFile(
-	cfg *config.UserConfig,
+	cfg *config.Instance,
 	pl platforms.Platform,
 	systemId string,
 	path string,
@@ -84,7 +84,7 @@ func MatchSystemFile(
 // PathToLaunchers is a reverse lookup to match a given path against all
 // possible launchers in a platform. Returns all matched launchers.
 func PathToLaunchers(
-	cfg *config.UserConfig,
+	cfg *config.Instance,
 	pl platforms.Platform,
 	path string,
 ) []platforms.Launcher {

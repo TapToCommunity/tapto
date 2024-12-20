@@ -1,22 +1,22 @@
 /*
-TapTo
+Zaparoo Core
 Copyright (C) 2023 Gareth Jones
 Copyright (C) 2023, 2024 Callan Barrett
 
-This file is part of TapTo.
+This file is part of Zaparoo Core.
 
-TapTo is free software: you can redistribute it and/or modify
+Zaparoo Core is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 the Free Software Foundation, either version 3 of the License, or
 (at your option) any later version.
 
-TapTo is distributed in the hope that it will be useful,
+Zaparoo Core is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
-along with TapTo.  If not, see <http://www.gnu.org/licenses/>.
+along with Zaparoo Core.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 package service
@@ -26,6 +26,7 @@ import (
 	"github.com/ZaparooProject/zaparoo-core/pkg/api"
 	"github.com/ZaparooProject/zaparoo-core/pkg/service/playlists"
 	"github.com/ZaparooProject/zaparoo-core/pkg/service/tokens"
+	"os"
 	"strings"
 	"time"
 
@@ -39,9 +40,9 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-func inExitGameBlocklist(platform platforms.Platform, cfg *config.UserConfig) bool {
+func inExitGameBlocklist(platform platforms.Platform, cfg *config.Instance) bool {
 	var blocklist []string
-	for _, v := range cfg.GetExitGameBlocklist() {
+	for _, v := range cfg.ReadersScan().IgnoreSystem {
 		blocklist = append(blocklist, strings.ToLower(v))
 	}
 	return slices.Contains(blocklist, strings.ToLower(platform.GetActiveLauncher()))
@@ -49,7 +50,7 @@ func inExitGameBlocklist(platform platforms.Platform, cfg *config.UserConfig) bo
 
 func launchToken(
 	platform platforms.Platform,
-	cfg *config.UserConfig,
+	cfg *config.Instance,
 	token tokens.Token,
 	db *database.Database,
 	lsq chan<- *tokens.Token,
@@ -76,7 +77,7 @@ func launchToken(
 			cfg,
 			plsc,
 			token,
-			cfg.GetAllowCommands() || mapped,
+			mapped,
 			cmd,
 			len(cmds),
 			i,
@@ -96,7 +97,7 @@ func launchToken(
 
 func processTokenQueue(
 	platform platforms.Platform,
-	cfg *config.UserConfig,
+	cfg *config.Instance,
 	st *state.State,
 	itq <-chan tokens.Token,
 	db *database.Database,
@@ -219,58 +220,57 @@ func processTokenQueue(
 }
 
 func Start(
-	platform platforms.Platform,
-	cfg *config.UserConfig,
+	pl platforms.Platform,
+	cfg *config.Instance,
 ) (func() error, error) {
+	cfg.LogValues()
+
+	dirs := []string{pl.DataDir(), pl.TempDir()}
+	for _, dir := range dirs {
+		err := os.MkdirAll(dir, 0755)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	// TODO: define the notifications chan here instead of in state
-	st, ns := state.NewState(platform)
+	st, ns := state.NewState(pl)
 	// TODO: convert this to a *token channel
 	itq := make(chan tokens.Token)
 	lsq := make(chan *tokens.Token)
 	plq := make(chan *playlists.Playlist)
 
-	log.Info().Msgf("Zaparoo v%s", config.Version)
-	log.Info().Msgf("config path = %s", cfg.IniPath)
-	log.Info().Msgf("app path = %s", cfg.AppPath)
-	log.Info().Msgf("connection_string = %s", cfg.GetConnectionString())
-	log.Info().Msgf("allow_commands = %t", cfg.GetAllowCommands())
-	log.Info().Msgf("disable_sounds = %t", cfg.GetDisableSounds())
-	log.Info().Msgf("probe_device = %t", cfg.GetProbeDevice())
-	log.Info().Msgf("exit_game = %t", cfg.GetExitGame())
-	log.Info().Msgf("exit_game_blocklist = %s", cfg.GetExitGameBlocklist())
-	log.Info().Msgf("debug = %t", cfg.GetDebug())
+	log.Debug().Msg("running platform setup")
+	err := pl.Setup(cfg, st.Notifications)
+	if err != nil {
+		log.Error().Msgf("error setting up platform: %s", err)
+		return nil, err
+	}
 
 	log.Debug().Msg("opening database")
-	db, err := database.Open(platform)
+	db, err := database.Open(pl)
 	if err != nil {
 		log.Error().Err(err).Msgf("error opening database")
 		return nil, err
 	}
 
 	log.Debug().Msg("starting API service")
-	go api.Start(platform, cfg, st, itq, db, ns)
+	go api.Start(pl, cfg, st, itq, db, ns)
 
-	log.Debug().Msg("running platform setup")
-	err = platform.Setup(cfg, st.Notifications)
-	if err != nil {
-		log.Error().Msgf("error setting up platform: %s", err)
-		return nil, err
-	}
-
-	if !platform.LaunchingEnabled() {
+	if !pl.LaunchingEnabled() {
 		st.DisableLauncher()
 	}
 
 	log.Debug().Msg("starting reader manager")
-	go readerManager(platform, cfg, st, itq, lsq)
+	go readerManager(pl, cfg, st, itq, lsq)
 
 	log.Debug().Msg("starting token queue manager")
-	go processTokenQueue(platform, cfg, st, itq, db, lsq, plq)
+	go processTokenQueue(pl, cfg, st, itq, db, lsq, plq)
 
 	return func() error {
-		err = platform.Stop()
+		err = pl.Stop()
 		if err != nil {
-			log.Warn().Msgf("error stopping platform: %s", err)
+			log.Warn().Msgf("error stopping pl: %s", err)
 		}
 		st.StopService()
 		close(plq)

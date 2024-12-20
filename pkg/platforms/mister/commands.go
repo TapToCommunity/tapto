@@ -69,7 +69,7 @@ func cmdMisterScript(plm Platform) func(platforms.Platform, platforms.CmdEnv) er
 			return fmt.Errorf("invalid script: %s", script)
 		}
 
-		scriptPath := filepath.Join(ScriptsFolder, script)
+		scriptPath := filepath.Join(ScriptsDir, script)
 		if _, err := os.Stat(scriptPath); err != nil {
 			return fmt.Errorf("script not found: %s", script)
 		}

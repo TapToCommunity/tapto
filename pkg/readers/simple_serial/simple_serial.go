@@ -2,13 +2,13 @@ package simple_serial
 
 import (
 	"errors"
+	"github.com/ZaparooProject/zaparoo-core/pkg/config"
 	"github.com/ZaparooProject/zaparoo-core/pkg/service/tokens"
 	"os"
 	"runtime"
 	"strings"
 	"time"
 
-	"github.com/ZaparooProject/zaparoo-core/pkg/config"
 	"github.com/ZaparooProject/zaparoo-core/pkg/readers"
 	"github.com/ZaparooProject/zaparoo-core/pkg/utils"
 	"github.com/rs/zerolog/log"
@@ -17,7 +17,7 @@ import (
 )
 
 type SimpleSerialReader struct {
-	cfg       *config.UserConfig
+	cfg       *config.Instance
 	device    string
 	path      string
 	polling   bool
@@ -25,7 +25,7 @@ type SimpleSerialReader struct {
 	lastToken *tokens.Token
 }
 
-func NewReader(cfg *config.UserConfig) *SimpleSerialReader {
+func NewReader(cfg *config.Instance) *SimpleSerialReader {
 	return &SimpleSerialReader{
 		cfg: cfg,
 	}

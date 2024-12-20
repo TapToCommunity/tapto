@@ -4,11 +4,11 @@ import (
 	"bytes"
 	"encoding/hex"
 	"errors"
+	"github.com/ZaparooProject/zaparoo-core/pkg/config"
 	"github.com/ZaparooProject/zaparoo-core/pkg/service/tokens"
 	"strings"
 	"time"
 
-	"github.com/ZaparooProject/zaparoo-core/pkg/config"
 	"github.com/ZaparooProject/zaparoo-core/pkg/readers"
 	"github.com/ZaparooProject/zaparoo-core/pkg/utils"
 	"github.com/ebfe/scard"
@@ -16,14 +16,14 @@ import (
 )
 
 type Acr122Pcsc struct {
-	cfg     *config.UserConfig
+	cfg     *config.Instance
 	device  string
 	name    string
 	polling bool
 	ctx     *scard.Context
 }
 
-func NewAcr122Pcsc(cfg *config.UserConfig) *Acr122Pcsc {
+func NewAcr122Pcsc(cfg *config.Instance) *Acr122Pcsc {
 	return &Acr122Pcsc{
 		cfg: cfg,
 	}

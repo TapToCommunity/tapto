@@ -1,24 +1,22 @@
-//go:build linux
-
 /*
-TapTo
+Zaparoo Core
 Copyright (C) 2023 Gareth Jones
 Copyright (C) 2023, 2024 Callan Barrett
 
-This file is part of TapTo.
+This file is part of Zaparoo Core.
 
-TapTo is free software: you can redistribute it and/or modify
+Zaparoo Core is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 the Free Software Foundation, either version 3 of the License, or
 (at your option) any later version.
 
-TapTo is distributed in the hope that it will be useful,
+Zaparoo Core is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
-along with TapTo.  If not, see <http://www.gnu.org/licenses/>.
+along with Zaparoo Core.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 package main
@@ -28,7 +26,6 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 
 	"github.com/ZaparooProject/zaparoo-core/pkg/platforms/batocera"
@@ -38,45 +35,33 @@ import (
 	"github.com/ZaparooProject/zaparoo-core/pkg/service"
 )
 
-const appName = "tapto"
+const appName = config.AppName
 
 func main() {
 	versionOpt := flag.Bool("version", false, "print version and exit")
 	flag.Parse()
 
 	if *versionOpt {
-		fmt.Println("TapTo v" + config.Version + " (mistex)")
+		fmt.Println("Zaparoo Core v" + config.Version + " (batocera)")
 		os.Exit(0)
 	}
 
 	pl := &batocera.Platform{}
-	err := utils.InitLogging(pl)
-	if err != nil {
-		fmt.Println("Error initializing logging:", err)
-		os.Exit(1)
-	}
 
-	cfg, err := config.NewUserConfig(appName, &config.UserConfig{
-		TapTo: config.TapToConfig{
-			ProbeDevice: true,
-		},
-		Api: config.ApiConfig{
-			Port: config.DefaultApiPort,
-		},
-	})
+	cfg, err := config.NewConfig(pl.ConfigDir(), config.BaseDefaults)
 	if err != nil {
 		log.Error().Msgf("error loading user config: %s", err)
 		fmt.Println("Error loading config:", err)
 		os.Exit(1)
 	}
 
-	if cfg.GetDebug() {
-		zerolog.SetGlobalLevel(zerolog.DebugLevel)
-	} else {
-		zerolog.SetGlobalLevel(zerolog.InfoLevel)
+	err = utils.InitLogging(cfg, pl)
+	if err != nil {
+		fmt.Println("Error initializing logging:", err)
+		os.Exit(1)
 	}
 
-	fmt.Println("TapTo v" + config.Version)
+	fmt.Println("Zaparoo Core v" + config.Version)
 
 	stopSvc, err := service.Start(pl, cfg)
 	if err != nil {

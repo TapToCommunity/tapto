@@ -46,7 +46,7 @@ These are the important commands:
 
 - `task build-mister`
 
-  Builds a MiSTer binary of TapTo and copies TapTUI to the build directory.
+  Builds a MiSTer binary of Zaparoo and copies TapTUI to the build directory.
 
 - `task deploy-mister`
 
