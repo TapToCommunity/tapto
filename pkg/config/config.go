@@ -119,6 +119,12 @@ func NewConfig(logDir string, defaults Values) (*Instance, error) {
 	return &cfg, nil
 }
 
+func (c *Instance) LogValues() {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	log.Info().Any("config", c.vals).Msg("config values")
+}
+
 func (c *Instance) Load() error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -141,8 +147,6 @@ func (c *Instance) Load() error {
 	if err != nil {
 		return err
 	}
-
-	// log.Info().Any("config", newVals).Msg("loaded new config")
 
 	c.vals = newVals
 
